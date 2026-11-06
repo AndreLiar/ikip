@@ -46,6 +46,14 @@ Adopt a **layered cache**, accessed through a `Cache` **port** (local Redis ↔ 
 **Neutral**
 - On Azure, caching may use a small Redis/Azure Cache instance — this is the justified case for the "dedicated managed Redis" the tech stack deferred, introduced only when measured.
 
+## Redis backend note (dev vs prod)
+Redis backs both the `Cache` (this ADR) and the `JobQueue` ([ADR 0003](./0003-local-first-ports-and-adapters.md)). Backend choice per environment:
+
+- **Dev:** either **local Docker Redis** (free, fast, offline) **or** **Redis Cloud Free (30 MB, best-effort SLA)** — both $0. Redis Cloud Free fits a "fully-managed dev" setup (Neon + R2 + Redis Cloud + Azure OpenAI, only the app local). 30 MB is adequate because the cache is **evictable (LRU)** and MVP job payloads are small (IDs/refs, not documents). Note: this is **convenience, not a cost saving** — unlike R2/Neon, Docker Redis was already free; and a remote Redis adds network latency to cache/queue ops.
+- **Prod:** **not** the 30 MB free tier (too small; best-effort SLA conflicts with the 99.5% target, NFR3). Cache → a sized **Azure Cache for Redis** / paid Redis tier; durable job queue → **Azure Service Bus** (retries/dead-letter, Story 2.6) rather than a tiny Redis.
+
+Both are reached through the `Cache` / `JobQueue` ports, so the backend is a config switch.
+
 ## Alternatives Considered
 - **No caching (current state):** simplest, but leaves obvious cost/latency on the table and re-embeds needlessly. Rejected.
 - **Naive semantic cache keyed on question text:** highest value, but violates tenant isolation and version-awareness as described. Rejected for MVP; allowed later only under the hard rules above.

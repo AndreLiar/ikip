@@ -11,12 +11,12 @@ IKIP must be developed and runnable entirely on a 16 GB laptop with only AI API 
 | Capability | Local | Azure |
 |---|---|---|
 | Object storage | Cloudflare R2 (MinIO optional offline) | Cloudflare R2 ([ADR 0014](./0014-cloudflare-r2-object-storage.md)) |
-| Job queue | Redis | Service Bus |
+| Job queue | Redis (Docker or Redis Cloud Free) | Service Bus |
 | Vector store | Neon Postgres + pgvector (Docker optional offline) | Neon Postgres + pgvector ([ADR 0015](./0015-neon-serverless-postgres.md)) |
 | LLM/embeddings | Azure OpenAI (API) | Azure OpenAI |
 | Secrets | `.env` | Key Vault + managed identities |
 | Telemetry | OpenTelemetry + Prometheus/Grafana | Azure Monitor + App Insights |
-| Cache | Redis | Redis / Azure Cache |
+| Cache | Redis (Docker or Redis Cloud Free) | Azure Cache / paid Redis |
 | PII detection | Presidio (self-hosted) | Presidio (self-hosted) |
 
 If business logic imported cloud SDKs directly, the laptop story and local↔cloud portability would be lost, and testing would require cloud resources.
