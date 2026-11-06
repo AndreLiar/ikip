@@ -1,0 +1,4 @@
+diagrams>=0.24,<0.25
+# System dependency (NOT pip): Graphviz `dot`
+#   macOS:  brew install graphviz
+#   Debian: apt-get install -y graphviz
