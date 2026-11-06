@@ -6,7 +6,7 @@ from diagrams.onprem.client import Users
 from diagrams.onprem.ci import GithubActions
 from diagrams.azure.compute import ContainerApps, ContainerRegistries
 from diagrams.azure.database import DatabaseForPostgresqlServers
-from diagrams.azure.storage import BlobStorage
+from diagrams.generic.storage import Storage       # Cloudflare R2 (no built-in icon) — label authoritative
 from diagrams.azure.integration import ServiceBus
 from diagrams.azure.security import KeyVaults
 from diagrams.azure.identity import ActiveDirectory
@@ -32,7 +32,7 @@ with Diagram("IKIP — Azure Production Topology", filename=OUT,
 
     with Cluster("Data & Messaging", graph_attr=cluster("#fdf4e7")):
         pg = DatabaseForPostgresqlServers("PostgreSQL Flexible Server\n+ pgvector")
-        blob = BlobStorage("Blob Storage")
+        blob = Storage("Cloudflare R2\n(S3, zero egress)")
         bus = ServiceBus("Service Bus")
 
     llm = AzureOpenAI("Azure OpenAI\nLLM + embeddings")

@@ -80,7 +80,7 @@ Industrial maintenance organizations manage documentation for thousands of equip
 - **NFR14** CI/CD shall enforce automated quality and security gates before deployment.
 - **NFR15** Raw files, cleaned content, document versions, search indexes and embeddings shall be logically separable so documents can be reprocessed/reindexed without losing original evidence.
 - **NFR16** Secrets and PII shall be protected; secrets managed via a secrets provider (local `.env` / Azure Key Vault).
-- **NFR17** The platform shall run fully on a developer laptop (16 GB RAM min) using Docker, with **only AI (LLM/embedding) calls remote** (Azure OpenAI / Foundry — a capable local model would need a GPU not assumed here). Local-first is the **default development workflow**; Azure is used for deployment (staging/prod) and cloud learning at deploy time — see [ADR 0012](adr/0012-local-first-dev-cloud-models-only.md).
+- **NFR17** The platform shall run on a developer laptop (16 GB RAM min) using Docker, with **AI (LLM/embedding) calls and object storage remote** (Azure OpenAI / Foundry; Cloudflare R2). A **fully-offline mode remains possible** by pointing the `ObjectStorage` adapter at a local MinIO (same S3 API) — see [ADR 0014](adr/0014-cloudflare-r2-object-storage.md). Local-first is the **default development workflow**; Azure is used for deployment and cloud learning at deploy time — see [ADR 0012](adr/0012-local-first-dev-cloud-models-only.md).
 - **NFR18** The system shall defend against prompt injection and malicious document content, and restrict tool access / safe-handle retrieved content.
 - **NFR19** Caching shall never weaken tenant isolation or version-awareness: any answer/retrieval cache entry shall be tenant-partitioned, encode equipment model/revision and current document-version set, be invalidated on version supersession, and never alter the abstention decision (see [ADR 0009](adr/0009-caching-strategy.md)).
 
@@ -135,7 +135,7 @@ Web Responsive — desktop-first for admin/operations; tablet-friendly for field
 - Language: Python 3 (backend/services), TypeScript (frontend).
 - Backend: FastAPI + Pydantic. Frontend: Next.js + React.
 - Database: PostgreSQL + pgvector (metadata, full-text, vectors).
-- Object storage: MinIO (local) → Azure Blob Storage.
+- Object storage: Cloudflare R2 (S3-compatible, all envs; zero egress), one S3 adapter; MinIO optional for offline tests ([ADR 0014](adr/0014-cloudflare-r2-object-storage.md)).
 - PDF/OCR: PyMuPDF + Docling; Tesseract (local) → Azure Document Intelligence for pages needing enhanced OCR.
 - LLM + embeddings: Azure OpenAI via a pluggable `LLMClient` adapter.
 - Tracing/LLMOps: OpenTelemetry (instrumentation) + Langfuse (self-hosted, LLM-native traces/prompts/eval/cost); pytest + custom gold dataset. See [ADR 0013](adr/0013-llmops-observability-otel-langfuse.md) and `architecture/llmops-stack.md`.
@@ -499,7 +499,7 @@ As a security owner, I want encryption and managed secrets/PII handling, so that
 2. `SecretsProvider` interface: `.env` locally, Azure Key Vault + managed identities in prod.
 3. PII is identified and protected per policy; secrets never logged. **PII detection/anonymization uses Presidio** (open-source, self-hosted, local-first) behind a `PiiScrubber` port — no paid PII service required.
 4. Dependency and security scanning run in CI.
-5. **Controlled object storage (Azure Blob):** containers are private (no public access); access uses managed identity (no account keys); the document viewer uses short-lived SAS/presigned URLs only; raw/cleaned/curated are separated (NFR15); lifecycle/retention is configured (ties to Story 6.5).
+5. **Controlled object storage (Cloudflare R2, S3-compatible):** buckets are private (no public access); access uses scoped R2 API tokens via the secrets provider / Key Vault (never committed); the document viewer uses short-lived presigned URLs only; raw/cleaned/curated are separated (NFR15); lifecycle/retention is configured (ties to Story 6.5). See [ADR 0014](adr/0014-cloudflare-r2-object-storage.md).
 
 ### Story 6.5 Data Retention, Deletion & Provenance
 As a governance owner, I want retention/deletion workflows and provenance tracking, so that we meet licensing and data-rights obligations.
