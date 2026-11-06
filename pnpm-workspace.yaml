@@ -1,0 +1,4 @@
+# pnpm workspace members. apps/web (Next.js) is the first; more added as they land.
+packages:
+  - "apps/*"
+  - "packages/*"

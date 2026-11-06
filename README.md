@@ -44,6 +44,51 @@ Runbooks live in [`docs/runbooks/`](./docs/runbooks) — e.g. [developing on Azu
 
 > The epics are ordered so each delivers a vertical, deployable increment. Epic 1 stands up the walking skeleton; later epics layer data engineering, retrieval, the app, LLMOps and production operations on top.
 
+## Repository structure (monorepo)
+
+Single monorepo ([ADR 0006](./docs/adr/0006-monorepo.md)); apps/services are built and deployed independently but share contracts in `packages/`.
+
+```
+ikip/
+├── apps/
+│   ├── web/                  # Next.js frontend (Epic 4)
+│   └── api/                  # FastAPI backend (Epic 1+)
+├── services/                 # Python services (Dagster/RAG) — Epics 2–3, 5
+│   ├── ingestion/ · document-processing/ · indexing/ · retrieval/ · evaluation/
+├── packages/
+│   ├── common/               # shared models + infra ports (ObjectStorage, VectorStore, …)
+│   └── ai-clients/           # pluggable LLM/embedding adapters
+├── infrastructure/
+│   ├── docker/               # Compose (optional offline stack)
+│   └── terraform/            # IaC: azurerm + Neon + Cloudflare (Epic 6)
+├── tests/{unit,integration,retrieval,security,performance}
+├── datasets/evaluation/      # gold datasets (Epic 5)
+└── docs/                     # brief, PRD, architecture, ADRs, LLD, runbooks, learning
+```
+
+## Development setup
+
+**Prerequisites:** Python 3.12+ with [uv](https://docs.astral.sh/uv/), Node.js ≥ 20 with [pnpm](https://pnpm.io/), Docker (for the optional offline stack).
+
+```bash
+cp .env.example .env            # fill in managed-service credentials (gitignored)
+```
+
+Managed-services-first ([ADR 0012](./docs/adr/0012-local-first-dev-cloud-models-only.md)): the app runs locally and connects to Neon (Postgres+pgvector), Cloudflare R2 (object storage), Redis (Cloud or Docker) and Langfuse Cloud via `.env`. A local Docker Compose stack is an optional offline fallback.
+
+**Lint & format** (enforced in CI):
+- Python — `ruff` (lint + format): `ruff check .` · `ruff format .`
+- TypeScript — `prettier` + `eslint`: `pnpm format` · `pnpm lint`
+
+## Contribution & branching conventions
+
+- **`main` is protected** — no direct pushes; the baseline CI check (`validate`) must pass.
+- **Workflow:** branch → commit → open PR → CI green → squash-merge → delete branch.
+- **Branch names:** `feat/…`, `fix/…`, `docs/…`, `chore/…` (optionally scoped, e.g. `feat/epic-1-story-1.1-monorepo`).
+- **Commits:** Conventional-Commits style (`feat(scope): …`, `docs: …`); imperative subject.
+- **Secrets never committed** — only `.env.example` (placeholders) is tracked; CI greps for obvious secrets.
+- **Significant decisions** → an [ADR](./docs/adr/README.md). **Execution-as-teaching** records → [`docs/learning/`](./docs/learning).
+
 ## Scope at a glance
 
 **In scope (MVP):** ingestion & data-quality pipeline, versioned document + equipment repository, hybrid retrieval + grounded RAG with citations and abstention, multi-tenant backend + web app, evaluation harness, security controls, observability, local-first deployment with an Azure production path.

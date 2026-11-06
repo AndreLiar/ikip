@@ -1,0 +1,6 @@
+node_modules
+.next
+dist
+out
+docs/architecture/img
+pnpm-lock.yaml
