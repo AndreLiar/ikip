@@ -16,6 +16,13 @@ Use **OpenTelemetry + Langfuse together** — they are complementary, not redund
 
 Routing: **instrument once with OTel → LLM/RAG spans to Langfuse; infra spans/metrics to Prometheus/Grafana (local) → Azure Monitor (prod).** Evaluation *logic* stays in the own pytest + gold-dataset harness (Epic 5); Langfuse stores datasets/scores and traces. Access remains behind the `Telemetry` port where practical ([ADR 0003](./0003-local-first-ports-and-adapters.md)).
 
+## Update (2026-11-06): Langfuse Cloud Hobby (free) is the default for dev/MVP
+Rather than self-hosting, dev/MVP uses **Langfuse Cloud — Hobby tier** (free: all features with limits, **50k units/month**, **30-day** data access, 2 users, community support). This removes the self-hosting ops burden (the datastore noted below) while keeping $0 cost, and — because Langfuse is open source — the **self-hosting exit path remains** (less lock-in than a closed SaaS like LangSmith). Use the **EU region** (`https://cloud.langfuse.com` EU). Credentials: `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` via the secrets provider.
+
+> ⚠️ **Data-governance caveat:** Langfuse traces contain prompts **and retrieved document content** (potentially sensitive). Sending these to a SaaS is acceptable for the **licensed sample/MVP corpus**, but **real customer data should use self-hosted Langfuse (or an EU region + DPA)** — this ties to Epic 6 and is a revisit trigger. Limits (50k units/mo, 30-day retention) also mean production-scale tracing or long eval history will need the paid tier or self-hosting.
+
+**Self-hosting remains the option** for data governance and scale; the choice is a config switch (same OTel instrumentation + SDK).
+
 ## Consequences
 **Positive**
 - One instrumentation (OTel), two fit-for-purpose backends; no lock-in.
