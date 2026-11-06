@@ -6,7 +6,7 @@ _Sharded from `../prd.md`. Part of the [epic index](./index.md)._
 
 **Related requirements:** FR19, FR20, FR21, FR27 · NFR10, NFR12, NFR13, NFR14, NFR16, NFR17
 
-> **Infra context (decided after this epic was first drafted):** the default dev backends are **managed** — Neon (Postgres+pgvector, [ADR 0015](../adr/0015-neon-serverless-postgres.md)), Cloudflare R2 (object storage, [ADR 0014](../adr/0014-cloudflare-r2-object-storage.md)), Redis Cloud/Docker ([ADR 0009](../adr/0009-caching-strategy.md)), Langfuse Cloud ([ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md)). Local Docker Postgres/MinIO/Redis remain an **optional offline** path (NFR17). All access goes through the ports ([ADR 0003](../adr/0003-local-first-ports-and-adapters.md)).
+> **Infra context (decided after this epic was first drafted):** the default dev backends are **managed** — Neon (Postgres+pgvector, [ADR 0015](../adr/0015-neon-serverless-postgres.md)), Cloudflare R2 (object storage, [ADR 0014](../adr/0014-cloudflare-r2-object-storage.md)), Redis Cloud ([ADR 0009](../adr/0009-caching-strategy.md)), Langfuse Cloud ([ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md)). **No local Docker Compose is provided** — the app (local) talks to managed services via `.env`. Offline/self-hosted backends remain possible via the ports ([ADR 0003](../adr/0003-local-first-ports-and-adapters.md)) but are not shipped; hermetic DB tests use a CI Postgres **service container**.
 
 ---
 
@@ -18,13 +18,13 @@ As a developer, I want a monorepo scaffold with documented conventions, so that 
 3. Linting/formatting configured for Python and TypeScript.
 4. Architecture Decision Record (ADR) location and template exist. _(Already in place: `docs/adr/` with README + template — verify, don't recreate.)_
 
-## Story 1.2 Dev Environment (managed-first, optional offline Docker)
-As a developer, I want a reproducible dev environment that connects to managed services by default and can fall back to local Docker backends, so that I develop cheaply and can also work fully offline.
+## Story 1.2 Configuration & Connectivity (managed-services-first)
+As a developer, I want a typed configuration layer that loads all backend connections from `.env`, plus a connectivity "doctor", so that the app is configured 12-factor-style and I can verify each managed service before running anything.
 **Acceptance Criteria:**
-1. The app reads all backend connections from environment via `.env` (copied from the committed `.env.example`); no hard-coded secrets. Default dev points at **managed services** (Neon / R2 / Redis Cloud / Langfuse).
-2. A Docker Compose file provides an **optional offline** stack (local Postgres+pgvector, MinIO, Redis) selectable by pointing `.env` at localhost — same ports/interfaces, no code change.
-3. A single documented command brings the optional offline stack up/down.
-4. Connectivity to each configured backend (managed or local) is verifiable via a documented check.
+1. A shared, typed settings module (Pydantic `BaseSettings`) in `packages/common` loads all backend config from environment / `.env` (copied from the committed `.env.example`); required values missing → fail fast with a clear error; no hard-coded secrets.
+2. A **connectivity check** command (`doctor`) verifies each configured backend (Neon/Postgres, R2, Redis, Langfuse) and reports pass/fail per service without printing secrets.
+3. Unit tests cover config loading/validation and are hermetic (no live services; env monkey-patched) so they run in CI.
+4. **No local Docker Compose is provided** (dev uses managed services — Neon/R2/Redis Cloud/Langfuse). Offline/self-hosted backends remain *possible* via the ports ([ADR 0003](../adr/0003-local-first-ports-and-adapters.md)) but are not shipped; DB-touching integration tests will use an **ephemeral Postgres service container in CI** (added with Story 1.3/1.5), not a local Compose.
 
 ## Story 1.3 FastAPI Backend Skeleton with Health Check
 As a developer, I want a FastAPI service with a versioned health endpoint, so that we have a deployable backend baseline.

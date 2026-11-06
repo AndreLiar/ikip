@@ -80,7 +80,7 @@ Industrial maintenance organizations manage documentation for thousands of equip
 - **NFR14** CI/CD shall enforce automated quality and security gates before deployment.
 - **NFR15** Raw files, cleaned content, document versions, search indexes and embeddings shall be logically separable so documents can be reprocessed/reindexed without losing original evidence.
 - **NFR16** Secrets and PII shall be protected; secrets managed via a secrets provider (local `.env` / Azure Key Vault).
-- **NFR17** The platform shall run on a developer laptop (16 GB RAM min) using Docker, with **AI (LLM/embedding) calls, object storage and database remote** (Azure OpenAI / Foundry; Cloudflare R2; Neon Postgres). A **fully-offline mode remains possible** by pointing the adapters at local MinIO (S3) and local Docker Postgres+pgvector (same APIs) — see [ADR 0014](adr/0014-cloudflare-r2-object-storage.md), [ADR 0015](adr/0015-neon-serverless-postgres.md). Local-first is the **default development workflow**; Azure is used for deployment and cloud learning at deploy time — see [ADR 0012](adr/0012-local-first-dev-cloud-models-only.md).
+- **NFR17** The platform shall run on a developer laptop (16 GB RAM min): the **app** (FastAPI/Next.js) runs locally while backends are **managed** (Neon Postgres+pgvector, Cloudflare R2, Redis Cloud, Langfuse Cloud, Azure OpenAI/Foundry). No local Docker Compose is shipped; a **fully-offline mode remains possible in principle** via the ports ([ADR 0003](adr/0003-local-first-ports-and-adapters.md)) by pointing adapters at local MinIO/Postgres/Redis, but is not provided out of the box. Hermetic DB tests use a CI Postgres service container. Azure is used for deployment and cloud learning at deploy time — see [ADR 0012](adr/0012-local-first-dev-cloud-models-only.md), [ADR 0014](adr/0014-cloudflare-r2-object-storage.md), [ADR 0015](adr/0015-neon-serverless-postgres.md).
 - **NFR18** The system shall defend against prompt injection and malicious document content, and restrict tool access / safe-handle retrieved content.
 - **NFR19** Caching shall never weaken tenant isolation or version-awareness: any answer/retrieval cache entry shall be tenant-partitioned, encode equipment model/revision and current document-version set, be invalidated on version supersession, and never alter the abstention decision (see [ADR 0009](adr/0009-caching-strategy.md)).
 
@@ -169,7 +169,7 @@ Web Responsive — desktop-first for admin/operations; tablet-friendly for field
 
 **Goal:** Stand up a deployable walking skeleton: a monorepo with CI, a managed-services-first dev setup (app local; Neon/R2/Redis Cloud/Langfuse via `.env`, with optional local Docker backends for offline work), a FastAPI backend talking to Postgres, authentication, and the multi-tenant data foundation — so every later epic builds on a secure, tested base and can be run end-to-end from day one.
 
-> **Infra context (decided after this epic was first drafted):** default dev backends are managed — Neon (Postgres+pgvector, ADR 0015), Cloudflare R2 (object storage, ADR 0014), Redis Cloud/Docker (ADR 0009), Langfuse Cloud (ADR 0013). Local Docker Postgres/MinIO/Redis remain an optional offline path (NFR17); all access goes through the ports (ADR 0003).
+> **Infra context (decided after this epic was first drafted):** default dev backends are managed — Neon (Postgres+pgvector, ADR 0015), Cloudflare R2 (object storage, ADR 0014), Redis Cloud (ADR 0009), Langfuse Cloud (ADR 0013). No local Docker Compose is provided — the app (local) talks to managed services via `.env`. Offline/self-hosted backends remain possible via the ports (ADR 0003) but are not shipped; hermetic DB tests use a CI Postgres service container.
 
 ### Story 1.1 Monorepo & Repository Conventions
 As a developer, I want a monorepo scaffold with documented conventions, so that all services share source and contributors follow one structure.
@@ -179,13 +179,13 @@ As a developer, I want a monorepo scaffold with documented conventions, so that 
 3. Linting/formatting configured for Python and TypeScript.
 4. Architecture Decision Record (ADR) location and template exist. _(Already in place: `docs/adr/` with README + template — verify, don't recreate.)_
 
-### Story 1.2 Dev Environment (managed-first, optional offline Docker)
-As a developer, I want a reproducible dev environment that connects to managed services by default and can fall back to local Docker backends, so that I develop cheaply and can also work fully offline.
+### Story 1.2 Configuration & Connectivity (managed-services-first)
+As a developer, I want a typed configuration layer that loads all backend connections from `.env`, plus a connectivity "doctor", so that the app is configured 12-factor-style and I can verify each managed service before running anything.
 **Acceptance Criteria:**
-1. The app reads all backend connections from environment via `.env` (copied from the committed `.env.example`); no hard-coded secrets. Default dev points at managed services (Neon / R2 / Redis Cloud / Langfuse).
-2. A Docker Compose file provides an optional offline stack (local Postgres+pgvector, MinIO, Redis) selectable by pointing `.env` at localhost — same ports/interfaces, no code change.
-3. A single documented command brings the optional offline stack up/down.
-4. Connectivity to each configured backend (managed or local) is verifiable via a documented check.
+1. A shared, typed settings module (Pydantic `BaseSettings`) in `packages/common` loads all backend config from environment / `.env`; required values missing → fail fast with a clear error; no hard-coded secrets.
+2. A connectivity check command (`doctor`) verifies each configured backend (Neon/Postgres, R2, Redis, Langfuse) and reports pass/fail per service without printing secrets.
+3. Unit tests cover config loading/validation and are hermetic (no live services; env monkey-patched) so they run in CI.
+4. No local Docker Compose is provided (dev uses managed services). Offline/self-hosted backends remain possible via the ports (ADR 0003) but are not shipped; DB-touching integration tests use an ephemeral Postgres service container in CI (Story 1.3/1.5).
 
 ### Story 1.3 FastAPI Backend Skeleton with Health Check
 As a developer, I want a FastAPI service with a versioned health endpoint, so that we have a deployable backend baseline.

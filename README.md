@@ -68,13 +68,15 @@ ikip/
 
 ## Development setup
 
-**Prerequisites:** Python 3.12+ with [uv](https://docs.astral.sh/uv/), Node.js ≥ 20 with [pnpm](https://pnpm.io/), Docker (for the optional offline stack).
+**Prerequisites:** Python 3.12+ with [uv](https://docs.astral.sh/uv/), Node.js ≥ 22 (LTS) with [pnpm](https://pnpm.io/).
 
 ```bash
 cp .env.example .env            # fill in managed-service credentials (gitignored)
+uv sync                         # install the Python workspace
+uv run --group doctor python -m ikip_common.doctor   # verify Neon / R2 / Redis / Langfuse
 ```
 
-Managed-services-first ([ADR 0012](./docs/adr/0012-local-first-dev-cloud-models-only.md)): the app runs locally and connects to Neon (Postgres+pgvector), Cloudflare R2 (object storage), Redis (Cloud or Docker) and Langfuse Cloud via `.env`. A local Docker Compose stack is an optional offline fallback.
+Managed-services-first ([ADR 0012](./docs/adr/0012-local-first-dev-cloud-models-only.md)): the **app** runs locally and connects to Neon (Postgres+pgvector), Cloudflare R2 (object storage), Redis Cloud and Langfuse Cloud via `.env`. **No local Docker Compose is shipped**; offline/self-hosted backends remain possible via the ports but are not provided, and hermetic DB tests use a CI Postgres service container (see [Story 1.2](./docs/prd/epic-1-foundation-platform-core.md)).
 
 **Lint & format** (enforced in CI):
 - Python — `ruff` (lint + format): `ruff check .` · `ruff format .`

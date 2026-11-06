@@ -4,7 +4,7 @@
   "private": true,
   "description": "Industrial Knowledge Intelligence Platform (IKIP) — monorepo root (JS/TS workspaces)",
   "packageManager": "pnpm@9.12.0",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
