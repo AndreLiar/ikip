@@ -14,7 +14,7 @@ Use **OpenTelemetry + Langfuse together** — they are complementary, not redund
 - **OpenTelemetry** is the single instrumentation standard (all spans/metrics; no lock-in; swappable backends).
 - **Langfuse (self-hosted, open source)** is the **LLM-native backend** that consumes OTel and integrates natively with LangChain/LangGraph. It provides RAG-step traces with prompt/response inspection, **token & cost per trace** (FR31), **prompt management/versioning** (FR32), and **eval dataset/score** tracking (Epic 5).
 
-Routing: **instrument once with OTel → LLM/RAG spans to Langfuse; infra spans/metrics to Prometheus/Grafana (local) → Azure Monitor (prod).** Evaluation *logic* stays in the own pytest + gold-dataset harness (Epic 5); Langfuse stores datasets/scores and traces. Access remains behind the `Telemetry` port where practical ([ADR 0003](./0003-local-first-ports-and-adapters.md)).
+Routing: **instrument once with the OTel SDK (an in-app library — nothing to host) → LLM/RAG spans to Langfuse; infra spans/metrics to Azure Monitor (or optional local Prometheus/Grafana).** No local observability container is required in a managed-dev setup (OTel exports directly to Langfuse Cloud / Azure Monitor); Prometheus + Grafana are optional, only for local infra dashboards. Evaluation *logic* stays in the own pytest + gold-dataset harness (Epic 5); Langfuse stores datasets/scores and traces. Access remains behind the `Telemetry` port where practical ([ADR 0003](./0003-local-first-ports-and-adapters.md)).
 
 ## Update (2026-11-06): Langfuse Cloud Hobby (free) is the default for dev/MVP
 Rather than self-hosting, dev/MVP uses **Langfuse Cloud — Hobby tier** (free: all features with limits, **50k units/month**, **30-day** data access, 2 users, community support). This removes the self-hosting ops burden (the datastore noted below) while keeping $0 cost, and — because Langfuse is open source — the **self-hosting exit path remains** (less lock-in than a closed SaaS like LangSmith). Use the **EU region** (`https://cloud.langfuse.com` EU). Credentials: `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` via the secrets provider.
@@ -36,7 +36,7 @@ Rather than self-hosting, dev/MVP uses **Langfuse Cloud — Hobby tier** (free: 
 - Prod self-hosting on Azure adds a container + datastore to operate (or use Langfuse Cloud free tier).
 
 **Neutral**
-- Infra metrics continue on Prometheus/Grafana → Azure Monitor unchanged.
+- Infra metrics go to Azure Monitor (Prometheus/Grafana optional, local only) — unchanged.
 
 ## Alternatives Considered
 - **OTel + Grafana only (no LLM-native layer):** no extra service, but no prompt management, no per-trace token cost, no eval-dataset UI — all hand-rolled. Rejected; weak LLMOps ergonomics.
