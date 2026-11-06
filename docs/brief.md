@@ -109,7 +109,7 @@ Vertical, industry-specific knowledge intelligence (not generic "chat with PDF")
 
 ## Technical Considerations
 
-- **Local-first, cloud-ready, interface-driven.** Infrastructure-dependent services (object storage, job queue, vector store, LLM client, secrets, telemetry) sit behind interfaces. Object storage is **Cloudflare R2** (S3-compatible, all envs, zero egress; MinIO optional offline — see `data-sources.md` context and the architecture); the rest are local (Redis/local Postgres/.env) and Azure (Service Bus/Flexible Server/Key Vault/Monitor).
+- **Local-first, cloud-ready, interface-driven.** Infrastructure-dependent services (object storage, job queue, vector store, LLM client, secrets, telemetry) sit behind interfaces. Object storage is **Cloudflare R2** (S3-compatible, all envs, zero egress; MinIO optional offline — see `data-sources.md` context and the architecture); the database is **Neon** (serverless Postgres + pgvector, scale-to-zero; Docker Postgres optional offline); the rest are local (Redis/.env) and Azure (Service Bus/Key Vault/Monitor).
 - **Hybrid retrieval on PostgreSQL first** (full-text + pgvector) — Azure AI Search only when managed search justifies the cost.
 - **Dual orchestration:** Dagster for the data/knowledge-base pipeline; LangGraph+LangChain for the technician-facing AI workflow. They are complementary, not interchangeable.
 - **Monorepo** so local and Azure versions share source.

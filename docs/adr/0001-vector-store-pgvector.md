@@ -18,6 +18,8 @@ Forces specific to IKIP:
 ## Decision
 Use **PostgreSQL 16 + pgvector** as the vector store for the initial platform, co-located with the relational metadata, with vector similarity indexed (HNSW) and lexical retrieval via Postgres full-text. Access the vector store exclusively through a **`VectorStore` interface** (ports & adapters, NFR12) so the implementation can be swapped without touching business logic.
 
+> **Hosting (see [ADR 0015](./0015-neon-serverless-postgres.md)):** the Postgres host is **Neon** (serverless, scale-to-zero, pgvector) in all environments, with local Docker Postgres+pgvector as an optional offline backend. This decision (pgvector as the vector store) is unchanged by where Postgres runs.
+
 ## Consequences
 **Positive**
 - Hybrid retrieval + metadata filters + ACL execute in a **single query** joining `chunk → embedding → document_version → equipment → tenant` — no cross-system fan-out or re-join.

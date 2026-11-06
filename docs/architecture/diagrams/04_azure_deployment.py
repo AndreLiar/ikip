@@ -31,7 +31,7 @@ with Diagram("IKIP — Azure Production Topology", filename=OUT,
         jobs = ContainerApps("Container Apps Jobs\n(Dagster batch)")
 
     with Cluster("Data & Messaging", graph_attr=cluster("#fdf4e7")):
-        pg = DatabaseForPostgresqlServers("PostgreSQL Flexible Server\n+ pgvector")
+        pg = DatabaseForPostgresqlServers("Neon Postgres\n+ pgvector (serverless)")
         blob = Storage("Cloudflare R2\n(S3, zero egress)")
         bus = ServiceBus("Service Bus")
 

@@ -12,7 +12,7 @@ IKIP must be developed and runnable entirely on a 16 GB laptop with only AI API 
 |---|---|---|
 | Object storage | Cloudflare R2 (MinIO optional offline) | Cloudflare R2 ([ADR 0014](./0014-cloudflare-r2-object-storage.md)) |
 | Job queue | Redis | Service Bus |
-| Vector store | local Postgres + pgvector | PostgreSQL Flexible Server + pgvector |
+| Vector store | Neon Postgres + pgvector (Docker optional offline) | Neon Postgres + pgvector ([ADR 0015](./0015-neon-serverless-postgres.md)) |
 | LLM/embeddings | Azure OpenAI (API) | Azure OpenAI |
 | Secrets | `.env` | Key Vault + managed identities |
 | Telemetry | OpenTelemetry + Prometheus/Grafana | Azure Monitor + App Insights |

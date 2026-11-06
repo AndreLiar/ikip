@@ -10,7 +10,7 @@ _Sharded from `../architecture.md`. Part of the [architecture index](./index.md)
 | Language (frontend) | TypeScript                                                   | Web app                                             |
 | Backend framework   | FastAPI + Pydantic v2                                        | REST APIs, validation                               |
 | Frontend framework  | Next.js (App Router) + React                                 | Technician/admin UI                                 |
-| Database            | PostgreSQL 16 + pgvector                                     | Metadata, full-text (BM25-style), vectors           |
+| Database            | **Neon** serverless Postgres 16 + pgvector (Docker optional offline) | Metadata, full-text, vectors; scale-to-zero ([ADR 0015](../adr/0015-neon-serverless-postgres.md)) |
 | Migrations          | Alembic                                                      | Safe, reversible migrations (NFR13)                 |
 | Data orchestration  | Dagster                                                      | Knowledge-base pipeline, assets, schedules, sensors |
 | RAG orchestration   | LangGraph + LangChain                                        | Stateful technician-facing workflow                 |
