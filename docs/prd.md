@@ -227,13 +227,15 @@ As a user, I want to authenticate and receive a role, so that access is controll
 
 > **Source corpus:** the connectors in this epic target the candidate sources cataloged in `data-sources.md`. MVP ingestion uses the **Category 1 industrial manuals** (licensed starter corpus); other categories are out of initial scope. Each source must pass a license + provenance check (Story 6.5) before being enabled.
 
+> **Infra context:** object storage = Cloudflare R2 (S3, ADR 0014; MinIO optional offline); database = Neon Postgres+pgvector (ADR 0015); async queue/DLQ = Redis (dev) → Azure Service Bus (prod, durable). **Dagster** runs locally in Docker during dev and as Container Apps Jobs in prod (ADR 0002/0005) — the one heavy local component vs the managed data backends.
+
 ### Story 2.1 Object Storage & Ingestion Job Model
 As an engineer, I want raw files stored in object storage and tracked by an ingestion-job record, so that every source file is traceable through processing.
 **Acceptance Criteria:**
-1. `ObjectStorage` interface with a MinIO implementation stores raw files.
+1. `ObjectStorage` port with a Cloudflare R2 (S3) implementation stores raw files (ADR 0014); MinIO backs the same port for offline tests.
 2. `ingestion_job` table records source, state, timestamps and error info.
-3. Raw, cleaned and curated artifacts are stored in logically separate locations/buckets.
-4. Tests cover upload/retrieve and job state transitions.
+3. Raw, cleaned and curated artifacts are stored in logically separate locations (buckets/prefixes), per NFR15.
+4. Tests cover upload/retrieve and job state transitions (storage port mockable so CI needs no live R2).
 
 ### Story 2.2 Source Connectors & Scheduled Sync
 As an admin, I want connectors for file and API sources with scheduled synchronization, so that documentation stays current.
@@ -247,7 +249,7 @@ As an admin, I want connectors for file and API sources with scheduled synchroni
 As an engineer, I want native-PDF extraction with OCR fallback that preserves page/layout/tables, so that downstream retrieval has accurate, locatable content.
 **Acceptance Criteria:**
 1. Native-digital PDFs extracted with PyMuPDF/Docling, preserving page references.
-2. Scanned/low-quality pages routed to OCR (two-stage strategy to control cost).
+2. Scanned/low-quality pages routed to OCR via a two-stage, cost-controlled strategy: stage 1 = local Tesseract ($0, default); stage 2 = Azure Document Intelligence (paid, optional) only for pages needing enhanced OCR/table/layout recognition.
 3. Tables and diagram references extracted with originating page numbers.
 4. Extraction quality is scored; low-quality extractions are flagged.
 
@@ -272,7 +274,7 @@ As an operator, I want lineage tracking, a data-quality report and controlled re
 **Acceptance Criteria:**
 1. Lineage links raw file → curated content → document version as Dagster assets.
 2. A data-quality report summarizes success rate, failures and duplicates per run.
-3. Failed jobs route to a dead-letter path with retry.
+3. Failed jobs route to a dead-letter path with retry, via the `JobQueue` port (Redis in dev → Azure Service Bus in prod for durability).
 4. Documents can be reprocessed/backfilled (e.g., after a parser change) via an asset-aware re-run without full rebuild.
 
 ---
