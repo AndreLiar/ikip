@@ -39,7 +39,7 @@ As a security owner, I want encryption and managed secrets/PII handling, so that
 2. `SecretsProvider` interface: `.env` locally, Azure Key Vault + managed identities in prod.
 3. PII is identified and protected per policy; secrets never logged. **PII detection/anonymization uses Presidio** (open-source, self-hosted, local-first) behind a `PiiScrubber` port — no paid PII service required. _Presidio handles PII only; it is not a substitute for Content Safety (harm/injection moderation) — see [`../architecture/llmops-stack.md`](../architecture/llmops-stack.md)._
 4. Dependency and security scanning run in CI.
-5. **Controlled object storage (Azure Blob):** containers are private (no public access); access uses managed identity (no account keys); the document viewer uses short-lived SAS/presigned URLs only; raw/cleaned/curated are separated (NFR15); lifecycle/retention is configured (ties to Story 6.5).
+5. **Controlled object storage (Cloudflare R2, S3-compatible):** buckets are private (no public access); access uses scoped R2 API tokens via the secrets provider / Key Vault (never committed); the document viewer uses short-lived presigned URLs only; raw/cleaned/curated are separated (NFR15); lifecycle/retention is configured (ties to Story 6.5). See [ADR 0014](../adr/0014-cloudflare-r2-object-storage.md).
 
 ## Story 6.5 Data Retention, Deletion & Provenance
 As a governance owner, I want retention/deletion workflows and provenance tracking, so that we meet licensing and data-rights obligations.

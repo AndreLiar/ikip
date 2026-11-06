@@ -20,7 +20,8 @@ Use Azure as the primary development environment (to learn IaC, identity, Key Va
 
 ## Keep everything else near-zero
 - **Container Apps on Consumption** → scale-to-zero; pay per request/CPU-second.
-- **Blob / Service Bus / ACR / Key Vault:** a few $/month combined at dev volume (Blob < $1 — see the MVP estimate in `../brief.md`).
+- **Object storage (Cloudflare R2, not Azure Blob):** MVP corpus (~10 GB) fits R2's **free tier** (10 GB storage, 1M Class A + 10M Class B ops/month) with **zero egress** → ~$0 ([ADR 0014](../adr/0014-cloudflare-r2-object-storage.md)).
+- **Service Bus / ACR / Key Vault:** a few $/month combined at dev volume.
 - **Azure OpenAI:** per-token; use small models and bounded eval runs during dev (brief §5).
 - **Azure Monitor:** watch **log retention/volume** — it grows silently; keep dev retention short.
 
@@ -39,7 +40,8 @@ Use Azure as the primary development environment (to learn IaC, identity, Key Va
 |------|------|------|
 | PostgreSQL B1ms | $0–15 | ~$0 if stopped most of the time |
 | Container Apps (consumption) | $0–20 | scale-to-zero |
-| Blob / Service Bus / ACR / Key Vault | ~$2–5 | negligible |
+| Cloudflare R2 (object storage) | ~$0 | free tier covers MVP; zero egress |
+| Service Bus / ACR / Key Vault | ~$2–5 | negligible |
 | Azure OpenAI (tokens) | $5–20 | per use |
 | Monitor/logs | $2–10 | retention-dependent |
 | **Total** | **~$30–70/mo** | lower with student credit + stopped DB |

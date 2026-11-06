@@ -24,21 +24,22 @@ with Diagram("IKIP — Local Development (Docker Compose)", filename=OUT,
         web = NextJs("web :3000")
         api = FastAPI("api :8000")
         pg = PostgreSQL("postgres + pgvector :5432")
-        minio = Storage("MinIO :9000\n(S3-compatible)")
         redis = Redis("redis :6379")
         dagster = Airflow("Dagster")
 
-    llm = AzureOpenAI("Azure OpenAI\n(only remote dependency)")
+    with Cluster("Remote (HTTPS only)", graph_attr=cluster("#fdf4e7")):
+        r2 = Storage("Cloudflare R2\n(S3 object storage ·\nMinIO optional offline)")
+        llm = AzureOpenAI("Azure OpenAI\n(LLM + embeddings)")
 
     dev >> principal("browses") >> web
     web >> principal("calls /api/v1") >> api
     api >> principal("queries") >> pg
     dagster >> principal("writes curated") >> pg
 
-    api >> backing("objects") >> minio
     api >> backing("enqueue") >> redis
-    dagster >> backing("artifacts") >> minio
     dagster >> backing("jobs") >> redis
 
+    api >> backing("objects (HTTPS)") >> r2
+    dagster >> backing("artifacts (HTTPS)") >> r2
     api >> principal("routes-to-LLM (HTTPS)") >> llm
     dagster >> backing("embeddings (HTTPS)") >> llm

@@ -15,7 +15,7 @@ _Sharded from `../architecture.md`. Part of the [architecture index](./index.md)
 | Data orchestration  | Dagster                                                      | Knowledge-base pipeline, assets, schedules, sensors |
 | RAG orchestration   | LangGraph + LangChain                                        | Stateful technician-facing workflow                 |
 | Async / queue       | Redis (local) → Azure Service Bus                           | `JobQueue` interface                              |
-| Object storage      | MinIO (local) → Azure Blob                                  | `ObjectStorage` interface                         |
+| Object storage      | **Cloudflare R2** (S3-compatible, all envs; MinIO optional offline) | `ObjectStorage` port, one S3 adapter; zero egress ([ADR 0014](../adr/0014-cloudflare-r2-object-storage.md)) |
 | PDF processing      | PyMuPDF + Docling                                            | Native extraction, layout, tables                   |
 | OCR                 | Tesseract (local) → Azure Document Intelligence             | Two-stage (cost control)                            |
 | Data validation     | Pydantic + Pandera                                           | Content/quality validation (Story 2.4)              |

@@ -10,7 +10,7 @@ IKIP must be developed and runnable entirely on a 16 GB laptop with only AI API 
 
 | Capability | Local | Azure |
 |---|---|---|
-| Object storage | MinIO | Blob Storage |
+| Object storage | Cloudflare R2 (MinIO optional offline) | Cloudflare R2 ([ADR 0014](./0014-cloudflare-r2-object-storage.md)) |
 | Job queue | Redis | Service Bus |
 | Vector store | local Postgres + pgvector | PostgreSQL Flexible Server + pgvector |
 | LLM/embeddings | Azure OpenAI (API) | Azure OpenAI |
@@ -21,7 +21,7 @@ IKIP must be developed and runnable entirely on a 16 GB laptop with only AI API 
 
 If business logic imported cloud SDKs directly, the laptop story and local↔cloud portability would be lost, and testing would require cloud resources.
 
-> **Controlled Azure Blob (`ObjectStorage` prod adapter):** private containers (no public access), managed-identity access (no account keys), short-lived SAS/presigned URLs for the document viewer only, raw/cleaned/curated separation (NFR15), and lifecycle/retention. Specified in Story 6.4 (AC 5) and tied to Story 6.5.
+> **Controlled Cloudflare R2 (`ObjectStorage` adapter, S3-compatible — [ADR 0014](./0014-cloudflare-r2-object-storage.md)):** private buckets (no public access), scoped R2 API tokens via `SecretsProvider`/Key Vault (never committed), short-lived presigned URLs for the document viewer only, raw/cleaned/curated separation (NFR15), and lifecycle/retention. Specified in Story 6.4 (AC 5) and tied to Story 6.5. MinIO can back the same adapter for offline tests.
 
 ## Decision
 Adopt **ports & adapters (hexagonal architecture)**: core logic depends only on interfaces defined in `packages/common` — `ObjectStorage`, `JobQueue`, `VectorStore`, `LLMClient`, `SecretsProvider`, `Telemetry`, `Cache` ([ADR 0009](./0009-caching-strategy.md)) and `PiiScrubber` (Presidio, Story 6.4). Each interface has a **local adapter** and an **Azure/prod adapter**; the concrete implementation is selected by configuration/environment. **No service may import an Azure SDK directly** — it goes through the interface. _(Note: some ports are backend-swappable rather than strictly local-vs-Azure — e.g., `PiiScrubber` is Presidio in both, `Cache` is Redis in both.)_

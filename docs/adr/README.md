@@ -53,3 +53,4 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0011](./0011-cloud-first-hybrid-dev-workflow.md)                | Cloud-first (hybrid) development workflow + cost strategy                             | Superseded by 0012 |
 | [0012](./0012-local-first-dev-cloud-models-only.md)              | Local-first development, cloud for models only                                        | Accepted           |
 | [0013](./0013-llmops-observability-otel-langfuse.md)             | LLMOps observability: OpenTelemetry + Langfuse (self-hosted)                          | Accepted           |
+| [0014](./0014-cloudflare-r2-object-storage.md)                   | Cloudflare R2 for object storage (S3-compatible), replacing MinIO + Azure Blob        | Accepted           |
