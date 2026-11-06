@@ -12,7 +12,7 @@ Build the LLMOps capability from **open, self-hostable, local-first** pieces —
 | Model inference (LLM + embeddings) | Azure OpenAI via `LLMClient` port | API call | Azure OpenAI in **Foundry** | [ADR 0007](../adr/0007-pluggable-llm-client-azure-openai.md), [0010](../adr/0010-foundry-model-platform-no-dedicated-ai-gateway.md) |
 | AI workflow orchestration | **LangGraph + LangChain** | local | local | [ADR 0002](../adr/0002-dual-orchestration-dagster-langgraph.md) |
 | **Instrumentation standard** | **OpenTelemetry** | OTel SDK | OTel SDK | FR30, Story 5.4 |
-| **LLM-native observability** (traces of RAG steps, prompt I/O, token/cost) | **Langfuse** (self-hosted, OSS) | Docker | container + datastore | [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md) |
+| **LLM-native observability** (traces of RAG steps, prompt I/O, token/cost) | **Langfuse** (Cloud Hobby free for dev/MVP; self-host option) | Cloud Hobby (EU) | Cloud / self-host | [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md) |
 | Prompt / model-config versioning | **Langfuse prompt management** + git artifacts | Langfuse + repo | idem | FR32, Story 5.5 |
 | Evaluation logic (Recall@K, citation, groundedness) | **pytest + gold datasets** (own harness); datasets tracked in Langfuse | local | CI | Epic 5, Stories 5.1–5.2 |
 | Safety / guardrails (default, $0) | **own guardrails** — adversarial test suite, untrusted-content handling, own groundedness eval | local | CI | Story 5.2, 5.3, 6.3 |
@@ -73,4 +73,4 @@ Unlike Entra ID, **Azure AI Content Safety is a paid service** (per 1,000 record
 **Foundry** = models (+ *optional* Content Safety detectors) · **own guardrails** = default safety (injection/groundedness/abstention) · **LangGraph/LangChain** = orchestration · **pytest + gold datasets** = eval logic & CI gates · **OpenTelemetry** = instrumentation · **Langfuse** = LLM-native tracing/prompts/eval/cost · **Prometheus/Grafana → Azure Monitor** = infra metrics · **Redis/Postgres** = caching.
 
 ## Cost
-Langfuse self-hosted = **$0** (open source, runs in your Docker stack). OTel/Prometheus/Grafana = $0 local. You pay only for **LLM tokens** + (optionally) **Foundry Content Safety** calls. Consistent with local-first ([ADR 0012](../adr/0012-local-first-dev-cloud-models-only.md)).
+Langfuse = **$0** on **Cloud Hobby** (free: 50k units/mo, 30-day retention, EU region) for dev/MVP, or self-hosted ($0, open source) — see [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md). OTel/Prometheus/Grafana = $0 local. You pay only for **LLM tokens** + (optionally) **Foundry Content Safety** calls. Governance caveat: Langfuse traces carry prompts + retrieved content → use self-hosting (or EU + DPA) for real customer data (Epic 6).
