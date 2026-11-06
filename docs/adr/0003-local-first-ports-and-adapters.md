@@ -15,7 +15,7 @@ IKIP must be developed and runnable entirely on a 16 GB laptop with only AI API 
 | Vector store | Neon Postgres + pgvector (Docker optional offline) | Neon Postgres + pgvector ([ADR 0015](./0015-neon-serverless-postgres.md)) |
 | LLM/embeddings | Azure OpenAI (API) | Azure OpenAI |
 | Secrets | `.env` | Key Vault + managed identities |
-| Telemetry | OpenTelemetry + Prometheus/Grafana | Azure Monitor + App Insights |
+| Telemetry | OTel SDK (in-app) → Langfuse Cloud / Azure Monitor (Prometheus/Grafana optional) | OTel SDK → Azure Monitor + App Insights |
 | Cache | Redis (Docker or Redis Cloud Free) | Azure Cache / paid Redis |
 | PII detection | Presidio (self-hosted) | Presidio (self-hosted) |
 

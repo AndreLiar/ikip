@@ -43,7 +43,7 @@ with Diagram("IKIP — System Context", filename=OUT, outformat=["png", "svg"],
         rag = Python("LangGraph + LangChain\nanalyze→retrieve→rerank→\nsufficiency→cite / abstain")
 
     llm = AzureOpenAI("Azure OpenAI\nLLM + embeddings")
-    obs = Grafana("Observability\n& Evaluation")
+    obs = Grafana("LLMOps: OTel SDK →\nLangfuse Cloud · Azure Monitor\n(Prometheus/Grafana optional)")
 
     # principal flows
     src >> principal("ingested by") >> dagster

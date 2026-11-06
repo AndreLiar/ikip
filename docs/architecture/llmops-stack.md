@@ -17,7 +17,7 @@ Build the LLMOps capability from **open, self-hostable, local-first** pieces —
 | Evaluation logic (Recall@K, citation, groundedness) | **pytest + gold datasets** (own harness); datasets tracked in Langfuse | local | CI | Epic 5, Stories 5.1–5.2 |
 | Safety / guardrails (default, $0) | **own guardrails** — adversarial test suite, untrusted-content handling, own groundedness eval | local | CI | Story 5.2, 5.3, 6.3 |
 | Safety detectors (optional, paid) | **Foundry Content Safety** (Prompt Shields, groundedness) — behind a guardrail interface; free tier first | API | API | optional complement |
-| Infra metrics / latency | OTel → **Prometheus/Grafana** | local | **Azure Monitor / App Insights** | FR31, Story 5.6 |
+| Infra metrics / latency | OTel SDK (in-app) → backend | **Azure Monitor** or **Prometheus/Grafana** (optional, local) | **Azure Monitor / App Insights** | FR31, Story 5.6 |
 | `query_trace` (user→chunks→model, latency, cost) | PostgreSQL + exported to Langfuse | local | local | FR30, Story 5.4 |
 | Regression gates (eval + safety) | **GitHub Actions** | CI | CI | Story 5.5, 6.7; NFR14 |
 | Caching (cost/latency) | Redis + Postgres (`Cache` port) | local | Redis/Azure Cache | [ADR 0009](../adr/0009-caching-strategy.md) |
@@ -30,7 +30,9 @@ They operate at different layers:
 - **OpenTelemetry = the instrumentation contract.** Vendor-neutral spans/metrics for *everything* (HTTP, DB, queue, and the RAG workflow). Instrument once; no lock-in; swappable backends. But raw OTel + Grafana is **not** LLM-aware — it has no concept of a prompt, a completion, token cost, or an eval dataset.
 - **Langfuse = an LLM-native backend that consumes OTel** (and integrates natively with LangChain/LangGraph). It adds exactly what OTel lacks for LLMOps: nested **RAG-step traces** with prompt/response inspection, **token & cost per trace**, **prompt management/versioning**, and **eval datasets/scores** — in a UI built for this.
 
-So the flow is: **instrument with OTel → LLM/RAG spans go to Langfuse (LLM layer); infra spans/metrics go to Prometheus/Grafana → Azure Monitor (infra layer).** One instrumentation, two fit-for-purpose backends.
+So the flow is: **instrument with OTel → LLM/RAG spans go to Langfuse (LLM layer); infra spans/metrics go to Azure Monitor (or optional Prometheus/Grafana) (infra layer).** One instrumentation, two fit-for-purpose backends.
+
+> **OTel is a library, not a service.** The OpenTelemetry SDK runs **inside the app** (FastAPI) and exports directly to backends — there is **nothing to host** for OTel itself (no Collector required at MVP). In a fully-managed dev setup, the app exports LLM traces to **Langfuse Cloud** and (optionally) infra metrics to **Azure Monitor**, so **no local observability container is required**. Prometheus + Grafana are an **optional** local choice only if you want infra dashboards on the laptop.
 
 ```
             OpenTelemetry (instrument once)

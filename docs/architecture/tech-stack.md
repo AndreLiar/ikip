@@ -22,7 +22,8 @@ _Sharded from `../architecture.md`. Part of the [architecture index](./index.md)
 | Data validation     | Pydantic + Pandera                                           | Content/quality validation (Story 2.4)              |
 | LLM + embeddings    | Azure OpenAI via `LLMClient` adapter                       | Pluggable provider                                  |
 | Tracing / LLMOps    | OpenTelemetry + **Langfuse** (Cloud Hobby free for dev/MVP; self-host option); pytest | OTel instruments; Langfuse = LLM-native traces/prompts/eval/cost ([ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md)) |
-| Observability       | Prometheus + Grafana (local) → Azure Monitor + App Insights | `Telemetry` interface                             |
+| Instrumentation     | OpenTelemetry SDK (**in-app library, not a service**)        | emits traces/metrics; exports directly to backends  |
+| Infra metrics/dashboards | Azure Monitor / App Insights; **Prometheus + Grafana optional** (local, only if infra dashboards wanted) | `Telemetry` port; managed-dev needs no local observability container |
 | PII detection       | **Presidio** (open-source, self-hosted)                      | PII detect/anonymize via `PiiScrubber` port (NFR16, Story 6.4); not Content Safety |
 | Auth                | Local dev accounts / OIDC → Microsoft Entra ID              | Tenant + role in token                              |
 | Secrets             | `.env` (local) → Azure Key Vault + managed identities     | `SecretsProvider` interface                       |
