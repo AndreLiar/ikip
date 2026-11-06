@@ -295,15 +295,16 @@ As an engineer, I want documents chunked by structure and semantics with section
 As an engineer, I want versioned embeddings via a pluggable client, so that we can re-embed and compare models safely.
 **Acceptance Criteria:**
 1. `LLMClient`/embedding adapter generates embeddings via Azure OpenAI (pluggable).
-2. `embedding` records store chunk ID, model version and vector in pgvector.
+2. `embedding` records store chunk ID, model version and vector in pgvector (on Neon).
 3. Embedding-model version is tracked; re-embedding does not destroy prior vectors needed for comparison.
-4. Tests cover embedding generation and version tagging.
+4. Embedding dimension is chosen mindful of Neon storage (e.g., 256–512 dims and/or `halfvec`) so the vector index fits the tier — see ADR 0015.
+5. Tests cover embedding generation and version tagging.
 
 ### Story 3.3 Lexical & Vector Search
 As a user, I want both keyword and semantic search, so that I can find content by terms or meaning.
 **Acceptance Criteria:**
-1. BM25/full-text search over curated content via PostgreSQL.
-2. Vector similarity search via pgvector.
+1. BM25/full-text search over curated content via Postgres (Neon) `tsvector`/GIN.
+2. Vector similarity search via pgvector (HNSW).
 3. Both return results with document/version/page/section references.
 4. Retrieval latency is measured and logged.
 
@@ -336,7 +337,7 @@ As an engineer, I want an initial gold dataset and retrieval/answer metrics, so 
 As an engineer, I want layered caching behind a `Cache` port, so that cost and latency drop without compromising tenant isolation or version-awareness ([ADR 0009](adr/0009-caching-strategy.md)).
 **Acceptance Criteria:**
 1. Embedding reuse: embeddings are not regenerated when `(chunk_id, model_version)` already exists (Postgres-backed); re-index/backfill reuses them.
-2. Query-embedding cache and an exact-match answer cache are implemented behind a `Cache` port (Redis locally).
+2. Query-embedding cache and an exact-match answer cache are implemented behind a `Cache` port (Redis — Cloud or Docker).
 3. Answer/retrieval cache keys are tenant-partitioned and encode equipment model + revision + current document-version set; a cache hit never crosses tenants and never serves a superseded version.
 4. Cache entries are invalidated when a new/superseded `document_version` is published by ingestion.
 5. A cache hit does not change the abstention decision vs. a cold run; security tests cover cross-tenant cache isolation (extends Story 6.2).
@@ -383,9 +384,9 @@ As a technician, I want a search + chat interface with filters and citations, so
 ### Story 4.5 Document Viewer at Cited Page
 As a technician, I want to open the source PDF at the exact cited page, so that I can confirm the evidence.
 **Acceptance Criteria:**
-1. Clicking a citation opens the source document at the referenced page.
+1. Clicking a citation opens the source document at the referenced page, served via a short-lived R2 presigned URL (ADR 0014).
 2. The cited section/region is highlighted where available.
-3. Access to the source is authorized before display.
+3. Access to the source is authorized before issuing the presigned URL / display.
 4. Viewer works for the supported document types.
 
 ### Story 4.6 Conversation History & Feedback
@@ -453,7 +454,7 @@ As an engineer, I want tracing from query → chunks → model → answer, so th
 ### Story 5.5 Prompt/Model Config Versioning & Regression Gates
 As an AI engineer, I want versioned prompts/model configs gated by regression tests, so that changes are controlled.
 **Acceptance Criteria:**
-1. Prompt and model configurations are versioned artifacts.
+1. Prompt and model configurations are versioned artifacts (prompts managed via Langfuse prompt management and/or repo artifacts — ADR 0013).
 2. Changing a config triggers the evaluation regression suite.
 3. Promotion requires passing retrieval, groundedness and safety gates.
 4. Rollback to a prior config version is supported.
@@ -464,7 +465,7 @@ As an operator, I want dashboards and alerts for latency, cost, pipeline health 
 1. Dashboards show p95 latencies, error rates, pipeline health and token cost.
 2. Evaluation dashboard shows Recall@K, citation correctness, groundedness and regressions.
 3. Alerts fire on defined thresholds (latency, errors, cost, quality regressions).
-4. Local (Prometheus/Grafana) and Azure (Monitor/App Insights) backends are both supported via the telemetry interface.
+4. Observability backends via the `Telemetry` port: Langfuse (LLM/RAG traces + eval), Azure Monitor/App Insights (infra), Prometheus/Grafana optional (local infra dashboards) — OTel is in-app instrumentation, nothing to host (ADR 0013).
 
 ---
 
@@ -516,9 +517,9 @@ As a governance owner, I want retention/deletion workflows and provenance tracki
 ### Story 6.6 Infrastructure as Code & Environments
 As a platform engineer, I want Terraform IaC for dev/staging/prod, so that environments are reproducible.
 **Acceptance Criteria:**
-1. Terraform modules provision Azure Container Apps, PostgreSQL Flexible Server, Blob Storage, Service Bus, ACR, Key Vault, Monitor.
+1. Terraform modules provision the stack using multiple providers: azurerm (Container Apps, Service Bus, ACR, Key Vault, Azure Monitor), Neon (serverless Postgres + pgvector — ADR 0015), and Cloudflare (R2 buckets — ADR 0014). _(Not Azure PostgreSQL Flexible Server / Blob Storage.)_
 2. Separate dev/staging/prod environment configurations.
-3. Secrets sourced from Key Vault via managed identities (no secrets in code).
+3. Secrets sourced from Key Vault via managed identities (no secrets in code); Neon/R2/Langfuse tokens stored in Key Vault.
 4. `terraform plan/apply` documented in runbooks.
 
 ### Story 6.7 CI/CD with Quality & Security Gates and Safe Migrations
@@ -532,8 +533,8 @@ As a release manager, I want gated CI/CD with safe migrations and rollback, so t
 ### Story 6.8 Backup, Recovery & Operational Runbooks
 As an operator, I want tested backups, recovery and runbooks, so that we meet reliability/recovery targets.
 **Acceptance Criteria:**
-1. Automated backups for database and object storage.
-2. A restore is demonstrated within the agreed RPO/RTO.
+1. Automated backups: Neon point-in-time recovery / branching for the database; R2 object versioning (and/or cross-bucket copy) for object storage.
+2. A restore is demonstrated within the agreed RPO/RTO (Neon PITR restore + R2 object restore).
 3. Runbooks cover deployment, rollback, incident response and recovery.
 4. Availability and recovery targets (99.5%, RPO/RTO) are documented and monitored.
 

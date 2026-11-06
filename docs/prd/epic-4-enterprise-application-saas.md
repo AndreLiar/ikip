@@ -43,9 +43,9 @@ As a technician, I want a search + chat interface with filters and citations, so
 ## Story 4.5 Document Viewer at Cited Page
 As a technician, I want to open the source PDF at the exact cited page, so that I can confirm the evidence.
 **Acceptance Criteria:**
-1. Clicking a citation opens the source document at the referenced page.
+1. Clicking a citation opens the source document at the referenced page, served via a short-lived **R2 presigned URL** ([ADR 0014](../adr/0014-cloudflare-r2-object-storage.md)).
 2. The cited section/region is highlighted where available.
-3. Access to the source is authorized before display.
+3. Access to the source is authorized **before** issuing the presigned URL / display.
 4. Viewer works for the supported document types.
 
 ## Story 4.6 Conversation History & Feedback

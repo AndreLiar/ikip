@@ -52,9 +52,9 @@ As a governance owner, I want retention/deletion workflows and provenance tracki
 ## Story 6.6 Infrastructure as Code & Environments
 As a platform engineer, I want Terraform IaC for dev/staging/prod, so that environments are reproducible.
 **Acceptance Criteria:**
-1. Terraform modules provision Azure Container Apps, PostgreSQL Flexible Server, Blob Storage, Service Bus, ACR, Key Vault, Monitor.
+1. Terraform modules provision the stack using multiple providers: **azurerm** (Container Apps, Service Bus, ACR, Key Vault, Azure Monitor), **Neon** (serverless Postgres + pgvector — [ADR 0015](../adr/0015-neon-serverless-postgres.md)), and **Cloudflare** (R2 buckets — [ADR 0014](../adr/0014-cloudflare-r2-object-storage.md)). _(Not Azure PostgreSQL Flexible Server / Blob Storage.)_
 2. Separate dev/staging/prod environment configurations.
-3. Secrets sourced from Key Vault via managed identities (no secrets in code).
+3. Secrets sourced from Key Vault via managed identities (no secrets in code); Neon/R2/Langfuse tokens stored in Key Vault.
 4. `terraform plan/apply` documented in runbooks.
 
 ## Story 6.7 CI/CD with Quality & Security Gates and Safe Migrations
@@ -68,7 +68,7 @@ As a release manager, I want gated CI/CD with safe migrations and rollback, so t
 ## Story 6.8 Backup, Recovery & Operational Runbooks
 As an operator, I want tested backups, recovery and runbooks, so that we meet reliability/recovery targets.
 **Acceptance Criteria:**
-1. Automated backups for database and object storage.
-2. A restore is demonstrated within the agreed RPO/RTO.
+1. Automated backups: **Neon** point-in-time recovery / branching for the database; **R2** object versioning (and/or cross-bucket copy) for object storage.
+2. A restore is demonstrated within the agreed RPO/RTO (Neon PITR restore + R2 object restore).
 3. Runbooks cover deployment, rollback, incident response and recovery.
 4. Availability and recovery targets (99.5%, RPO/RTO) are documented and monitored.

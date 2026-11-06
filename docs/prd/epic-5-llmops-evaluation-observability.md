@@ -45,7 +45,7 @@ As an engineer, I want tracing from query → chunks → model → answer, so th
 ## Story 5.5 Prompt/Model Config Versioning & Regression Gates
 As an AI engineer, I want versioned prompts/model configs gated by regression tests, so that changes are controlled.
 **Acceptance Criteria:**
-1. Prompt and model configurations are versioned artifacts.
+1. Prompt and model configurations are versioned artifacts (prompts managed via **Langfuse prompt management** and/or repo artifacts — [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md)).
 2. Changing a config triggers the evaluation regression suite.
 3. Promotion requires passing retrieval, groundedness and safety gates.
 4. Rollback to a prior config version is supported.
@@ -56,4 +56,4 @@ As an operator, I want dashboards and alerts for latency, cost, pipeline health 
 1. Dashboards show p95 latencies, error rates, pipeline health and token cost.
 2. Evaluation dashboard shows Recall@K, citation correctness, groundedness and regressions.
 3. Alerts fire on defined thresholds (latency, errors, cost, quality regressions).
-4. Local (Prometheus/Grafana) and Azure (Monitor/App Insights) backends are both supported via the telemetry interface.
+4. Observability backends via the `Telemetry` port: **Langfuse** (LLM/RAG traces + eval), **Azure Monitor/App Insights** (infra), with **Prometheus/Grafana optional** (local infra dashboards) — OTel is in-app instrumentation, nothing to host ([ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md)).
