@@ -20,3 +20,6 @@
 
 ## Related decisions (existing ADRs, not duplicated)
 Monorepo [ADR 0006](../../../adr/0006-monorepo.md) · ports & adapters [ADR 0003](../../../adr/0003-local-first-ports-and-adapters.md) · managed-first dev [ADR 0012](../../../adr/0012-local-first-dev-cloud-models-only.md).
+
+## Concepts
+Tooling explained once in [concepts/dev-tooling.md](../../concepts/dev-tooling.md) (lint vs format, ruff, pytest, pnpm, prettier, eslint, tsconfig) — reused by later missions.
