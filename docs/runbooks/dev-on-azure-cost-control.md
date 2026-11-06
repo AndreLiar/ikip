@@ -13,10 +13,11 @@ Use Azure as the primary development environment (to learn IaC, identity, Key Va
 3. **Azure for Students** credit (if eligible) — apply before spending real money.
 4. Provision the dev env with **Terraform** (Story 6.6) so it is reproducible and destroyable.
 
-## The one cost that matters: PostgreSQL
-- PostgreSQL Flexible Server is the main **always-on** cost (~$12–15/mo on the cheapest burstable **B1ms**; more on larger tiers).
-- **Stop the server when not working** (Flexible Server can be stopped up to 7 days; it auto-restarts after). Start it only during dev sessions.
-- Use the smallest burstable tier for dev; size up only in staging/prod.
+## Database: Neon serverless Postgres (scale-to-zero)
+- The database is **Neon** (not Azure Flexible Server) — it **scales compute to zero** when idle, so there is **no always-on DB cost**; the free tier covers early usage ([ADR 0015](../adr/0015-neon-serverless-postgres.md)).
+- Watch **free-tier storage vs vector volume** (~400k × 1536-dim vectors ≈ ~2.4 GB): reduce embedding dimensions (256–512) or use `halfvec`, else move to Neon's modest paid tier (still scale-to-zero).
+- Mind **cold-start latency** vs NFR1 on the first query after idle — use a warm/min-compute setting on the hot path if needed.
+- This removes the previous "stop the Postgres server" chore entirely.
 
 ## Keep everything else near-zero
 - **Container Apps on Consumption** → scale-to-zero; pay per request/CPU-second.
@@ -32,13 +33,13 @@ Use Azure as the primary development environment (to learn IaC, identity, Key Va
 
 ## Weekly hygiene
 - Check the Cost Management dashboard; confirm the budget trend.
-- Ensure dev **PostgreSQL is stopped** when idle.
+- Neon scales to zero automatically — nothing to stop; just watch storage usage.
 - **Tear down** any ephemeral resources not needed (Terraform); remember persistent storage/DB keep costing while they exist.
 
 ## Indicative monthly dev cost (well managed)
 | Item | Est. | Note |
 |------|------|------|
-| PostgreSQL B1ms | $0–15 | ~$0 if stopped most of the time |
+| Neon Postgres (serverless) | ~$0 | scale-to-zero; free tier covers early usage |
 | Container Apps (consumption) | $0–20 | scale-to-zero |
 | Cloudflare R2 (object storage) | ~$0 | free tier covers MVP; zero egress |
 | Service Bus / ACR / Key Vault | ~$2–5 | negligible |

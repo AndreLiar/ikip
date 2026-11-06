@@ -80,7 +80,7 @@ Industrial maintenance organizations manage documentation for thousands of equip
 - **NFR14** CI/CD shall enforce automated quality and security gates before deployment.
 - **NFR15** Raw files, cleaned content, document versions, search indexes and embeddings shall be logically separable so documents can be reprocessed/reindexed without losing original evidence.
 - **NFR16** Secrets and PII shall be protected; secrets managed via a secrets provider (local `.env` / Azure Key Vault).
-- **NFR17** The platform shall run on a developer laptop (16 GB RAM min) using Docker, with **AI (LLM/embedding) calls and object storage remote** (Azure OpenAI / Foundry; Cloudflare R2). A **fully-offline mode remains possible** by pointing the `ObjectStorage` adapter at a local MinIO (same S3 API) — see [ADR 0014](adr/0014-cloudflare-r2-object-storage.md). Local-first is the **default development workflow**; Azure is used for deployment and cloud learning at deploy time — see [ADR 0012](adr/0012-local-first-dev-cloud-models-only.md).
+- **NFR17** The platform shall run on a developer laptop (16 GB RAM min) using Docker, with **AI (LLM/embedding) calls, object storage and database remote** (Azure OpenAI / Foundry; Cloudflare R2; Neon Postgres). A **fully-offline mode remains possible** by pointing the adapters at local MinIO (S3) and local Docker Postgres+pgvector (same APIs) — see [ADR 0014](adr/0014-cloudflare-r2-object-storage.md), [ADR 0015](adr/0015-neon-serverless-postgres.md). Local-first is the **default development workflow**; Azure is used for deployment and cloud learning at deploy time — see [ADR 0012](adr/0012-local-first-dev-cloud-models-only.md).
 - **NFR18** The system shall defend against prompt injection and malicious document content, and restrict tool access / safe-handle retrieved content.
 - **NFR19** Caching shall never weaken tenant isolation or version-awareness: any answer/retrieval cache entry shall be tenant-partitioned, encode equipment model/revision and current document-version set, be invalidated on version supersession, and never alter the abstention decision (see [ADR 0009](adr/0009-caching-strategy.md)).
 
@@ -134,7 +134,7 @@ Web Responsive — desktop-first for admin/operations; tablet-friendly for field
 ### Additional Technical Assumptions
 - Language: Python 3 (backend/services), TypeScript (frontend).
 - Backend: FastAPI + Pydantic. Frontend: Next.js + React.
-- Database: PostgreSQL + pgvector (metadata, full-text, vectors).
+- Database: Neon serverless Postgres + pgvector (metadata, full-text, vectors; scale-to-zero; Docker Postgres optional offline — [ADR 0015](adr/0015-neon-serverless-postgres.md)).
 - Object storage: Cloudflare R2 (S3-compatible, all envs; zero egress), one S3 adapter; MinIO optional for offline tests ([ADR 0014](adr/0014-cloudflare-r2-object-storage.md)).
 - PDF/OCR: PyMuPDF + Docling; Tesseract (local) → Azure Document Intelligence for pages needing enhanced OCR.
 - LLM + embeddings: Azure OpenAI via a pluggable `LLMClient` adapter.

@@ -23,18 +23,18 @@ with Diagram("IKIP — Local Development (Docker Compose)", filename=OUT,
     with Cluster("Docker Compose  (laptop · 16 GB · no GPU)", graph_attr=cluster("#eef3fb")):
         web = NextJs("web :3000")
         api = FastAPI("api :8000")
-        pg = PostgreSQL("postgres + pgvector :5432")
         redis = Redis("redis :6379")
         dagster = Airflow("Dagster")
 
     with Cluster("Remote (HTTPS only)", graph_attr=cluster("#fdf4e7")):
+        pg = PostgreSQL("Neon Postgres + pgvector\n(serverless · Docker optional offline)")
         r2 = Storage("Cloudflare R2\n(S3 object storage ·\nMinIO optional offline)")
         llm = AzureOpenAI("Azure OpenAI\n(LLM + embeddings)")
 
     dev >> principal("browses") >> web
     web >> principal("calls /api/v1") >> api
-    api >> principal("queries") >> pg
-    dagster >> principal("writes curated") >> pg
+    api >> principal("queries (TLS)") >> pg
+    dagster >> principal("writes curated (TLS)") >> pg
 
     api >> backing("enqueue") >> redis
     dagster >> backing("jobs") >> redis
