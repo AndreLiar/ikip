@@ -21,11 +21,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Baseline for Story 1.4 (CI Pipeline & Baseline Testing).
-      # This grows into ruff + pytest (Python services/api) and lint + test
-      # (Next.js web) as Epic 1 lands real code. For now — a docs-only repo —
-      # it validates that all committed Python is syntactically valid and that
-      # no obvious secrets were committed.
+      # Baseline for Story 1.4 (CI Pipeline & Baseline Testing). Grows into pytest
+      # (Python) and lint+test (Next.js web) as Epic 1 lands real code. For now it
+      # enforces Python lint+format (ruff) and guards against committed secrets.
+      - name: Install ruff
+        run: pip install --quiet ruff
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
       - name: Compile Python sources
         run: python -m compileall -q .
 

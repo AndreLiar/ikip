@@ -1,0 +1,32 @@
+# Root Python project config for the IKIP monorepo.
+# Dependency/env management: uv (https://docs.astral.sh/uv/). Per-service deps are
+# added as uv workspace members when their code lands (Story 1.3+). This root file
+# holds the shared lint/format config (ruff) used across all Python code.
+
+[project]
+name = "ikip"
+version = "0.1.0"
+description = "Industrial Knowledge Intelligence Platform (IKIP) — monorepo root"
+requires-python = ">=3.12"
+
+[tool.ruff]
+# One tool for lint + format (replaces black + isort + flake8).
+target-version = "py312"
+line-length = 100
+# Lint/format application code only. `docs/` holds documentation artifacts
+# (diagram-as-code generators with intentionally loose style, illustrative
+# code blocks) that are not application source — excluded on purpose.
+extend-exclude = [".venv", "venv", "node_modules", "**/.gitkeep", "docs"]
+
+[tool.ruff.lint]
+# Sensible, not noisy: pyflakes(F), pycodestyle(E/W), isort(I), bugbear(B),
+# comprehensions(C4), pyupgrade(UP), naming(N).
+select = ["F", "E", "W", "I", "B", "C4", "UP", "N"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
