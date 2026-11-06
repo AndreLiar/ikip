@@ -9,6 +9,22 @@ version = "0.1.0"
 description = "Industrial Knowledge Intelligence Platform (IKIP) — monorepo root"
 requires-python = ">=3.12"
 
+# uv workspace: Python packages/services are members. Shared dev deps live here.
+# Members are added as their code lands (packages/ai-clients, services/*, apps/api).
+[tool.uv.workspace]
+members = ["packages/common"]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.7", "ikip-common"]
+# Connectivity doctor clients (optional): uv run --group doctor python -m ikip_common.doctor
+doctor = ["boto3>=1.35", "psycopg[binary]>=3.2", "redis>=5.0", "httpx>=0.27"]
+
+[tool.uv.sources]
+ikip-common = { workspace = true }
+
+[tool.uv]
+package = false
+
 [tool.ruff]
 # One tool for lint + format (replaces black + isort + flake8).
 target-version = "py312"

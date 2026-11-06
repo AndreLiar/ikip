@@ -16,30 +16,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
 
-      # Baseline for Story 1.4 (CI Pipeline & Baseline Testing). Grows into pytest
-      # (Python) and lint+test (Next.js web) as Epic 1 lands real code. For now it
-      # enforces Python lint+format (ruff) and guards against committed secrets.
-      - name: Install ruff
-        run: pip install --quiet ruff
+      # uv provisions the interpreter from `requires-python` (>=3.12) during sync.
+
+      # Baseline for Story 1.4 (CI Pipeline & Baseline Testing). Grows into
+      # lint+test (Next.js web) as Epic 1 lands TS code. Enforces Python
+      # lint+format (ruff) + hermetic unit tests (pytest), and guards secrets.
+      - name: Install workspace (hermetic; no live services)
+        run: uv sync
 
       - name: Ruff lint
-        run: ruff check .
+        run: uv run ruff check .
 
       - name: Ruff format check
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
-      - name: Compile Python sources
-        run: python -m compileall -q .
+      - name: Unit tests (pytest)
+        run: uv run pytest packages -q
 
       - name: Guard against committed secrets
         run: |
-          if grep -rInE '(AZURE_OPENAI_API_KEY|AZURE_OPENAI_KEY|-----BEGIN [A-Z ]*PRIVATE KEY-----)' \
-               --include='*.py' --include='*.ts' --include='*.tsx' --include='*.env' . ; then
+          # Match real secret ASSIGNMENTS (KEY=value with a value), not identifiers
+          # used as config aliases, and PEM private-key blocks.
+          if grep -rInE \
+               '((AZURE_OPENAI_API_KEY|R2_SECRET_ACCESS_KEY|LANGFUSE_SECRET_KEY)[[:space:]]*=[[:space:]]*[A-Za-z0-9/+_-]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)' \
+               --include='*.py' --include='*.ts' --include='*.tsx' . ; then
             echo "::error::Potential secret committed"; exit 1
           fi
           echo "No obvious secrets found."
