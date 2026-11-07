@@ -4,6 +4,13 @@ Engine adapters (PyMuPDF/Tesseract/Docling) live in `engines` and are imported
 lazily; the core models/pipeline/quality here are engine-free and CI-testable.
 """
 
+from ikip_docproc.cleaning import clean_text, iter_blocks, normalize_unicode
+from ikip_docproc.metadata import (
+    DocumentMetadata,
+    DocumentType,
+    build_metadata,
+    classify_document,
+)
 from ikip_docproc.models import (
     DocumentExtraction,
     ExtractionMethod,
@@ -16,6 +23,7 @@ from ikip_docproc.pipeline import (
     extract_document,
 )
 from ikip_docproc.quality import is_low_quality, needs_ocr, score_page
+from ikip_docproc.validation import ValidationReport, validate_pages
 
 __all__ = [
     "DocumentExtraction",
@@ -28,4 +36,13 @@ __all__ = [
     "is_low_quality",
     "needs_ocr",
     "score_page",
+    "clean_text",
+    "normalize_unicode",
+    "iter_blocks",
+    "DocumentMetadata",
+    "DocumentType",
+    "build_metadata",
+    "classify_document",
+    "ValidationReport",
+    "validate_pages",
 ]

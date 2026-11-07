@@ -7,6 +7,9 @@ requires-python = ">=3.12"
 # stays fast/testable in CI. The heavy extraction engines are an optional extra.
 dependencies = [
   "ikip-common",
+  # Validation (Story 2.4): Pydantic (metadata schema) + Pandera (tabular quality).
+  # Light vs the extraction engines, so cleaning/validation stay in the fast CI job.
+  "pandera[pandas]>=0.20",
 ]
 
 [project.optional-dependencies]
