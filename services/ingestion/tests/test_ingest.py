@@ -35,6 +35,7 @@ class _Job:
     id: uuid.UUID
     source: str
     raw_object_key: str | None
+    content_type: str | None = None
 
 
 class FakeJobs:
@@ -43,8 +44,12 @@ class FakeJobs:
     def __init__(self) -> None:
         self.created: list[_Job] = []
 
-    def create(self, source: str, *, raw_object_key: str | None = None) -> _Job:
-        job = _Job(id=uuid.uuid4(), source=source, raw_object_key=raw_object_key)
+    def create(
+        self, source: str, *, raw_object_key: str | None = None, content_type: str | None = None
+    ) -> _Job:
+        job = _Job(
+            id=uuid.uuid4(), source=source, raw_object_key=raw_object_key, content_type=content_type
+        )
         self.created.append(job)
         return job
 
@@ -75,6 +80,8 @@ def test_ingest_stores_raw_and_creates_jobs() -> None:
     assert len(jobs.created) == 2
     # raw tier + tenant in the key
     assert all(k.startswith(f"raw/{_TENANT}/") for k in storage.objects)
+    # content_type captured on the job (persisted so curation needn't sniff later)
+    assert {j.content_type for j in jobs.created} == {"application/pdf", "text/csv"}
 
 
 def test_change_detection_skips_unchanged() -> None:

@@ -84,7 +84,7 @@ def ingest_documents(
             continue
         key = _raw_key(tenant_id, doc.source_uri, checksum)
         storage.put(key, doc.content, content_type=doc.content_type)
-        job = jobs.create(source=doc.source_uri, raw_object_key=key)
+        job = jobs.create(source=doc.source_uri, raw_object_key=key, content_type=doc.content_type)
         seen.mark(doc.source_uri, checksum)
         result.ingested += 1
         result.job_ids.append(str(job.id))

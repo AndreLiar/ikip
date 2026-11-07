@@ -17,7 +17,16 @@ from ikip_docproc.cleaning import clean_text
 from ikip_docproc.metadata import DocumentMetadata, build_metadata
 
 _TAG = re.compile(r"<[^>]+>")
-_SCRIPT_STYLE = re.compile(r"<(script|style)[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+# Boilerplate regions to drop before extracting text: scripts/styles plus nav/header/
+# footer/aside/form — the menus, cookie banners and version pickers that otherwise
+# pollute the curated text (and retrieval). Removed whole, tag + contents.
+_BOILERPLATE = re.compile(
+    r"<(script|style|nav|header|footer|aside|form)\b[^>]*>.*?</\1>",
+    re.IGNORECASE | re.DOTALL,
+)
+# Prefer the main content region when the page marks one (<main>/<article>). Picks
+# the largest such block so a page with several <article>s keeps the biggest.
+_MAIN_REGION = re.compile(r"<(main|article)\b[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL)
 # Sniff HTML by content, since the content-type isn't always threaded through
 # (ingestion jobs don't persist it). A connector that fetches an HTML page yields
 # bytes starting with a doctype/<html>; strip tags even when content_type is None.
@@ -38,16 +47,25 @@ class CuratedDocument:
     page_count: int
 
 
+def _strip_html(text: str) -> str:
+    """Extract readable text from HTML: drop boilerplate regions, prefer the main
+    content block if the page marks one, then strip remaining tags + unescape.
+    Pure heuristic (no dep); `trafilatura`-grade extraction is a future adapter."""
+    body = _BOILERPLATE.sub(" ", text)
+    regions = _MAIN_REGION.findall(body)
+    if regions:
+        # findall returns (tag, inner); keep the largest inner region.
+        body = max((inner for _tag, inner in regions), key=len)
+    body = _TAG.sub(" ", body)
+    return html.unescape(body)
+
+
 def _decode_text(raw: bytes, content_type: str | None) -> str:
     text = raw.decode("utf-8", errors="replace")
     is_html = (content_type is not None and "html" in content_type.lower()) or bool(
         _HTML_SNIFF.search(text[:4096])
     )
-    if is_html:
-        text = _SCRIPT_STYLE.sub(" ", text)
-        text = _TAG.sub(" ", text)
-        text = html.unescape(text)
-    return text
+    return _strip_html(text) if is_html else text
 
 
 def _title_from(source: str) -> str:

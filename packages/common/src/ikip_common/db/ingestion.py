@@ -29,8 +29,14 @@ class IllegalStateTransitionError(Exception):
 class IngestionJobRepository(TenantScopedRepository[IngestionJob]):
     model = IngestionJob
 
-    def create(self, source: str, *, raw_object_key: str | None = None) -> IngestionJob:
-        job = IngestionJob(source=source, raw_object_key=raw_object_key)
+    def create(
+        self,
+        source: str,
+        *,
+        raw_object_key: str | None = None,
+        content_type: str | None = None,
+    ) -> IngestionJob:
+        job = IngestionJob(source=source, raw_object_key=raw_object_key, content_type=content_type)
         return self.add(job)
 
     def transition(

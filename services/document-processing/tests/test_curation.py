@@ -26,6 +26,22 @@ def test_curate_sniffs_html_without_content_type() -> None:
     assert "<" not in doc.text and "A Pod runs containers." in doc.text
 
 
+def test_curate_drops_boilerplate_and_keeps_main() -> None:
+    raw = (
+        b"<!doctype html><html><body>"
+        b"<nav>Home Docs Blog Training Versions v1.37 v1.36 English Chinese</nav>"
+        b"<header>Cookie banner - hide this notice</header>"
+        b"<main><h1>Pods</h1><p>A Pod is the smallest deployable unit.</p></main>"
+        b"<footer>Copyright The Authors</footer>"
+        b"</body></html>"
+    )
+    doc = curate_document(raw, source="pods.html", content_type="text/html")
+    assert "A Pod is the smallest deployable unit." in doc.text
+    # nav/header/footer boilerplate removed (menus, cookie banner, version picker)
+    assert "v1.37" not in doc.text and "Cookie banner" not in doc.text
+    assert "Copyright" not in doc.text and "Home Docs Blog" not in doc.text
+
+
 def test_curate_no_revision_leaves_none() -> None:
     doc = curate_document(b"Some manual text without a revision marker.", source="m.txt")
     assert doc.metadata.revision is None  # caller applies a deterministic fallback
