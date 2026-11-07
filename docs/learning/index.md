@@ -10,6 +10,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-003](./missions/MISSION-003/mission.md) | FastAPI skeleton & health endpoint | Epic 1 / Story 1.3 |
 | [MISSION-004](./missions/MISSION-004/mission.md) | Multi-tenant data foundation (models, migrations, repo) | Epic 1 / Story 1.5 |
 | [MISSION-005](./missions/MISSION-005/mission.md) | Authentication & RBAC (JWT, Principal, role hierarchy) | Epic 1 / Story 1.6 |
+| [MISSION-006](./missions/MISSION-006/mission.md) | Object storage port (R2) & ingestion-job model | Epic 2 / Story 2.1 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -19,3 +20,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [health-checks](./concepts/health-checks.md) | liveness vs readiness, dependency probes, 503-on-degraded, mockability |
 | [multi-tenancy](./concepts/multi-tenancy.md) | isolation models, `tenant_id` + repository scoping, RLS backstop, proving isolation |
 | [auth-rbac](./concepts/auth-rbac.md) | authn vs authz, JWT, Principal, role hierarchy, dev-token vs Entra ID |
+| [object-storage](./concepts/object-storage.md) | blobs vs DB, S3 abstraction, ObjectStorage port, artifact tiers, presigned URLs |

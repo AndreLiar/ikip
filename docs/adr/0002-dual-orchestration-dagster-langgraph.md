@@ -39,6 +39,10 @@ They are **complementary, not interchangeable**. Both read/write the same Postgr
 - **Dagster only (replace LangGraph):** Dagster is not designed for stateful, conditional, request-time AI reasoning with human-in-the-loop and abstention. Rejected for the technician-facing path.
 - **A single general-purpose workflow engine (e.g., Temporal) for both:** more generic power but neither the data-asset ergonomics of Dagster nor the AI-graph ergonomics of LangGraph; higher build cost. Rejected at MVP.
 
+## Dagster hosting (2026-11-07)
+- **Dev:** Dagster OSS runs in a **Docker image** (webserver + daemon). Free; the one containerized dev component (the managed data backends — Neon/R2/Redis/Langfuse — are not). Note: `dagster dev` as a plain process is also possible, but we standardize on a Docker image for dev parity.
+- **Prod:** hosting is **deferred / open** — candidates: self-host on Azure Container Apps (daemon ~always-on), a managed alternative (e.g. Prefect Cloud free tier), or lighter orchestration (GitHub Actions + the existing `JobQueue`). Decided when Epic 2 orchestration (Story 2.2) lands and the prod cost/benefit is concrete. The always-on daemon is the main prod cost to weigh.
+
 ## Revisit When
 - The system is small enough that one orchestrator's overhead outweighs the benefit (collapse to LangGraph-only), **or**
 - Operational burden of running Dagster on Azure is disproportionate to pipeline complexity, **or**
