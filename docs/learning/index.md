@@ -17,6 +17,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-010](./missions/MISSION-010/mission.md) | Deduplication & document versioning | Epic 2 / Story 2.5 |
 | [MISSION-011](./missions/MISSION-011/mission.md) | Lineage, quality reporting & reprocessing | Epic 2 / Story 2.6 |
 | [MISSION-012](./missions/MISSION-012/mission.md) | Structure-aware chunking | Epic 3 / Story 3.1 |
+| [MISSION-013](./missions/MISSION-013/mission.md) | Embeddings generation & version management (+ Azure OpenAI via Terraform) | Epic 3 / Story 3.2 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -34,3 +35,5 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [lineage-reprocessing](./concepts/lineage-reprocessing.md) | asset lineage, quality report, retry/dead-letter, asset-aware reprocessing |
 | [why-rag](./concepts/why-rag.md) | why the context window isn't enough; cost/latency/quality/security/citations → RAG |
 | [chunking](./concepts/chunking.md) | chunking strategies, structure-aware + overlap, tokens, citation chain · 🇫🇷 [strategies](./concepts/chunking-strategies.fr.md) |
+| [embeddings](./concepts/embeddings.md) | vectors, dimensions, Matryoshka reduction, model_version (additive re-embed), cost, port+fake |
+| [rag-orchestration](./concepts/rag-orchestration.md) | Dagster (build-time) vs LangGraph (request-time) vs direct SQL/SDK; why no LangChain on the read path |

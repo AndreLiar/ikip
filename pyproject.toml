@@ -22,6 +22,11 @@ doctor = ["boto3>=1.35", "psycopg[binary]>=3.2", "redis>=5.0", "httpx>=0.27"]
 dagster = ["dagster>=1.9,<1.12", "dagster-webserver>=1.9,<1.12"]
 # Extraction engines (heavy; opt-in): uv run --group extraction pytest services/document-processing/tests
 extraction = ["pymupdf>=1.24", "pytesseract>=0.3.13", "pillow>=10.4"]
+# Embedding + retrieval bricks (opt-in; lazy-imported like boto3). We reuse
+# LangChain components BEHIND our ports (ADR 0021): langchain-openai brings
+# AzureOpenAIEmbeddings (+ langchain-core + the openai SDK). Fake-client tests need
+# none of this; the live Azure test needs this + AZURE_OPENAI_*.
+embeddings = ["langchain-openai>=0.2", "langchain-core>=0.3"]
 
 [tool.uv.sources]
 ikip-common = { workspace = true }

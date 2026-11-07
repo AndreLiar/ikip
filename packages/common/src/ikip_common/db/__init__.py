@@ -6,13 +6,21 @@ from ikip_common.db.documents import (
     DuplicateDocumentError,
     IngestOutcome,
 )
+from ikip_common.db.embeddings import (
+    EmbeddingRepository,
+    EmbedReport,
+    embed_and_store,
+    vectors_for_chunk,
+)
 from ikip_common.db.ingestion import IllegalStateTransitionError, IngestionJobRepository
 from ikip_common.db.models import (
+    EMBEDDING_DIM,
     AccountStatus,
     AppUser,
     Chunk,
     Document,
     DocumentVersion,
+    Embedding,
     IngestionJob,
     IngestionState,
     Section,
@@ -44,6 +52,12 @@ __all__ = [
     "DocumentVersion",
     "Section",
     "Chunk",
+    "Embedding",
+    "EMBEDDING_DIM",
+    "EmbeddingRepository",
+    "EmbedReport",
+    "embed_and_store",
+    "vectors_for_chunk",
     "DocumentRepository",
     "DuplicateDocumentError",
     "IngestOutcome",

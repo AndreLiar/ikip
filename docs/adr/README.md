@@ -59,3 +59,5 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0017](./0017-sqlalchemy-alembic.md)                             | SQLAlchemy (ORM/Core) + Alembic (migrations) for the data layer                       | Accepted           |
 | [0018](./0018-pydantic-records-pandera-frames.md)                | Validation: Pydantic for records, Pandera for frames                                  | Accepted           |
 | [0019](./0019-structure-aware-chunking.md)                       | Structure-aware chunking with bounded sub-splitting                                    | Accepted           |
+| [0020](./0020-embedding-model-text-embedding-3-small.md)         | Embedding model `text-embedding-3-small` @ 512 dims (Matryoshka reduction)             | Accepted           |
+| [0021](./0021-framework-boundary-langchain-langgraph-vs-data-plane.md) | Framework boundary: reuse LangChain/LangGraph components behind our business ports (domain keeps schema, citations, tenant isolation, versioning) | Accepted           |

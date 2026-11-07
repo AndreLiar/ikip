@@ -11,11 +11,17 @@ import enum
 import uuid
 from datetime import date, datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ikip_common.db.base import Base, TenantScoped, Timestamped, UUIDPrimaryKey
+
+# Embedding vector dimension (ADR 0020). text-embedding-3-small reduced to 512 via
+# Matryoshka to fit Neon storage (ADR 0015). Baked into the pgvector column type;
+# changing it is a migration + versioned re-embedding, not a hot toggle.
+EMBEDDING_DIM = 512
 
 
 class UserRole(enum.StrEnum):
@@ -145,3 +151,25 @@ class Chunk(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     page_end: Mapped[int | None] = mapped_column(default=None)
     token_count: Mapped[int] = mapped_column(default=0)
     chunk_metadata: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+
+class Embedding(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A chunk's vector for semantic retrieval (Story 3.2, ADR 0020/0021).
+
+    Vectors live in OUR relational schema (not a framework's store) so they keep the
+    chunk → section → document_version citation chain (FR16) and tenant scoping (NFR10).
+    `model_version` tags which model+dimension produced the vector; a unique
+    (chunk_id, model_version) lets re-embedding be idempotent and *additive* — a new
+    model version writes new rows without destroying prior vectors (FR14).
+    """
+
+    __tablename__ = "embedding"
+    __table_args__ = (
+        UniqueConstraint("chunk_id", "model_version", name="uq_embedding_chunk_model"),
+    )
+
+    chunk_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chunk.id", ondelete="CASCADE"), index=True
+    )
+    model_version: Mapped[str] = mapped_column(String(128), index=True)
+    vector: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))

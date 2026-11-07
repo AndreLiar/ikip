@@ -62,6 +62,22 @@ class Settings(BaseSettings):
     azure_openai_endpoint: str | None = Field(default=None, alias="AZURE_OPENAI_ENDPOINT")
     azure_openai_api_key: SecretStr | None = Field(default=None, alias="AZURE_OPENAI_API_KEY")
     azure_openai_api_version: str | None = Field(default=None, alias="AZURE_OPENAI_API_VERSION")
+    azure_openai_embedding_deployment: str | None = Field(
+        default=None, alias="AZURE_OPENAI_EMBEDDING_DEPLOYMENT"
+    )
+    # Embedding vector dimension. `text-embedding-3-small` is reduced to 512 via
+    # Matryoshka so vectors fit Neon's storage budget (ADR 0020 / ADR 0015). This
+    # is baked into the pgvector column type (`vector(512)`) — changing it is a
+    # migration + versioned re-embedding, not a hot toggle.
+    embedding_dimensions: int = Field(default=512, alias="EMBEDDING_DIMENSIONS")
+
+    @property
+    def embedding_model_version(self) -> str:
+        """Stable tag stored on every embedding row (e.g. 'text-embedding-3-small@512').
+        Vectors are only comparable within the same model_version; re-embedding with a
+        new one is additive, never destructive (FR14, ADR 0020)."""
+        model = self.azure_openai_embedding_deployment or "unknown"
+        return f"{model}@{self.embedding_dimensions}"
 
 
 @lru_cache

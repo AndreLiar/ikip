@@ -10,6 +10,10 @@ dependencies = [
   "alembic>=1.13",
   "psycopg[binary]>=3.2",
   "pyjwt>=2.9",
+  # pgvector's SQLAlchemy `Vector` type is referenced in db/models.py (Embedding),
+  # so it is a core dep (pure-Python, light). The `openai` SDK used by the Azure
+  # embedding adapter is a root `embeddings` dependency-group (lazy-imported).
+  "pgvector>=0.3",
 ]
 # The connectivity doctor's heavy clients (boto3, psycopg, redis, httpx) are
 # imported lazily and declared as a root `doctor` dependency-group, so the core
