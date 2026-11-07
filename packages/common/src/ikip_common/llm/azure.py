@@ -49,11 +49,22 @@ def _make_client(settings: Settings) -> Any:
 class AzureOpenAIEmbeddingClient:
     """EmbeddingClient backed by LangChain's AzureOpenAIEmbeddings, behind our port."""
 
-    def __init__(self, settings: Settings | None = None, client: Any = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        client: Any = None,
+        *,
+        batch_size: int = 16,
+        max_retries: int = 5,
+    ) -> None:
         self._settings = settings or get_settings()
         self._dimensions = self._settings.embedding_dimensions
         self._model_version = self._settings.embedding_model_version
         self._client = client or _make_client(self._settings)
+        # Batch + retry so a large document doesn't trip the Azure per-minute quota
+        # (S0 tiers are low); 429s are retried with exponential backoff.
+        self._batch_size = batch_size
+        self._max_retries = max_retries
 
     @property
     def model_version(self) -> str:
@@ -66,5 +77,30 @@ class AzureOpenAIEmbeddingClient:
     def embed(self, texts: Sequence[str]) -> list[Vector]:
         if not texts:
             return []
-        # LangChain's embed_documents preserves input order and returns list[list[float]].
-        return [list(v) for v in self._client.embed_documents(list(texts))]
+        items = list(texts)
+        vectors: list[Vector] = []
+        for i in range(0, len(items), self._batch_size):
+            batch = items[i : i + self._batch_size]
+            vectors.extend(list(v) for v in self._embed_batch(batch))
+        return vectors
+
+    def _embed_batch(self, batch: list[str]) -> list[Vector]:
+        import time
+
+        try:
+            from openai import RateLimitError
+
+            retryable: tuple[type[BaseException], ...] = (RateLimitError,)
+        except ImportError:
+            # openai not installed (e.g. an injected fake client in the fast CI job) —
+            # nothing to retry; an empty tuple in `except` never matches.
+            retryable = ()
+
+        for attempt in range(self._max_retries):
+            try:
+                return self._client.embed_documents(batch)
+            except retryable:
+                if attempt == self._max_retries - 1:
+                    raise
+                time.sleep(min(2**attempt, 30))  # exponential backoff, capped
+        return []  # unreachable
