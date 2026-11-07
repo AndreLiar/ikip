@@ -17,6 +17,12 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-010](./missions/MISSION-010/mission.md) | Deduplication & document versioning | Epic 2 / Story 2.5 |
 | [MISSION-011](./missions/MISSION-011/mission.md) | Lineage, quality reporting & reprocessing | Epic 2 / Story 2.6 |
 | [MISSION-012](./missions/MISSION-012/mission.md) | Structure-aware chunking | Epic 3 / Story 3.1 |
+| [MISSION-013](./missions/MISSION-013/mission.md) | Embeddings generation & version management (+ Azure OpenAI via Terraform) | Epic 3 / Story 3.2 |
+| [MISSION-014](./missions/MISSION-014/mission.md) | Lexical & vector search (tsvector/GIN + pgvector/HNSW; LangChain BaseRetriever) | Epic 3 / Story 3.3 |
+| [MISSION-015](./missions/MISSION-015/mission.md) | Hybrid retrieval, reranking & filters (RRF, Reranker port, version-aware filters, abstention) | Epic 3 / Story 3.4 |
+| [MISSION-016](./missions/MISSION-016/mission.md) | LangGraph grounded-answer service (gpt-5.4-mini, server-resolved citations, grounding validation) | Epic 3 / Story 3.5 |
+| [MISSION-017](./missions/MISSION-017/mission.md) | Retrieval & answer quality baseline (deterministic metrics, gold set, regression reports) | Epic 3 / Story 3.6 |
+| [MISSION-018](./missions/MISSION-018/mission.md) | Caching (Cache port, tenant/version-aware keys, invalidation, exact-match answer cache) | Epic 3 / Story 3.7 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -34,3 +40,10 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [lineage-reprocessing](./concepts/lineage-reprocessing.md) | asset lineage, quality report, retry/dead-letter, asset-aware reprocessing |
 | [why-rag](./concepts/why-rag.md) | why the context window isn't enough; cost/latency/quality/security/citations → RAG |
 | [chunking](./concepts/chunking.md) | chunking strategies, structure-aware + overlap, tokens, citation chain · 🇫🇷 [strategies](./concepts/chunking-strategies.fr.md) |
+| [embeddings](./concepts/embeddings.md) | vectors, dimensions, Matryoshka reduction, model_version (additive re-embed), cost, port+fake |
+| [rag-orchestration](./concepts/rag-orchestration.md) | Dagster (build-time) vs LangGraph (request-time); how LangChain is used behind our ports |
+| [retrieval](./concepts/retrieval.md) | lexical (tsvector/GIN, simple) vs vector (pgvector/HNSW, cosine); citations; IkipRetriever BaseRetriever |
+| [hybrid-retrieval](./concepts/hybrid-retrieval.md) | RRF fusion, Reranker port (identity→cross-encoder), version-aware filters, abstention |
+| [grounded-answers](./concepts/grounded-answers.md) | LangGraph flow, opaque handles + server-resolved citations, grounding validation, reasoning vs temperature |
+| [rag-evaluation](./concepts/rag-evaluation.md) | deterministic metrics (Recall@K, citation resolution/coverage), resolution≠entailment, 3-artifact regression reports |
+| [caching](./concepts/caching.md) | Cache port, key-as-correctness (tenant/version/epoch), answer cache, abstention-preserving hits, semantic deferred |

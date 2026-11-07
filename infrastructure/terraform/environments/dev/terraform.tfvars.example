@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Only subscription_id is required.
+# Get it with: az account show --query id -o tsv
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Optional overrides (defaults in variables.tf are fine for dev):
+# location                  = "francecentral"   # fallback if model unavailable: "swedencentral"
+# embedding_capacity        = 30                 # thousands of tokens/min

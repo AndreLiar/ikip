@@ -11,11 +11,32 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    Boolean,
+    Computed,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ikip_common.db.base import Base, TenantScoped, Timestamped, UUIDPrimaryKey
+
+# Embedding vector dimension (ADR 0020). text-embedding-3-small reduced to 512 via
+# Matryoshka to fit Neon storage (ADR 0015). Baked into the pgvector column type;
+# changing it is a migration + versioned re-embedding, not a hot toggle.
+EMBEDDING_DIM = 512
+
+# Postgres text-search config for the lexical arm (Story 3.3). 'simple' = no stemming,
+# language-neutral — best for exact codes/refs and mixed FR/EN; the vector arm covers
+# meaning/synonyms. Per-language stemming is a post-MVP enhancement.
+FTS_CONFIG = "simple"
 
 
 class UserRole(enum.StrEnum):
@@ -136,12 +157,76 @@ class Chunk(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     to document/version/page/section for citations (FR16)."""
 
     __tablename__ = "chunk"
+    # GIN index over the generated tsvector for BM25/full-text search (Story 3.3 AC1).
+    __table_args__ = (Index("ix_chunk_content_tsv", "content_tsv", postgresql_using="gin"),)
 
     section_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("section.id", ondelete="CASCADE"), index=True
     )
     content: Mapped[str] = mapped_column()
+    # Stored, DB-generated full-text vector (language-neutral 'simple' config, FTS_CONFIG).
+    # Kept in sync by Postgres from `content`; never set from Python.
+    content_tsv: Mapped[str | None] = mapped_column(
+        TSVECTOR, Computed(f"to_tsvector('{FTS_CONFIG}', content)", persisted=True)
+    )
     page_start: Mapped[int | None] = mapped_column(default=None)
     page_end: Mapped[int | None] = mapped_column(default=None)
     token_count: Mapped[int] = mapped_column(default=0)
     chunk_metadata: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+
+class Embedding(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A chunk's vector for semantic retrieval (Story 3.2, ADR 0020/0021).
+
+    Vectors live in OUR relational schema (not a framework's store) so they keep the
+    chunk → section → document_version citation chain (FR16) and tenant scoping (NFR10).
+    `model_version` tags which model+dimension produced the vector; a unique
+    (chunk_id, model_version) lets re-embedding be idempotent and *additive* — a new
+    model version writes new rows without destroying prior vectors (FR14).
+    """
+
+    __tablename__ = "embedding"
+    __table_args__ = (
+        UniqueConstraint("chunk_id", "model_version", name="uq_embedding_chunk_model"),
+        # HNSW approximate-nearest-neighbour index for cosine similarity (Story 3.3 AC2).
+        Index(
+            "ix_embedding_vector_hnsw",
+            "vector",
+            postgresql_using="hnsw",
+            postgresql_ops={"vector": "vector_cosine_ops"},
+        ),
+    )
+
+    chunk_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chunk.id", ondelete="CASCADE"), index=True
+    )
+    model_version: Mapped[str] = mapped_column(String(128), index=True)
+    vector: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+
+
+class ExpectedBehavior(enum.StrEnum):
+    """Expected system behaviour for an evaluation case (Story 3.6)."""
+
+    answered = "answered"
+    abstained = "abstained"
+
+
+class EvaluationCase(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A gold-set case for RAG quality evaluation (Story 3.6, ADR 0016).
+
+    `case_key` is a stable id within a `gold_set_version`, so a regression can be
+    attributed to retrieval/generation vs a corpus change. `relevant_chunk_ids` is the
+    expected evidence (for Recall@K). Stored tenant-scoped; `expected_behavior` is a
+    plain String (not a DB enum) to keep migrations trap-free."""
+
+    __tablename__ = "evaluation_case"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "gold_set_version", "case_key", name="uq_eval_case_key"),
+    )
+
+    case_key: Mapped[str] = mapped_column(String(128), index=True)
+    gold_set_version: Mapped[str] = mapped_column(String(64), index=True)
+    question: Mapped[str] = mapped_column()
+    expected_behavior: Mapped[str] = mapped_column(String(16))  # ExpectedBehavior value
+    relevant_chunk_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    notes: Mapped[str | None] = mapped_column(String(1024), default=None)

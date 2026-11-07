@@ -42,3 +42,6 @@ htmlcov/
 !*.tfvars.example
 
 # Diagram render venv is already ignored locally; rendered PNG/SVG are committed on purpose
+
+# RAG evaluation run outputs (Story 3.6); baseline.json is committed per gold set if desired
+eval-results/

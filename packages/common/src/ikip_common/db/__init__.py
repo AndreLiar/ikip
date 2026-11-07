@@ -6,13 +6,23 @@ from ikip_common.db.documents import (
     DuplicateDocumentError,
     IngestOutcome,
 )
+from ikip_common.db.embeddings import (
+    EmbeddingRepository,
+    EmbedReport,
+    embed_and_store,
+    vectors_for_chunk,
+)
 from ikip_common.db.ingestion import IllegalStateTransitionError, IngestionJobRepository
 from ikip_common.db.models import (
+    EMBEDDING_DIM,
     AccountStatus,
     AppUser,
     Chunk,
     Document,
     DocumentVersion,
+    Embedding,
+    EvaluationCase,
+    ExpectedBehavior,
     IngestionJob,
     IngestionState,
     Section,
@@ -20,6 +30,12 @@ from ikip_common.db.models import (
     UserRole,
 )
 from ikip_common.db.repository import TenantScopedRepository
+from ikip_common.db.retrieval import (
+    RetrievalFilters,
+    SearchHit,
+    lexical_search,
+    vector_search,
+)
 from ikip_common.db.session import make_engine, make_session_factory
 from ikip_common.db.similarity import (
     hamming_distance,
@@ -44,6 +60,14 @@ __all__ = [
     "DocumentVersion",
     "Section",
     "Chunk",
+    "Embedding",
+    "EvaluationCase",
+    "ExpectedBehavior",
+    "EMBEDDING_DIM",
+    "EmbeddingRepository",
+    "EmbedReport",
+    "embed_and_store",
+    "vectors_for_chunk",
     "DocumentRepository",
     "DuplicateDocumentError",
     "IngestOutcome",
@@ -51,6 +75,10 @@ __all__ = [
     "hamming_distance",
     "is_near_duplicate",
     "TenantScopedRepository",
+    "SearchHit",
+    "RetrievalFilters",
+    "lexical_search",
+    "vector_search",
     "make_engine",
     "make_session_factory",
 ]

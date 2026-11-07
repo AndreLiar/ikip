@@ -1,0 +1,19 @@
+{
+  "gold_set_version": "v1",
+  "cases": [
+    {
+      "case_key": "fault-e42",
+      "question": "What does fault code E42 mean?",
+      "expected_behavior": "answered",
+      "relevant_chunk_ids": ["c1"],
+      "notes": "single-equipment fault lookup"
+    },
+    {
+      "case_key": "torque-unknown",
+      "question": "What is the torque spec for the gearbox housing bolts?",
+      "expected_behavior": "abstained",
+      "relevant_chunk_ids": [],
+      "notes": "evidence absent -> must abstain"
+    }
+  ]
+}
