@@ -28,6 +28,7 @@ from ikip_common.db.models import (
     UserRole,
 )
 from ikip_common.db.repository import TenantScopedRepository
+from ikip_common.db.retrieval import SearchHit, lexical_search, vector_search
 from ikip_common.db.session import make_engine, make_session_factory
 from ikip_common.db.similarity import (
     hamming_distance,
@@ -65,6 +66,9 @@ __all__ = [
     "hamming_distance",
     "is_near_duplicate",
     "TenantScopedRepository",
+    "SearchHit",
+    "lexical_search",
+    "vector_search",
     "make_engine",
     "make_session_factory",
 ]

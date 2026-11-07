@@ -12,8 +12,18 @@ import uuid
 from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import (
+    Boolean,
+    Computed,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ikip_common.db.base import Base, TenantScoped, Timestamped, UUIDPrimaryKey
@@ -22,6 +32,11 @@ from ikip_common.db.base import Base, TenantScoped, Timestamped, UUIDPrimaryKey
 # Matryoshka to fit Neon storage (ADR 0015). Baked into the pgvector column type;
 # changing it is a migration + versioned re-embedding, not a hot toggle.
 EMBEDDING_DIM = 512
+
+# Postgres text-search config for the lexical arm (Story 3.3). 'simple' = no stemming,
+# language-neutral — best for exact codes/refs and mixed FR/EN; the vector arm covers
+# meaning/synonyms. Per-language stemming is a post-MVP enhancement.
+FTS_CONFIG = "simple"
 
 
 class UserRole(enum.StrEnum):
@@ -142,11 +157,18 @@ class Chunk(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     to document/version/page/section for citations (FR16)."""
 
     __tablename__ = "chunk"
+    # GIN index over the generated tsvector for BM25/full-text search (Story 3.3 AC1).
+    __table_args__ = (Index("ix_chunk_content_tsv", "content_tsv", postgresql_using="gin"),)
 
     section_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("section.id", ondelete="CASCADE"), index=True
     )
     content: Mapped[str] = mapped_column()
+    # Stored, DB-generated full-text vector (language-neutral 'simple' config, FTS_CONFIG).
+    # Kept in sync by Postgres from `content`; never set from Python.
+    content_tsv: Mapped[str | None] = mapped_column(
+        TSVECTOR, Computed(f"to_tsvector('{FTS_CONFIG}', content)", persisted=True)
+    )
     page_start: Mapped[int | None] = mapped_column(default=None)
     page_end: Mapped[int | None] = mapped_column(default=None)
     token_count: Mapped[int] = mapped_column(default=0)
@@ -166,6 +188,13 @@ class Embedding(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     __tablename__ = "embedding"
     __table_args__ = (
         UniqueConstraint("chunk_id", "model_version", name="uq_embedding_chunk_model"),
+        # HNSW approximate-nearest-neighbour index for cosine similarity (Story 3.3 AC2).
+        Index(
+            "ix_embedding_vector_hnsw",
+            "vector",
+            postgresql_using="hnsw",
+            postgresql_ops={"vector": "vector_cosine_ops"},
+        ),
     )
 
     chunk_id: Mapped[uuid.UUID] = mapped_column(
