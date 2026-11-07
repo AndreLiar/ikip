@@ -8,9 +8,10 @@ pattern established here applies to all of them.
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+import uuid
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Enum, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -74,3 +75,37 @@ class IngestionJob(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     error_info: Mapped[dict | None] = mapped_column(JSONB, default=None)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class Document(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A logical document (Story 2.5). Has many versions; raw evidence preserved."""
+
+    __tablename__ = "document"
+
+    title: Mapped[str] = mapped_column(String(512))
+    source: Mapped[str | None] = mapped_column(String(1024), default=None)
+    type: Mapped[str | None] = mapped_column(String(64), default=None)
+    rights: Mapped[str | None] = mapped_column(String(256), default=None)  # license/provenance
+    # content_fingerprint = SimHash (or similar) for near-duplicate detection (Story 2.5).
+    content_fingerprint: Mapped[str | None] = mapped_column(String(64), default=None, index=True)
+
+
+class DocumentVersion(UUIDPrimaryKey, Timestamped, Base):
+    """A revision of a Document. New versions supersede prior ones without deleting
+    them (`is_current`), preserving original evidence (NFR15)."""
+
+    __tablename__ = "document_version"
+    __table_args__ = (
+        UniqueConstraint("document_id", "revision", name="uq_docver_document_revision"),
+    )
+
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document.id", ondelete="CASCADE"), index=True
+    )
+    revision: Mapped[str] = mapped_column(String(64))
+    checksum: Mapped[str] = mapped_column(String(128), index=True)  # exact-dup detection
+    publication_date: Mapped[date | None] = mapped_column(Date, default=None)
+    effective_date: Mapped[date | None] = mapped_column(Date, default=None)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    # Key of the curated artifact for this version in object storage.
+    curated_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
