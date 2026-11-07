@@ -18,6 +18,9 @@ Use **Neon serverless Postgres as the database for all environments** (dev, stag
 - Connection via standard Postgres driver (pooled connection string) from `DATABASE_URL`; no `VectorStore` adapter change (it is still Postgres+pgvector — [ADR 0001](./0001-vector-store-pgvector.md)).
 - Use **Neon branching** to give feature branches / PRs isolated databases where useful.
 
+## Update (2026-11-07): branch model for environments + tests
+Neon branches model environments (like git for the DB): **`production`** (Neon's default branch) = prod; a persistent **`dev`** branch = daily development (`.env` → dev); **`test/*`** ephemeral branches (auto-delete) are created/deleted per CI run for destructive migration/isolation tests, so the shared `dev` DB is never polluted. Caveat: free-tier branch/compute limits apply, and a real isolated prod may later want a **separate Neon project** rather than a branch. CI-level ephemeral-branch testing needs a **Neon API token** in GitHub secrets.
+
 ## Consequences
 **Positive**
 - **Removes the always-on Postgres cost** in prod/staging: Neon scales compute to zero → ~$0 when idle (free tier covers early usage). This is the biggest standing-cost reduction in the stack.
