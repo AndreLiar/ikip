@@ -21,6 +21,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-014](./missions/MISSION-014/mission.md) | Lexical & vector search (tsvector/GIN + pgvector/HNSW; LangChain BaseRetriever) | Epic 3 / Story 3.3 |
 | [MISSION-015](./missions/MISSION-015/mission.md) | Hybrid retrieval, reranking & filters (RRF, Reranker port, version-aware filters, abstention) | Epic 3 / Story 3.4 |
 | [MISSION-016](./missions/MISSION-016/mission.md) | LangGraph grounded-answer service (gpt-5.4-mini, server-resolved citations, grounding validation) | Epic 3 / Story 3.5 |
+| [MISSION-017](./missions/MISSION-017/mission.md) | Retrieval & answer quality baseline (deterministic metrics, gold set, regression reports) | Epic 3 / Story 3.6 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -43,3 +44,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [retrieval](./concepts/retrieval.md) | lexical (tsvector/GIN, simple) vs vector (pgvector/HNSW, cosine); citations; IkipRetriever BaseRetriever |
 | [hybrid-retrieval](./concepts/hybrid-retrieval.md) | RRF fusion, Reranker port (identity→cross-encoder), version-aware filters, abstention |
 | [grounded-answers](./concepts/grounded-answers.md) | LangGraph flow, opaque handles + server-resolved citations, grounding validation, reasoning vs temperature |
+| [rag-evaluation](./concepts/rag-evaluation.md) | deterministic metrics (Recall@K, citation resolution/coverage), resolution≠entailment, 3-artifact regression reports |

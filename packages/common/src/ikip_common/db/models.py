@@ -202,3 +202,31 @@ class Embedding(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     )
     model_version: Mapped[str] = mapped_column(String(128), index=True)
     vector: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+
+
+class ExpectedBehavior(enum.StrEnum):
+    """Expected system behaviour for an evaluation case (Story 3.6)."""
+
+    answered = "answered"
+    abstained = "abstained"
+
+
+class EvaluationCase(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A gold-set case for RAG quality evaluation (Story 3.6, ADR 0016).
+
+    `case_key` is a stable id within a `gold_set_version`, so a regression can be
+    attributed to retrieval/generation vs a corpus change. `relevant_chunk_ids` is the
+    expected evidence (for Recall@K). Stored tenant-scoped; `expected_behavior` is a
+    plain String (not a DB enum) to keep migrations trap-free."""
+
+    __tablename__ = "evaluation_case"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "gold_set_version", "case_key", name="uq_eval_case_key"),
+    )
+
+    case_key: Mapped[str] = mapped_column(String(128), index=True)
+    gold_set_version: Mapped[str] = mapped_column(String(64), index=True)
+    question: Mapped[str] = mapped_column()
+    expected_behavior: Mapped[str] = mapped_column(String(16))  # ExpectedBehavior value
+    relevant_chunk_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    notes: Mapped[str | None] = mapped_column(String(1024), default=None)
