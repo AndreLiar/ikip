@@ -33,4 +33,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [dedup-versioning](./concepts/dedup-versioning.md) | exact vs near-dup, SimHash, supersede-not-delete, migration enum trap |
 | [lineage-reprocessing](./concepts/lineage-reprocessing.md) | asset lineage, quality report, retry/dead-letter, asset-aware reprocessing |
 | [why-rag](./concepts/why-rag.md) | why the context window isn't enough; cost/latency/quality/security/citations → RAG |
-| [chunking](./concepts/chunking.md) | chunking strategies, structure-aware + overlap, tokens, citation chain |
+| [chunking](./concepts/chunking.md) | chunking strategies, structure-aware + overlap, tokens, citation chain · 🇫🇷 [strategies](./concepts/chunking-strategies.fr.md) |
