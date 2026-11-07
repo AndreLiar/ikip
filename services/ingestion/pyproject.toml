@@ -1,0 +1,28 @@
+[project]
+name = "ikip-ingestion"
+version = "0.1.0"
+description = "IKIP ingestion service — source connectors + Dagster orchestration"
+requires-python = ">=3.12"
+# Core (connectors + ingest logic) is Dagster-free so it stays fast/testable in CI.
+dependencies = [
+  "ikip-common",
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Dagster is heavy and only needed to RUN the pipeline (webserver + daemon / schedules).
+# Installed in the Dagster Docker image, not in the fast `validate` CI job.
+dagster = [
+  "dagster>=1.9,<1.12",
+  "dagster-webserver>=1.9,<1.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ikip_ingestion"]
+
+[tool.uv.sources]
+ikip-common = { workspace = true }

@@ -82,6 +82,15 @@ Managed-services-first ([ADR 0012](./docs/adr/0012-local-first-dev-cloud-models-
 - Python — `ruff` (lint + format): `ruff check .` · `ruff format .`
 - TypeScript — `prettier` + `eslint`: `pnpm format` · `pnpm lint`
 
+**Ingestion pipeline (Dagster)** — the data pipeline (Epic 2) is orchestrated by Dagster. Dev runs it via a Docker image ([ADR 0002](./docs/adr/0002-dual-orchestration-dagster-langgraph.md)); prod hosting is deferred.
+```bash
+# UI at http://localhost:3000
+docker build -f services/ingestion/Dockerfile.dagster -t ikip-dagster .
+docker run --rm -p 3000:3000 --env-file .env ikip-dagster
+# or, without Docker: uv run --group dagster dagster dev -m ikip_ingestion.definitions
+```
+The connector/ingest logic is Dagster-free and tested in CI; only the Dagster wiring needs the image.
+
 ## Contribution & branching conventions
 
 - **`main` is protected** — no direct pushes; the baseline CI check (`validate`) must pass.
