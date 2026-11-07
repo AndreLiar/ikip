@@ -4,6 +4,7 @@ Engine adapters (PyMuPDF/Tesseract/Docling) live in `engines` and are imported
 lazily; the core models/pipeline/quality here are engine-free and CI-testable.
 """
 
+from ikip_docproc.chunking import ChunkSpec, chunk_document, estimate_tokens
 from ikip_docproc.cleaning import clean_text, iter_blocks, normalize_unicode
 from ikip_docproc.metadata import (
     DocumentMetadata,
@@ -39,6 +40,9 @@ __all__ = [
     "clean_text",
     "normalize_unicode",
     "iter_blocks",
+    "ChunkSpec",
+    "chunk_document",
+    "estimate_tokens",
     "DocumentMetadata",
     "DocumentType",
     "build_metadata",

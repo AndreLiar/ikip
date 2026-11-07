@@ -58,3 +58,4 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0016](./0016-rag-evaluation-custom-plus-ragas.md)               | RAG evaluation: custom deterministic harness + Ragas, compared                        | Accepted           |
 | [0017](./0017-sqlalchemy-alembic.md)                             | SQLAlchemy (ORM/Core) + Alembic (migrations) for the data layer                       | Accepted           |
 | [0018](./0018-pydantic-records-pandera-frames.md)                | Validation: Pydantic for records, Pandera for frames                                  | Accepted           |
+| [0019](./0019-structure-aware-chunking.md)                       | Structure-aware chunking with bounded sub-splitting                                    | Accepted           |

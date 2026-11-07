@@ -10,10 +10,12 @@ from ikip_common.db.ingestion import IllegalStateTransitionError, IngestionJobRe
 from ikip_common.db.models import (
     AccountStatus,
     AppUser,
+    Chunk,
     Document,
     DocumentVersion,
     IngestionJob,
     IngestionState,
+    Section,
     Tenant,
     UserRole,
 )
@@ -40,6 +42,8 @@ __all__ = [
     "IllegalStateTransitionError",
     "Document",
     "DocumentVersion",
+    "Section",
+    "Chunk",
     "DocumentRepository",
     "DuplicateDocumentError",
     "IngestOutcome",
