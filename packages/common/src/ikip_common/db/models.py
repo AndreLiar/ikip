@@ -109,3 +109,39 @@ class DocumentVersion(UUIDPrimaryKey, Timestamped, Base):
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     # Key of the curated artifact for this version in object storage.
     curated_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+
+
+class Section(UUIDPrimaryKey, Timestamped, Base):
+    """A structural section of a document version (Story 3.1). Hierarchy + page range
+    so chunks (and citations) can resolve back to a section/page (FR16)."""
+
+    __tablename__ = "section"
+
+    document_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_version.id", ondelete="CASCADE"), index=True
+    )
+    parent_section_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("section.id", ondelete="CASCADE"), default=None
+    )
+    heading: Mapped[str | None] = mapped_column(String(512), default=None)
+    hierarchy_path: Mapped[str | None] = mapped_column(String(128), default=None)  # e.g. '3.2.1'
+    page_start: Mapped[int | None] = mapped_column(default=None)
+    page_end: Mapped[int | None] = mapped_column(default=None)
+    ordinal: Mapped[int] = mapped_column(default=0)
+
+
+class Chunk(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A retrieval unit (Story 3.1). Tenant-scoped (denormalized) so retrieval
+    filters by tenant without a multi-join (NFR10). Keeps a resolvable back-reference
+    to document/version/page/section for citations (FR16)."""
+
+    __tablename__ = "chunk"
+
+    section_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("section.id", ondelete="CASCADE"), index=True
+    )
+    content: Mapped[str] = mapped_column()
+    page_start: Mapped[int | None] = mapped_column(default=None)
+    page_end: Mapped[int | None] = mapped_column(default=None)
+    token_count: Mapped[int] = mapped_column(default=0)
+    chunk_metadata: Mapped[dict] = mapped_column(JSONB, default=dict)
