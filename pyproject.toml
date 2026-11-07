@@ -12,16 +12,19 @@ requires-python = ">=3.12"
 # uv workspace: Python packages/services are members. Shared dev deps live here.
 # Members are added as their code lands (packages/ai-clients, services/*).
 [tool.uv.workspace]
-members = ["packages/common", "apps/api"]
+members = ["packages/common", "apps/api", "services/ingestion"]
 
 [dependency-groups]
-dev = ["pytest>=8.3", "ruff>=0.7", "ikip-common", "ikip-api"]
+dev = ["pytest>=8.3", "ruff>=0.7", "ikip-common", "ikip-api", "ikip-ingestion"]
 # Connectivity doctor clients (optional): uv run --group doctor python -m ikip_common.doctor
 doctor = ["boto3>=1.35", "psycopg[binary]>=3.2", "redis>=5.0", "httpx>=0.27"]
+# Dagster (heavy; opt-in): uv run --group dagster pytest services/ingestion/tests/test_definitions.py
+dagster = ["dagster>=1.9,<1.12", "dagster-webserver>=1.9,<1.12"]
 
 [tool.uv.sources]
 ikip-common = { workspace = true }
 ikip-api = { workspace = true }
+ikip-ingestion = { workspace = true }
 
 [tool.uv]
 package = false
@@ -45,5 +48,5 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["packages", "apps", "tests"]
+testpaths = ["packages", "apps", "services", "tests"]
 python_files = ["test_*.py", "*_test.py"]

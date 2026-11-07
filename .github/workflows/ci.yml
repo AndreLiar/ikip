@@ -34,7 +34,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Unit tests (pytest)
-        run: uv run pytest apps packages -q
+        run: uv run pytest apps packages services -q
 
       - name: Guard against committed secrets
         run: |

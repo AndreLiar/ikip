@@ -1,0 +1,31 @@
+# Dagster dev image (Story 2.2, ADR 0002: dev = Docker image).
+# Runs the webserver + daemon with the ingestion definitions. Secrets come from
+# the environment (.env passed at `docker run`), never baked into the image.
+#
+#   docker build -f services/ingestion/Dockerfile.dagster -t ikip-dagster .
+#   docker run --rm -p 3000:3000 --env-file .env ikip-dagster
+#
+# Then open http://localhost:3000 for the Dagster UI.
+FROM python:3.12-slim
+
+# uv for fast, reproducible installs.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+WORKDIR /app
+
+# Install the ingestion package with its Dagster extra. Copy the two local
+# packages it needs (common + ingestion); install from source.
+COPY packages/common /app/packages/common
+COPY services/ingestion /app/services/ingestion
+
+RUN uv pip install --system \
+    /app/packages/common \
+    "/app/services/ingestion[dagster]"
+
+ENV DAGSTER_HOME=/app/.dagster
+RUN mkdir -p "$DAGSTER_HOME"
+
+EXPOSE 3000
+
+# `dagster dev` runs the webserver + daemon together (fine for dev).
+CMD ["dagster", "dev", "-m", "ikip_ingestion.definitions", "-h", "0.0.0.0", "-p", "3000"]
