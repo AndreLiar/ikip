@@ -31,3 +31,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [data-validation](./concepts/data-validation.md) | cleaning, Pydantic-vs-Pandera, report-not-raise, regex negative cases |
 | [dedup-versioning](./concepts/dedup-versioning.md) | exact vs near-dup, SimHash, supersede-not-delete, migration enum trap |
 | [lineage-reprocessing](./concepts/lineage-reprocessing.md) | asset lineage, quality report, retry/dead-letter, asset-aware reprocessing |
+| [why-rag](./concepts/why-rag.md) | why the context window isn't enough; cost/latency/quality/security/citations → RAG |
