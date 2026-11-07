@@ -111,11 +111,60 @@ def document_versions(context) -> dg.MaterializeResult:  # noqa: ANN001
     return dg.MaterializeResult(metadata={"stage": "versions", **report.as_dict()})
 
 
-_ALL_ASSETS = [ingested_sources, curated_documents, document_versions]
+@dg.asset(
+    deps=[document_versions],
+    description="Chunk + embed + index current document versions (Story 3.1/3.2) into pgvector.",
+)
+def embedded_chunks(context) -> dg.MaterializeResult:  # noqa: ANN001
+    # Closes the build-time loop (Epic 2 -> Epic 3): for each CURRENT version with
+    # curated text in R2, chunk -> persist Section/Chunk -> embed into pgvector, so
+    # retrieval (/retrieve, /ask) has data. index_version is idempotent/rerun-safe.
+    if not _DEFAULT_TENANT:
+        context.log.warning("IKIP_INGEST_TENANT_ID not set — nothing to index.")
+        return dg.MaterializeResult(metadata={"stage": "embedded", "versions": 0})
+
+    import uuid
+
+    from ikip_common.db import make_session_factory
+    from ikip_common.db.models import Document, DocumentVersion
+    from ikip_common.llm import build_embedding_client
+    from ikip_common.storage import R2ObjectStorage
+    from ikip_docproc.indexing import index_version
+    from sqlalchemy import select
+
+    tenant_id = uuid.UUID(_DEFAULT_TENANT)
+    storage = R2ObjectStorage()
+    client = build_embedding_client()
+    indexed_versions = total_chunks = 0
+
+    with make_session_factory()() as session:
+        current = session.execute(
+            select(DocumentVersion)
+            .join(Document, DocumentVersion.document_id == Document.id)
+            .where(
+                Document.tenant_id == tenant_id,
+                DocumentVersion.is_current.is_(True),
+                DocumentVersion.curated_object_key.is_not(None),
+            )
+        ).scalars()
+        for dv in current:
+            curated_text = storage.get(dv.curated_object_key).decode("utf-8")
+            report = index_version(session, tenant_id, dv.id, curated_text, client)
+            indexed_versions += 1
+            total_chunks += report.chunks_created
+        session.commit()
+
+    context.log.info("indexed %d versions, %d new chunks", indexed_versions, total_chunks)
+    return dg.MaterializeResult(
+        metadata={"stage": "embedded", "versions": indexed_versions, "chunks": total_chunks}
+    )
+
+
+_ALL_ASSETS = [ingested_sources, curated_documents, document_versions, embedded_chunks]
 
 daily_ingest_schedule = dg.ScheduleDefinition(
     name="daily_ingest",
-    # Materialize the whole pipeline (raw -> curated -> versions) nightly.
+    # Materialize the whole pipeline (raw -> curated -> versions -> embeddings) nightly.
     target=dg.AssetSelection.assets(*_ALL_ASSETS),
     cron_schedule="0 2 * * *",  # 02:00 daily
 )
