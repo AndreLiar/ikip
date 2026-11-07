@@ -23,6 +23,17 @@ Rather than self-hosting, dev/MVP uses **Langfuse Cloud — Hobby tier** (free: 
 
 **Self-hosting remains the option** for data governance and scale; the choice is a config switch (same OTel instrumentation + SDK).
 
+## Update (2026-11-07): Grafana Cloud (free) for infra observability + k6
+The **infra** observability layer (metrics, logs, traces, dashboards, alerts) uses **Grafana Cloud — Free tier** ($0, all services with usage limits, **14-day** retention, community support), replacing the previously "optional local Prometheus/Grafana". It ingests our existing OpenTelemetry via **OTLP** → no code change, just an endpoint + token (`GRAFANA_OTLP_ENDPOINT`, `GRAFANA_OTLP_TOKEN` via the secrets provider). **Azure Monitor becomes optional/prod** (deferred). This continues the managed-free-tier trajectory (Neon/R2/Redis Cloud/Langfuse).
+
+**Clear division of layers (not redundant):**
+- **Langfuse** = the **LLM/RAG** layer (prompts, token cost, eval datasets, RAG traces).
+- **Grafana Cloud** = the **infra** layer (HTTP/DB latency, error rates, system metrics, logs, traces) + **dashboards & alerts** (Story 5.6) + **k6 performance tests** (NFR1 p95 retrieval < 1.5 s, NFR2 TTFT < 5 s — k6 was already the chosen perf tool).
+
+> ⚠️ **Caveats:** 14-day retention is fine for **operational** dashboards because the durable audit trail (`query_trace`, `audit_event`) lives in **Postgres/Neon**, not Grafana. Free-tier **usage limits** (metric series, log/trace volume) are ample at MVP scale — verify current limits. Same data-governance note as Langfuse applies to anything sensitive in logs/traces (scrub PII — Presidio; Epic 6).
+
+**Timing:** this is a decision capture. The OTel→Grafana OTLP wiring and k6 setup are implemented in **Epic 5** (observability), not now. Everything stays behind the `Telemetry` port, so Grafana↔Azure Monitor is a config swap.
+
 ## Consequences
 **Positive**
 - One instrumentation (OTel), two fit-for-purpose backends; no lock-in.

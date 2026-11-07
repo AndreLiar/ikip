@@ -23,7 +23,7 @@ _Sharded from `../architecture.md`. Part of the [architecture index](./index.md)
 | LLM + embeddings    | Azure OpenAI via `LLMClient` adapter                       | Pluggable provider                                  |
 | Tracing / LLMOps    | OpenTelemetry + **Langfuse** (Cloud Hobby free for dev/MVP; self-host option); pytest | OTel instruments; Langfuse = LLM-native traces/prompts/eval/cost ([ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md)) |
 | Instrumentation     | OpenTelemetry SDK (**in-app library, not a service**)        | emits traces/metrics; exports directly to backends  |
-| Infra metrics/dashboards | Azure Monitor / App Insights; **Prometheus + Grafana optional** (local, only if infra dashboards wanted) | `Telemetry` port; managed-dev needs no local observability container |
+| Infra observability | **Grafana Cloud** (free): metrics/logs/traces + dashboards/alerts + **k6**; Azure Monitor optional/prod | OTel → OTLP; `Telemetry` port ([ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md) 2026-11-07) |
 | PII detection       | **Presidio** (open-source, self-hosted)                      | PII detect/anonymize via `PiiScrubber` port (NFR16, Story 6.4); not Content Safety |
 | Auth                | Local dev accounts / OIDC → Microsoft Entra ID              | Tenant + role in token                              |
 | Secrets             | `.env` (local) → Azure Key Vault + managed identities     | `SecretsProvider` interface                       |
@@ -33,6 +33,7 @@ _Sharded from `../architecture.md`. Part of the [architecture index](./index.md)
 | IaC                 | Terraform                                                    | dev/staging/prod (NFR13)                            |
 | CI/CD               | GitHub Actions                                               | Quality + security + safety gates (NFR14)           |
 | Testing             | pytest, Playwright, k6 (perf)                                | Unit/integration/retrieval/security/perf            |
+| RAG evaluation      | pytest (deterministic) + **Ragas** (LLM-judged), compared    | Recall@K/citation + faithfulness/relevancy/context ([ADR 0016](../adr/0016-rag-evaluation-custom-plus-ragas.md)) |
 
 > **Deliberately excluded at MVP (add only when justified):** Kubernetes/AKS, Azure AI Search, dedicated managed Redis, provisioned-throughput LLM, always-on GPU, large Document Intelligence bills. See [ADR 0005](../adr/0005-managed-containers-not-kubernetes.md). _"Dedicated managed Redis" means a separate paid Azure Cache tier — not caching itself: the MVP caches on the existing local Redis + Postgres behind a `Cache` port (see caching note below)._
 

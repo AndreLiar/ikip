@@ -55,3 +55,4 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0013](./0013-llmops-observability-otel-langfuse.md)             | LLMOps observability: OpenTelemetry + Langfuse (self-hosted)                          | Accepted           |
 | [0014](./0014-cloudflare-r2-object-storage.md)                   | Cloudflare R2 for object storage (S3-compatible), replacing MinIO + Azure Blob        | Accepted           |
 | [0015](./0015-neon-serverless-postgres.md)                       | Neon serverless Postgres (+ pgvector) as the database for all environments            | Accepted           |
+| [0016](./0016-rag-evaluation-custom-plus-ragas.md)               | RAG evaluation: custom deterministic harness + Ragas, compared                        | Accepted           |

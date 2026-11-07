@@ -430,10 +430,11 @@ As an evaluator, I want dedicated gold datasets for key failure modes, so that e
 ### Story 5.2 Retrieval, Citation & Groundedness Evaluation Harness
 As an evaluator, I want automated quality metrics, so that improvements are measured, not demoed.
 **Acceptance Criteria:**
-1. Recall@K and ranking metrics computed on the retrieval datasets.
-2. Citation-correctness (resolution to correct document/location) measured.
-3. Groundedness/faithfulness measured against evidence.
-4. Results stored and comparable across runs (regression baseline).
+1. Custom deterministic metrics compute Recall@K and ranking on the retrieval datasets (no LLM; fast/reproducible).
+2. Citation-correctness (resolution to correct document/version/page) measured deterministically.
+3. Ragas computes LLM-judged metrics — faithfulness (groundedness), answer_relevancy, context_precision, context_recall — using Azure OpenAI as judge; scores pushed to Langfuse.
+4. A comparison report runs both on the same gold set and reports agreement/divergence, cost and run-to-run variance (to justify which set gates releases). See ADR 0016.
+5. Results stored and comparable across runs (regression baseline). Deterministic metrics gate every push; Ragas runs on a bounded sample in CI + full nightly/on-demand.
 
 ### Story 5.3 Safety-Abstention Evaluation
 As a safety owner, I want critical safety-abstention tests, so that the system refuses unsafe/unsupported guidance.
@@ -465,7 +466,7 @@ As an operator, I want dashboards and alerts for latency, cost, pipeline health 
 1. Dashboards show p95 latencies, error rates, pipeline health and token cost.
 2. Evaluation dashboard shows Recall@K, citation correctness, groundedness and regressions.
 3. Alerts fire on defined thresholds (latency, errors, cost, quality regressions).
-4. Observability backends via the `Telemetry` port: Langfuse (LLM/RAG traces + eval), Azure Monitor/App Insights (infra), Prometheus/Grafana optional (local infra dashboards) — OTel is in-app instrumentation, nothing to host (ADR 0013).
+4. Observability backends via the `Telemetry` port: Langfuse (LLM/RAG traces + eval), Grafana Cloud (infra metrics/logs/traces + dashboards/alerts + k6; free tier), Azure Monitor optional/prod — OTel is in-app instrumentation exporting via OTLP, nothing to host (ADR 0013, 2026-11-07 update).
 
 ---
 
