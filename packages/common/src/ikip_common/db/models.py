@@ -92,6 +92,9 @@ class IngestionJob(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     )
     # Key of the stored raw artifact in object storage (tier-prefixed), if captured.
     raw_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+    # MIME type of the raw artifact, captured at fetch time so curation doesn't have to
+    # sniff it later (Story 2.2; the sniff remains a fallback).
+    content_type: Mapped[str | None] = mapped_column(String(128), default=None)
     attempts: Mapped[int] = mapped_column(default=0)
     error_info: Mapped[dict | None] = mapped_column(JSONB, default=None)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

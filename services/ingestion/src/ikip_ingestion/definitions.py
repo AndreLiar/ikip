@@ -137,6 +137,7 @@ def document_versions(context) -> dg.MaterializeResult:  # noqa: ANN001
                     repo=repo,
                     cache=cache,
                     storage=storage,
+                    content_type=job.content_type,
                 )
                 jobs.transition(job, IngestionState.succeeded)
                 report.succeeded += 1

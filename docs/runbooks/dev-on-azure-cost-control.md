@@ -46,3 +46,19 @@ Use Azure as the primary development environment (to learn IaC, identity, Key Va
 | Azure OpenAI (tokens) | $5–20 | per use |
 | Monitor/logs | $2–10 | retention-dependent |
 | **Total** | **~$30–70/mo** | lower with student credit + stopped DB |
+
+## Azure OpenAI rate limits (S0) — 429s during bulk ingestion
+The default **S0** pricing tier has a low per-minute call/token rate. Embedding a large
+document in one shot returns **429 (rate limit exceeded)**. Mitigations, in order:
+
+1. **In code (already):** the embedding adapter batches inputs (`EMBEDDING_BATCH_SIZE`,
+   default 16) and retries 429s with exponential backoff. Lower the batch size on very
+   constrained tiers; raise it once you have more quota.
+2. **Raise the deployment capacity (TPM):** bump `embedding_capacity` / `chat_capacity`
+   in `infrastructure/terraform/environments/dev` and `terraform apply` (DataZoneStandard
+   capacity = thousands of tokens/min). This is the real fix for sustained bulk ingestion.
+3. **Request a quota increase:** Azure portal → the OpenAI resource → *Quotas* →
+   request more RPM/TPM (https://aka.ms/oai/quotaincrease). Portal action, not IaC.
+
+For a one-off backfill, option 1 (small batch + backoff) is enough; for a large corpus,
+do option 2.

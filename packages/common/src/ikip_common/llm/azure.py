@@ -54,7 +54,7 @@ class AzureOpenAIEmbeddingClient:
         settings: Settings | None = None,
         client: Any = None,
         *,
-        batch_size: int = 16,
+        batch_size: int | None = None,
         max_retries: int = 5,
     ) -> None:
         self._settings = settings or get_settings()
@@ -62,8 +62,9 @@ class AzureOpenAIEmbeddingClient:
         self._model_version = self._settings.embedding_model_version
         self._client = client or _make_client(self._settings)
         # Batch + retry so a large document doesn't trip the Azure per-minute quota
-        # (S0 tiers are low); 429s are retried with exponential backoff.
-        self._batch_size = batch_size
+        # (S0 tiers are low); 429s are retried with exponential backoff. Batch size
+        # comes from Settings unless overridden (tests pass it explicitly).
+        self._batch_size = batch_size or self._settings.embedding_batch_size
         self._max_retries = max_retries
 
     @property

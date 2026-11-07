@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     # is baked into the pgvector column type (`vector(512)`) — changing it is a
     # migration + versioned re-embedding, not a hot toggle.
     embedding_dimensions: int = Field(default=512, alias="EMBEDDING_DIMENSIONS")
+    # Max texts per embeddings API call. Keep small on low Azure tiers (S0) to stay
+    # under the per-minute call/token rate limit; a bigger quota allows larger batches.
+    # 429s are retried with backoff regardless (ADR 0020 / dev-on-azure-cost-control).
+    embedding_batch_size: int = Field(default=16, alias="EMBEDDING_BATCH_SIZE")
 
     # Chat model for grounded-answer generation (Story 3.5, ADR 0022). gpt-5.4-mini
     # is reasoning-capable; `reasoning_effort` tunes depth vs cost/latency ("minimal"
