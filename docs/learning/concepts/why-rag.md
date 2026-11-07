@@ -2,6 +2,21 @@
 
 _Write-once concept note. Frames Epic 3 (Retrieval & RAG). Answers: "why not just put all the documents in the prompt?"_
 
+## First: what is a context window?
+The **context window** is the LLM's **working memory for one request** — the maximum amount of text it can read *at once* (your question + the documents you give it + the answer it's writing). Everything must fit inside it.
+
+- **Measured in tokens, not words.** A **token** ≈ a chunk of a word; rule of thumb **1 token ≈ ¾ of a word ≈ 4 characters**. A page of a manual ≈ ~500 tokens; a 100-page manual ≈ ~50,000 tokens.
+- **The desk analogy.** Picture the LLM working at a **fixed-size desk** (the context window, e.g. 128k or 1M tokens). You lay on it: the question + the documents + it writes the answer there. It all has to fit at the same time. Pile on too many documents → it **overflows** (error) or you must remove things.
+- **No memory between requests.** The desk is **wiped** after each call. The model only "knows" what is on the desk *right now* — it does not remember your previous question or documents.
+- **Context window ≠ the model's knowledge.** A model has two sources of information:
+  | Source | What it is |
+  |---|---|
+  | **Weights (training)** | what it learned during training — frozen, general, **no access to your private documents** |
+  | **Context window** | what *you* put in at request time — your manuals, your question |
+
+  Your industrial manuals are **not** in the weights (private, recent). The only way to make the model use them is to **put them in the context window** — which is exactly why "just put everything in" is tempting, and why it fails below.
+- **Typical sizes (for scale):** common models ~**128,000 tokens** (~250 pages); the largest ~**1,000,000 tokens** (~2,000 pages ≈ **~20 manuals**).
+
 ## The naive idea
 "LLMs have huge context windows now — why not stuff **all** the manuals into the prompt and ask the question?" If that worked, RAG wouldn't exist. It fails for seven reasons — the first four are general, the last three are specific to IKIP's value.
 
