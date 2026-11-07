@@ -6,6 +6,7 @@ lazily; the core models/pipeline/quality here are engine-free and CI-testable.
 
 from ikip_docproc.chunking import ChunkSpec, chunk_document, estimate_tokens
 from ikip_docproc.cleaning import clean_text, iter_blocks, normalize_unicode
+from ikip_docproc.indexing import IndexReport, index_version, plan_sections
 from ikip_docproc.metadata import (
     DocumentMetadata,
     DocumentType,
@@ -43,6 +44,9 @@ __all__ = [
     "ChunkSpec",
     "chunk_document",
     "estimate_tokens",
+    "index_version",
+    "plan_sections",
+    "IndexReport",
     "DocumentMetadata",
     "DocumentType",
     "build_metadata",

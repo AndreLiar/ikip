@@ -1286,6 +1286,7 @@ source = { editable = "services/ingestion" }
 dependencies = [
     { name = "httpx" },
     { name = "ikip-common" },
+    { name = "ikip-docproc" },
 ]
 
 [package.optional-dependencies]
@@ -1300,6 +1301,7 @@ requires-dist = [
     { name = "dagster-webserver", marker = "extra == 'dagster'", specifier = ">=1.9,<1.12" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "ikip-common", editable = "packages/common" },
+    { name = "ikip-docproc", editable = "services/document-processing" },
 ]
 provides-extras = ["dagster"]
 

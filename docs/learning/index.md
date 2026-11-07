@@ -24,6 +24,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-017](./missions/MISSION-017/mission.md) | Retrieval & answer quality baseline (deterministic metrics, gold set, regression reports) | Epic 3 / Story 3.6 |
 | [MISSION-018](./missions/MISSION-018/mission.md) | Caching (Cache port, tenant/version-aware keys, invalidation, exact-match answer cache) | Epic 3 / Story 3.7 |
 | [MISSION-019](./missions/MISSION-019/mission.md) | Wire Epic 3 hooks: cache invalidation at ingestion + hybrid-retrieval/ask endpoints | Epic 3 / integration |
+| [MISSION-020](./missions/MISSION-020/mission.md) | Build-time embedding pipeline (index_version + Dagster embedded_chunks asset) — closes Epic 2↔3 | Epic 2↔3 / build-time |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
