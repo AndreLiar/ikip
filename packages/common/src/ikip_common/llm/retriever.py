@@ -22,7 +22,13 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from sqlalchemy.orm import Session
 
-from ikip_common.db.retrieval import DEFAULT_LIMIT, SearchHit, lexical_search, vector_search
+from ikip_common.db.retrieval import (
+    DEFAULT_LIMIT,
+    RetrievalFilters,
+    SearchHit,
+    lexical_search,
+    vector_search,
+)
 from ikip_common.llm.base import EmbeddingClient
 
 
@@ -59,6 +65,8 @@ class IkipRetriever(BaseRetriever):
     arm: str = "vector"
     limit: int = DEFAULT_LIMIT
     embedding_client: EmbeddingClient | None = None
+    filters: RetrievalFilters | None = None
+    min_score: float | None = None
 
     # BaseRetriever is a pydantic model; our fields are non-pydantic types.
     model_config = {"arbitrary_types_allowed": True}
@@ -71,7 +79,14 @@ class IkipRetriever(BaseRetriever):
 
     def _search(self, query: str) -> Sequence[SearchHit]:
         if self.arm == "lexical":
-            return lexical_search(self.session, self.tenant_id, query, limit=self.limit)
+            return lexical_search(
+                self.session,
+                self.tenant_id,
+                query,
+                limit=self.limit,
+                filters=self.filters,
+                min_score=self.min_score,
+            )
         if self.arm == "vector":
             if self.embedding_client is None:
                 raise ValueError("vector arm requires an embedding_client")
@@ -82,5 +97,7 @@ class IkipRetriever(BaseRetriever):
                 query_vector,
                 model_version=self.embedding_client.model_version,
                 limit=self.limit,
+                filters=self.filters,
+                min_score=self.min_score,
             )
         raise ValueError(f"unknown arm: {self.arm!r} (expected 'vector' or 'lexical')")

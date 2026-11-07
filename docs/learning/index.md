@@ -19,6 +19,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-012](./missions/MISSION-012/mission.md) | Structure-aware chunking | Epic 3 / Story 3.1 |
 | [MISSION-013](./missions/MISSION-013/mission.md) | Embeddings generation & version management (+ Azure OpenAI via Terraform) | Epic 3 / Story 3.2 |
 | [MISSION-014](./missions/MISSION-014/mission.md) | Lexical & vector search (tsvector/GIN + pgvector/HNSW; LangChain BaseRetriever) | Epic 3 / Story 3.3 |
+| [MISSION-015](./missions/MISSION-015/mission.md) | Hybrid retrieval, reranking & filters (RRF, Reranker port, version-aware filters, abstention) | Epic 3 / Story 3.4 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -39,3 +40,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [embeddings](./concepts/embeddings.md) | vectors, dimensions, Matryoshka reduction, model_version (additive re-embed), cost, port+fake |
 | [rag-orchestration](./concepts/rag-orchestration.md) | Dagster (build-time) vs LangGraph (request-time); how LangChain is used behind our ports |
 | [retrieval](./concepts/retrieval.md) | lexical (tsvector/GIN, simple) vs vector (pgvector/HNSW, cosine); citations; IkipRetriever BaseRetriever |
+| [hybrid-retrieval](./concepts/hybrid-retrieval.md) | RRF fusion, Reranker port (identity→cross-encoder), version-aware filters, abstention |

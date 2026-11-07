@@ -14,6 +14,7 @@ from ikip_common.db.base import Base
 from ikip_common.db.embeddings import embed_and_store
 from ikip_common.db.models import Chunk, Document, DocumentVersion, Section, Tenant
 from ikip_common.db.retrieval import (
+    RetrievalFilters,
     _lexical_stmt,
     _vector_stmt,
     lexical_search,
@@ -35,7 +36,7 @@ def test_lexical_stmt_uses_simple_fts_and_rank() -> None:
     from ikip_common.db.models import FTS_CONFIG
 
     assert FTS_CONFIG == "simple"  # language-neutral config (decision)
-    sql = _sql(_lexical_stmt(uuid.uuid4(), "fault E42", 10))
+    sql = _sql(_lexical_stmt(uuid.uuid4(), "fault E42", 10, None))
     assert "websearch_to_tsquery" in sql
     assert "@@" in sql  # tsvector match
     assert "ts_rank" in sql  # ranking
@@ -43,15 +44,28 @@ def test_lexical_stmt_uses_simple_fts_and_rank() -> None:
 
 
 def test_lexical_stmt_joins_citation_chain() -> None:
-    sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 5))
+    sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 5, None))
     assert "join section" in sql and "join document_version" in sql and "join document" in sql
 
 
 def test_vector_stmt_uses_cosine_and_filters_model_version() -> None:
-    sql = _sql(_vector_stmt(uuid.uuid4(), [0.1] * 512, "m1@512", 10))
+    sql = _sql(_vector_stmt(uuid.uuid4(), [0.1] * 512, "m1@512", 10, None))
     assert "<=>" in sql  # pgvector cosine distance
     assert "model_version" in sql  # only same-version vectors are comparable
     assert "tenant_id" in sql
+
+
+def test_filters_add_version_type_and_metadata_clauses() -> None:
+    filters = RetrievalFilters(current_only=True, document_type="manual", metadata={"equip": "P1"})
+    sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 10, filters))
+    assert "is_current is true" in sql  # version-awareness WHERE (applicable vs obsolete)
+    assert "document.type" in sql  # equipment/document kind
+    assert "@>" in sql  # JSONB containment for metadata (equipment model/revision)
+
+
+def test_current_only_false_omits_is_current_predicate() -> None:
+    sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 10, RetrievalFilters(current_only=False)))
+    assert "is_current is true" not in sql  # no version-awareness WHERE predicate
 
 
 # --- DB-backed -------------------------------------------------------------

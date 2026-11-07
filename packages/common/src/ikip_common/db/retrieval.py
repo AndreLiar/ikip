@@ -4,9 +4,12 @@ Two retrieval arms, both tenant-scoped (NFR10) and both returning the full citat
 chain chunk → section → document_version → document (FR16):
   - `lexical_search`  — BM25/full-text via Postgres `tsvector`/GIN (`simple` config).
   - `vector_search`   — semantic via pgvector HNSW (cosine distance).
-Fusion + reranking + filters come in Story 3.4; the grounded-answer graph in 3.5.
-Each call measures and logs its latency (AC4). SQL stays ours (not a LangChain
-retriever) so tenant scoping + citations are structural, not delegated (ADR 0021).
+Both accept `RetrievalFilters` (version-awareness via `is_current`, document type,
+metadata containment — Story 3.4 AC3) and an optional `min_score` floor (feeds the
+abstention path, AC4). Fusion/reranking live in `ikip_common.llm.hybrid`; the
+grounded-answer graph in Story 3.5. Each call measures and logs its latency (AC4).
+SQL stays ours (not a LangChain retriever) so tenant scoping + citations are
+structural, not delegated (ADR 0021).
 """
 
 from __future__ import annotations
@@ -45,6 +48,32 @@ class SearchHit:
     hierarchy_path: str | None
     page_start: int | None
     page_end: int | None
+
+
+@dataclass
+class RetrievalFilters:
+    """Metadata filters for retrieval (Story 3.4 AC3). Applied in SQL on both arms.
+
+    `current_only` enforces version-awareness (only applicable, non-superseded versions
+    — NFR15/FR14); `document_type` narrows by document kind; `metadata` is a JSONB
+    containment match on `chunk.chunk_metadata` (e.g. equipment model/revision, kept
+    lightweight at MVP — no dedicated equipment table yet)."""
+
+    current_only: bool = True
+    document_type: str | None = None
+    metadata: dict | None = None
+
+
+def _apply_filters(stmt, filters: RetrievalFilters | None):
+    if filters is None:
+        return stmt
+    if filters.current_only:
+        stmt = stmt.where(DocumentVersion.is_current.is_(True))
+    if filters.document_type is not None:
+        stmt = stmt.where(Document.type == filters.document_type)
+    if filters.metadata:
+        stmt = stmt.where(Chunk.chunk_metadata.contains(filters.metadata))
+    return stmt
 
 
 @contextmanager
@@ -98,17 +127,23 @@ _CITATION_COLUMNS = (
 )
 
 
-def _lexical_stmt(tenant_id: uuid.UUID, query: str, limit: int):
+def _lexical_stmt(tenant_id: uuid.UUID, query: str, limit: int, filters: RetrievalFilters | None):
     tsquery = func.websearch_to_tsquery(FTS_CONFIG, query)
     score = func.ts_rank(Chunk.content_tsv, tsquery).label("score")
     stmt = _citation_joins(select(*_CITATION_COLUMNS, score)).where(
         Chunk.tenant_id == tenant_id,
         Chunk.content_tsv.op("@@")(tsquery),
     )
-    return stmt.order_by(score.desc()).limit(limit)
+    return _apply_filters(stmt, filters).order_by(score.desc()).limit(limit)
 
 
-def _vector_stmt(tenant_id: uuid.UUID, query_vector: Vector, model_version: str, limit: int):
+def _vector_stmt(
+    tenant_id: uuid.UUID,
+    query_vector: Vector,
+    model_version: str,
+    limit: int,
+    filters: RetrievalFilters | None,
+):
     distance = Embedding.vector.cosine_distance(query_vector)
     # cosine similarity = 1 - cosine distance -> higher-is-better score
     score = (1 - distance).label("score")
@@ -118,7 +153,12 @@ def _vector_stmt(tenant_id: uuid.UUID, query_vector: Vector, model_version: str,
         Embedding.tenant_id == tenant_id,
         Embedding.model_version == model_version,
     )
-    return stmt.order_by(distance).limit(limit)  # ascending distance = closest first
+    # ascending distance = closest first
+    return _apply_filters(stmt, filters).order_by(distance).limit(limit)
+
+
+def _floor(hits: list[SearchHit], min_score: float | None) -> list[SearchHit]:
+    return hits if min_score is None else [h for h in hits if h.score >= min_score]
 
 
 def lexical_search(
@@ -127,11 +167,13 @@ def lexical_search(
     query: str,
     *,
     limit: int = DEFAULT_LIMIT,
+    filters: RetrievalFilters | None = None,
+    min_score: float | None = None,
 ) -> list[SearchHit]:
     """Full-text (BM25-style) search via `tsvector`/GIN, ranked by `ts_rank` (AC1)."""
     with _timed("lexical", tenant_id=tenant_id):
-        rows = session.execute(_lexical_stmt(tenant_id, query, limit)).all()
-    return [_hit(r) for r in rows]
+        rows = session.execute(_lexical_stmt(tenant_id, query, limit, filters)).all()
+    return _floor([_hit(r) for r in rows], min_score)
 
 
 def vector_search(
@@ -141,9 +183,13 @@ def vector_search(
     *,
     model_version: str,
     limit: int = DEFAULT_LIMIT,
+    filters: RetrievalFilters | None = None,
+    min_score: float | None = None,
 ) -> list[SearchHit]:
     """Semantic search via pgvector HNSW cosine distance (AC2). Only vectors of the
     given `model_version` are comparable, so we filter on it."""
     with _timed("vector", tenant_id=tenant_id):
-        rows = session.execute(_vector_stmt(tenant_id, query_vector, model_version, limit)).all()
-    return [_hit(r) for r in rows]
+        rows = session.execute(
+            _vector_stmt(tenant_id, query_vector, model_version, limit, filters)
+        ).all()
+    return _floor([_hit(r) for r in rows], min_score)
