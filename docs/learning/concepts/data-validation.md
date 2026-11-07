@@ -43,5 +43,6 @@ They're complementary: Pydantic guards the **metadata record**; Pandera guards t
 5. Test heuristics/regexes with negative cases.
 
 ## Related
+- **Decision:** [ADR 0018](../../adr/0018-pydantic-records-pandera-frames.md) (Pydantic for records, Pandera for frames).
 - [pdf-extraction](./pdf-extraction.md) (produces the pages this cleans) · [config-12-factor](./config-12-factor.md).
 - Story 2.4; feeds Story 2.5 (dedup/versioning) and Epic 3 (chunking).

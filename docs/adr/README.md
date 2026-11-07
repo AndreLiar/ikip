@@ -57,3 +57,4 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0015](./0015-neon-serverless-postgres.md)                       | Neon serverless Postgres (+ pgvector) as the database for all environments            | Accepted           |
 | [0016](./0016-rag-evaluation-custom-plus-ragas.md)               | RAG evaluation: custom deterministic harness + Ragas, compared                        | Accepted           |
 | [0017](./0017-sqlalchemy-alembic.md)                             | SQLAlchemy (ORM/Core) + Alembic (migrations) for the data layer                       | Accepted           |
+| [0018](./0018-pydantic-records-pandera-frames.md)                | Validation: Pydantic for records, Pandera for frames                                  | Accepted           |
