@@ -14,10 +14,14 @@ Build the LLMOps capability from **open, self-hostable, local-first** pieces —
 | **Instrumentation standard** | **OpenTelemetry** | OTel SDK | OTel SDK | FR30, Story 5.4 |
 | **LLM-native observability** (traces of RAG steps, prompt I/O, token/cost) | **Langfuse** (Cloud Hobby free for dev/MVP; self-host option) | Cloud Hobby (EU) | Cloud / self-host | [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md) |
 | Prompt / model-config versioning | **Langfuse prompt management** + git artifacts | Langfuse + repo | idem | FR32, Story 5.5 |
-| Evaluation logic (Recall@K, citation, groundedness) | **pytest + gold datasets** (own harness); datasets tracked in Langfuse | local | CI | Epic 5, Stories 5.1–5.2 |
+| Evaluation — deterministic (Recall@K, citation) | **pytest + gold datasets** (own harness) | local | CI (every push) | Epic 5, Story 5.2 |
+| Evaluation — LLM-judged (faithfulness, relevancy, context precision/recall) | **Ragas** (judge = Azure OpenAI; scores → Langfuse) | local | CI sample + nightly | [ADR 0016](../adr/0016-rag-evaluation-custom-plus-ragas.md) |
+| Evaluation — comparison | custom vs Ragas (agreement, cost, variance) | local | nightly/on-demand | ADR 0016 |
 | Safety / guardrails (default, $0) | **own guardrails** — adversarial test suite, untrusted-content handling, own groundedness eval | local | CI | Story 5.2, 5.3, 6.3 |
 | Safety detectors (optional, paid) | **Foundry Content Safety** (Prompt Shields, groundedness) — behind a guardrail interface; free tier first | API | API | optional complement |
-| Infra metrics / latency | OTel SDK (in-app) → backend | **Azure Monitor** or **Prometheus/Grafana** (optional, local) | **Azure Monitor / App Insights** | FR31, Story 5.6 |
+| Infra metrics / logs / traces | OTel SDK (in-app) → OTLP | **Grafana Cloud** (free) | **Grafana Cloud** (or Azure Monitor) | FR31, Story 5.6 |
+| Dashboards & alerts | — | **Grafana Cloud** | Grafana Cloud | Story 5.6 |
+| Performance tests | **k6** → Grafana Cloud k6 | local or Grafana Cloud | Grafana Cloud k6 | NFR1, NFR2 |
 | `query_trace` (user→chunks→model, latency, cost) | PostgreSQL + exported to Langfuse | local | local | FR30, Story 5.4 |
 | Regression gates (eval + safety) | **GitHub Actions** | CI | CI | Story 5.5, 6.7; NFR14 |
 | Caching (cost/latency) | Redis + Postgres (`Cache` port) | local | Redis/Azure Cache | [ADR 0009](../adr/0009-caching-strategy.md) |
@@ -30,9 +34,9 @@ They operate at different layers:
 - **OpenTelemetry = the instrumentation contract.** Vendor-neutral spans/metrics for *everything* (HTTP, DB, queue, and the RAG workflow). Instrument once; no lock-in; swappable backends. But raw OTel + Grafana is **not** LLM-aware — it has no concept of a prompt, a completion, token cost, or an eval dataset.
 - **Langfuse = an LLM-native backend that consumes OTel** (and integrates natively with LangChain/LangGraph). It adds exactly what OTel lacks for LLMOps: nested **RAG-step traces** with prompt/response inspection, **token & cost per trace**, **prompt management/versioning**, and **eval datasets/scores** — in a UI built for this.
 
-So the flow is: **instrument with OTel → LLM/RAG spans go to Langfuse (LLM layer); infra spans/metrics go to Azure Monitor (or optional Prometheus/Grafana) (infra layer).** One instrumentation, two fit-for-purpose backends.
+So the flow is: **instrument with OTel → LLM/RAG spans go to Langfuse (LLM layer); infra metrics/logs/traces go to Grafana Cloud via OTLP (infra layer).** One instrumentation, two fit-for-purpose managed backends.
 
-> **OTel is a library, not a service.** The OpenTelemetry SDK runs **inside the app** (FastAPI) and exports directly to backends — there is **nothing to host** for OTel itself (no Collector required at MVP). In a fully-managed dev setup, the app exports LLM traces to **Langfuse Cloud** and (optionally) infra metrics to **Azure Monitor**, so **no local observability container is required**. Prometheus + Grafana are an **optional** local choice only if you want infra dashboards on the laptop.
+> **OTel is a library, not a service.** The OpenTelemetry SDK runs **inside the app** (FastAPI) and exports directly to backends — there is **nothing to host** for OTel itself (no Collector required at MVP). In the fully-managed setup, the app exports LLM traces to **Langfuse Cloud** and infra metrics/logs/traces to **Grafana Cloud** (free, via OTLP) — so **no local observability container is required**. Grafana Cloud also hosts **dashboards, alerts and k6 performance tests**; Azure Monitor is optional/prod. See [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md) (2026-11-07 update).
 
 ```
             OpenTelemetry (instrument once)
@@ -72,7 +76,7 @@ They are **not** equivalent and do not overlap: Presidio does PII, Content Safet
 Unlike Entra ID, **Azure AI Content Safety is a paid service** (per 1,000 records; a limited free tier exists). It is therefore **optional**, not MVP-required: IKIP's safety requirements (FR17/18, NFR18) are already met by **own guardrails** — the adversarial/prompt-injection test suite (Story 6.3), untrusted-retrieved-content handling (coding standard), the own groundedness eval (Story 5.2) and the safety-abstention set (Story 5.3). Default MVP = $0 (own guardrails); Content Safety is a managed complement behind a guardrail interface, free tier first, enabled only if stronger managed detection is wanted.
 
 ## Division of labour (one line)
-**Foundry** = models (+ *optional* Content Safety detectors) · **own guardrails** = default safety (injection/groundedness/abstention) · **LangGraph/LangChain** = orchestration · **pytest + gold datasets** = eval logic & CI gates · **OpenTelemetry** = instrumentation · **Langfuse** = LLM-native tracing/prompts/eval/cost · **Prometheus/Grafana → Azure Monitor** = infra metrics · **Redis/Postgres** = caching.
+**Foundry** = models (+ *optional* Content Safety detectors) · **own guardrails** = default safety (injection/groundedness/abstention) · **LangGraph/LangChain** = orchestration · **pytest (deterministic: Recall@K, citation) + Ragas (LLM-judged: faithfulness, relevancy, context) — compared** = eval · **OpenTelemetry** = instrumentation · **Langfuse** = LLM-native tracing/prompts/eval/cost · **Grafana Cloud** = infra metrics/logs/traces + dashboards/alerts + k6 · **Redis/Postgres** = caching.
 
 ## Cost
-Langfuse = **$0** on **Cloud Hobby** (free: 50k units/mo, 30-day retention, EU region) for dev/MVP, or self-hosted ($0, open source) — see [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md). OTel/Prometheus/Grafana = $0 local. You pay only for **LLM tokens** + (optionally) **Foundry Content Safety** calls. Governance caveat: Langfuse traces carry prompts + retrieved content → use self-hosting (or EU + DPA) for real customer data (Epic 6).
+Langfuse = **$0** on **Cloud Hobby** (free: 50k units/mo, 30-day retention, EU region) for dev/MVP, or self-hosted ($0, open source). **Grafana Cloud = $0** on the Free tier (infra metrics/logs/traces + dashboards/alerts + k6; 14-day retention). OTel is in-app ($0). You pay only for **LLM tokens** + (optionally) **Foundry Content Safety** calls. Governance caveat: Langfuse traces carry prompts + retrieved content, and infra logs/traces may carry data → scrub PII (Presidio) and use self-hosting / EU + DPA for real customer data (Epic 6). See [ADR 0013](../adr/0013-llmops-observability-otel-langfuse.md).
