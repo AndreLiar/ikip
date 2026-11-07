@@ -87,12 +87,19 @@ class AzureOpenAIEmbeddingClient:
     def _embed_batch(self, batch: list[str]) -> list[Vector]:
         import time
 
-        from openai import RateLimitError
+        try:
+            from openai import RateLimitError
+
+            retryable: tuple[type[BaseException], ...] = (RateLimitError,)
+        except ImportError:
+            # openai not installed (e.g. an injected fake client in the fast CI job) —
+            # nothing to retry; an empty tuple in `except` never matches.
+            retryable = ()
 
         for attempt in range(self._max_retries):
             try:
                 return self._client.embed_documents(batch)
-            except RateLimitError:
+            except retryable:
                 if attempt == self._max_retries - 1:
                     raise
                 time.sleep(min(2**attempt, 30))  # exponential backoff, capped
