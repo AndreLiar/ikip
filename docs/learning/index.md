@@ -12,6 +12,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-005](./missions/MISSION-005/mission.md) | Authentication & RBAC (JWT, Principal, role hierarchy) | Epic 1 / Story 1.6 |
 | [MISSION-006](./missions/MISSION-006/mission.md) | Object storage port (R2) & ingestion-job model | Epic 2 / Story 2.1 |
 | [MISSION-007](./missions/MISSION-007/mission.md) | Source connectors & Dagster orchestration | Epic 2 / Story 2.2 |
+| [MISSION-008](./missions/MISSION-008/mission.md) | PDF extraction with OCR fallback (two-stage) | Epic 2 / Story 2.3 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -23,3 +24,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [auth-rbac](./concepts/auth-rbac.md) | authn vs authz, JWT, Principal, role hierarchy, dev-token vs Entra ID |
 | [object-storage](./concepts/object-storage.md) | blobs vs DB, S3 abstraction, ObjectStorage port, artifact tiers, presigned URLs |
 | [dagster-orchestration](./concepts/dagster-orchestration.md) | assets, schedules, Definitions, thin-wrapper pattern, keeping CI fast |
+| [pdf-extraction](./concepts/pdf-extraction.md) | native vs scanned, two-stage PyMuPDF→OCR, quality scoring, optional engines |
