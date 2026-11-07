@@ -15,6 +15,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-008](./missions/MISSION-008/mission.md) | PDF extraction with OCR fallback (two-stage) | Epic 2 / Story 2.3 |
 | [MISSION-009](./missions/MISSION-009/mission.md) | Cleaning, normalization, metadata & validation | Epic 2 / Story 2.4 |
 | [MISSION-010](./missions/MISSION-010/mission.md) | Deduplication & document versioning | Epic 2 / Story 2.5 |
+| [MISSION-011](./missions/MISSION-011/mission.md) | Lineage, quality reporting & reprocessing | Epic 2 / Story 2.6 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -29,3 +30,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [pdf-extraction](./concepts/pdf-extraction.md) | native vs scanned, two-stage PyMuPDF→OCR, quality scoring, optional engines |
 | [data-validation](./concepts/data-validation.md) | cleaning, Pydantic-vs-Pandera, report-not-raise, regex negative cases |
 | [dedup-versioning](./concepts/dedup-versioning.md) | exact vs near-dup, SimHash, supersede-not-delete, migration enum trap |
+| [lineage-reprocessing](./concepts/lineage-reprocessing.md) | asset lineage, quality report, retry/dead-letter, asset-aware reprocessing |

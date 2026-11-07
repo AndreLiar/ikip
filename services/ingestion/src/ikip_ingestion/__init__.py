@@ -13,6 +13,8 @@ from ikip_ingestion.ingest import (
     SeenStore,
     ingest_documents,
 )
+from ikip_ingestion.quality_report import DataQualityReport
+from ikip_ingestion.retry import RetryDecision, RetryPolicy
 
 __all__ = [
     "HttpSourceConnector",
@@ -24,4 +26,7 @@ __all__ = [
     "IngestResult",
     "SeenStore",
     "ingest_documents",
+    "DataQualityReport",
+    "RetryDecision",
+    "RetryPolicy",
 ]
