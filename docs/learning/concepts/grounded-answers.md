@@ -19,6 +19,44 @@ analyze → retrieve (hybrid, Story 3.4) → [sufficient?] → generate → vali
 - **validate_grounding**: check each claim is actually entailed by its evidence.
 - **finalize / abstain**: render validated claims + citations + warnings, or abstain.
 
+## How it maps to the code (`llm/answer.py`)
+Built in `build_answer_graph(retrieve, chat_client, validator)` and run by
+`grounded_answer(question, …)` → `graph.invoke({"question": question})`.
+
+| LangGraph element | In `answer.py` | Role |
+|---|---|---|
+| State (`StateGraph(AnswerState)`) | `class AnswerState(TypedDict)` | carries `question`, `documents`, `doc_by_marker`, `evidence`, `sufficient`, `draft`, `result` between nodes |
+| Node `analyze` | `def analyze` | normalize the query (no LLM) |
+| Node `retrieve` | `def retrieve_node` | calls our `hybrid_retrieve`; assigns opaque handles `[E1]…`; fills `evidence` |
+| Node `generate` | `def generate` | `chat_client.complete_structured(...) → GroundedAnswer` |
+| Node `validate` | `def validate` | `GroundingValidator` + grounding policy → `AnswerResult` |
+| Node `abstain` | `def abstain` | "insufficient evidence" |
+| Conditional edge | `route_after_retrieve` | `generate` if `sufficient` else `abstain` |
+| Conditional edge | `route_after_generate` | `abstain` if model returned `status="abstained"` else `validate` |
+
+## Walkthrough — trace #1: answered (test `test_live_grounded_answer_with_real_model`)
+Query **"What does fault E42 mean?"**, with a chunk `c1` = *"Fault code E42 indicates the pump motor has overheated."*
+
+1. **analyze** → `question="what does fault e42 mean?"`.
+2. **retrieve** → `hybrid_retrieve` returns `c1`; state gets `doc_by_marker={"E1": <c1>}`, `evidence={"E1": "Fault E42 … overheated."}`, `sufficient=True`.
+3. `route_after_retrieve` → **generate**.
+4. **generate** → the prompt shows only the opaque handle `[E1]`; `gpt-5.4-mini` returns `GroundedAnswer(status="answered", claims=[Claim(text="E42 = pump motor overheat", evidence_markers=["E1"], safety_critical=False)])`.
+5. `route_after_generate` → **validate** (status ≠ abstained).
+6. **validate** → the validator judges `E1` **supported** → claim kept; the citation is **resolved server-side** from `doc_by_marker["E1"].metadata` (revision A, page 142). `result = AnswerResult(status="answered", answer="… [E1]", not_certified_notice=…)`.
+7. END → verified grounded answer.
+
+## Walkthrough — trace #2: abstention (test `test_live_abstains_on_irrelevant_evidence`)
+Query **"What is the torque spec for the gearbox housing bolts?"**, evidence only mentions lubrication.
+
+1. **retrieve** returns an off-topic doc → `sufficient=True` (there *is* text) → **generate**.
+2. **generate** → the model, constrained "answer only from the evidence, else abstain", returns `status="abstained"`.
+3. `route_after_generate` → **abstain** → `AnswerResult(status="abstained", reason="insufficient evidence")`. Nothing invented (AC4).
+
+*(Third branch, covered by the pure tests `test_answer_graph.py`: an unsupported **safety-critical** claim at `validate` → immediate full abstention — the safety asymmetry.)*
+
+## Why not a plain if/else
+Three decision points (sufficiency, model abstention, grounding failure) sharing one state → exactly LangGraph's model. It also leaves room to add nodes (equipment identification, retries, tool calls) **without rewriting** the flow, and the graph doubles as the execution trace for observability ([ADR 0013](../../adr/0013-llmops-observability-otel-langfuse.md)).
+
 ## Why a prompt is not enough (the trust model)
 Two independent mechanisms make grounding **structural**, not a matter of the model behaving:
 
