@@ -1134,6 +1134,9 @@ version = "0.1.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
+cache = [
+    { name = "redis" },
+]
 dagster = [
     { name = "dagster" },
     { name = "dagster-webserver" },
@@ -1166,6 +1169,7 @@ extraction = [
 [package.metadata]
 
 [package.metadata.requires-dev]
+cache = [{ name = "redis", specifier = ">=5.0" }]
 dagster = [
     { name = "dagster", specifier = ">=1.9,<1.12" },
     { name = "dagster-webserver", specifier = ">=1.9,<1.12" },
