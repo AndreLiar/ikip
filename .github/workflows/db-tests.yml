@@ -58,7 +58,11 @@ jobs:
         if: steps.guard.outputs.on == 'true'
         env:
           TEST_DATABASE_URL: ${{ steps.branch.outputs.uri }}
-        run: uv run pytest packages -q
+        # `--group embeddings` so DB tests that touch LangChain/pgvector (hybrid retrieval,
+        # answer cache, build-time indexing) actually run instead of importorskip-skipping.
+        # Covers packages + services (the build-time indexing closed-loop test lives in
+        # services/document-processing). Live-Azure tests still skip (no AZURE creds here).
+        run: uv run --group embeddings pytest packages services -q
 
       - name: Delete ephemeral Neon branch
         if: always() && steps.guard.outputs.on == 'true' && steps.branch.outputs.bid != ''
