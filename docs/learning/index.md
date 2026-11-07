@@ -20,6 +20,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-013](./missions/MISSION-013/mission.md) | Embeddings generation & version management (+ Azure OpenAI via Terraform) | Epic 3 / Story 3.2 |
 | [MISSION-014](./missions/MISSION-014/mission.md) | Lexical & vector search (tsvector/GIN + pgvector/HNSW; LangChain BaseRetriever) | Epic 3 / Story 3.3 |
 | [MISSION-015](./missions/MISSION-015/mission.md) | Hybrid retrieval, reranking & filters (RRF, Reranker port, version-aware filters, abstention) | Epic 3 / Story 3.4 |
+| [MISSION-016](./missions/MISSION-016/mission.md) | LangGraph grounded-answer service (gpt-5.4-mini, server-resolved citations, grounding validation) | Epic 3 / Story 3.5 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
@@ -41,3 +42,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [rag-orchestration](./concepts/rag-orchestration.md) | Dagster (build-time) vs LangGraph (request-time); how LangChain is used behind our ports |
 | [retrieval](./concepts/retrieval.md) | lexical (tsvector/GIN, simple) vs vector (pgvector/HNSW, cosine); citations; IkipRetriever BaseRetriever |
 | [hybrid-retrieval](./concepts/hybrid-retrieval.md) | RRF fusion, Reranker port (identity→cross-encoder), version-aware filters, abstention |
+| [grounded-answers](./concepts/grounded-answers.md) | LangGraph flow, opaque handles + server-resolved citations, grounding validation, reasoning vs temperature |

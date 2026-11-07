@@ -49,3 +49,23 @@ resource "azurerm_cognitive_deployment" "embedding" {
     capacity = var.embedding_capacity
   }
 }
+
+resource "azurerm_cognitive_deployment" "chat" {
+  name                 = var.chat_deployment_name
+  cognitive_account_id = azurerm_cognitive_account.openai.id
+
+  model {
+    format  = "OpenAI"
+    name    = var.chat_model
+    version = var.chat_model_version
+  }
+
+  sku {
+    name     = var.chat_sku
+    capacity = var.chat_capacity
+  }
+
+  # Azure serializes deployment creation on one account; depend on the embedding
+  # deployment so `apply` creates them one after the other (avoids a transient conflict).
+  depends_on = [azurerm_cognitive_deployment.embedding]
+}

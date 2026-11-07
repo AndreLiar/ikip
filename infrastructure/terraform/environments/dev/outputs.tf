@@ -11,6 +11,11 @@ output "azure_openai_embedding_deployment" {
   value       = azurerm_cognitive_deployment.embedding.name
 }
 
+output "azure_openai_chat_deployment" {
+  description = "AZURE_OPENAI_CHAT_DEPLOYMENT"
+  value       = azurerm_cognitive_deployment.chat.name
+}
+
 output "azure_openai_account_name" {
   description = "The provisioned account name (with unique suffix)."
   value       = azurerm_cognitive_account.openai.name

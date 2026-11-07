@@ -71,6 +71,19 @@ class Settings(BaseSettings):
     # migration + versioned re-embedding, not a hot toggle.
     embedding_dimensions: int = Field(default=512, alias="EMBEDDING_DIMENSIONS")
 
+    # Chat model for grounded-answer generation (Story 3.5, ADR 0022). gpt-5.4-mini
+    # is reasoning-capable; `reasoning_effort` tunes depth vs cost/latency ("minimal"
+    # keeps it cheap/fast for grounded synthesis). Parameterized to swap the model.
+    azure_openai_chat_deployment: str | None = Field(
+        default=None, alias="AZURE_OPENAI_CHAT_DEPLOYMENT"
+    )
+    # Reasoning models (gpt-5.x, o-series) are tuned by reasoning_effort and fix
+    # temperature at 1. Non-reasoning models (e.g. gpt-4.1-mini) accept an explicit
+    # temperature instead. Only the relevant knob is sent per model (ADR 0022);
+    # setting chat_temperature on a reasoning model is rejected at config time.
+    chat_reasoning_effort: str = Field(default="minimal", alias="CHAT_REASONING_EFFORT")
+    chat_temperature: float | None = Field(default=None, alias="CHAT_TEMPERATURE")
+
     @property
     def embedding_model_version(self) -> str:
         """Stable tag stored on every embedding row (e.g. 'text-embedding-3-small@512').

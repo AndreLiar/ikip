@@ -54,6 +54,37 @@ variable "embedding_sku" {
   default     = "DataZoneStandard"
 }
 
+# --- Chat model (Story 3.5, grounded-answer generation; ADR 0022) ----------
+variable "chat_model" {
+  description = "Chat model to deploy. gpt-5.4-mini (reasoning-capable, GA, longer lifecycle than the deprecated 4o-mini/4.1-mini). Parameterized so a swap is one value."
+  type        = string
+  default     = "gpt-5.4-mini"
+}
+
+variable "chat_model_version" {
+  description = "Chat model version on Azure."
+  type        = string
+  default     = "2026-03-17"
+}
+
+variable "chat_deployment_name" {
+  description = "Deployment name the app calls (AZURE_OPENAI_CHAT_DEPLOYMENT)."
+  type        = string
+  default     = "gpt-5.4-mini"
+}
+
+variable "chat_sku" {
+  description = "Chat deployment SKU. DataZoneStandard keeps processing in the EU data zone (consistent with the embedding deployment / ADR 0015)."
+  type        = string
+  default     = "DataZoneStandard"
+}
+
+variable "chat_capacity" {
+  description = "Chat deployment throughput in thousands of tokens/min (TPM). 30 = 30k TPM, ample for dev."
+  type        = number
+  default     = 30
+}
+
 variable "tags" {
   description = "Tags applied to all resources (cost tracking / cleanup)."
   type        = map(string)
