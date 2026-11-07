@@ -1,0 +1,72 @@
+name: DB tests (ephemeral Neon branch)
+
+# Runs the DB-touching tests (migrations, tenant isolation) against a throwaway
+# Neon branch created per run and deleted afterwards — never the shared dev DB.
+# Not a required gate (the required check is `validate`); it is additive and is a
+# no-op when the NEON_API_KEY secret is absent (e.g. forks).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  db-tests:
+    name: db-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — only run when Neon secret is configured
+        id: guard
+        run: |
+          if [ -n "${{ secrets.NEON_API_KEY }}" ]; then
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on=false" >> "$GITHUB_OUTPUT"
+            echo "NEON_API_KEY not set — skipping DB tests."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.on == 'true'
+
+      - uses: astral-sh/setup-uv@v3
+        if: steps.guard.outputs.on == 'true'
+
+      - name: Create ephemeral Neon branch
+        id: branch
+        if: steps.guard.outputs.on == 'true'
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: |
+          name="ci-${{ github.run_id }}-${{ github.run_attempt }}"
+          resp=$(curl -sf -X POST \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches" \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"branch\":{\"name\":\"${name}\"},\"endpoints\":[{\"type\":\"read_write\"}]}")
+          bid=$(echo "$resp" | jq -r '.branch.id')
+          uri=$(echo "$resp" | jq -r '.connection_uris[0].connection_uri')
+          echo "::add-mask::$uri"
+          echo "bid=$bid" >> "$GITHUB_OUTPUT"
+          echo "uri=$uri" >> "$GITHUB_OUTPUT"
+
+      - name: Run DB tests
+        if: steps.guard.outputs.on == 'true'
+        env:
+          TEST_DATABASE_URL: ${{ steps.branch.outputs.uri }}
+        run: uv run pytest packages -q
+
+      - name: Delete ephemeral Neon branch
+        if: always() && steps.guard.outputs.on == 'true' && steps.branch.outputs.bid != ''
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: |
+          curl -sf -X DELETE \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${{ steps.branch.outputs.bid }}" \
+            -H "Authorization: Bearer ${NEON_API_KEY}" >/dev/null
+          echo "deleted ephemeral branch ${{ steps.branch.outputs.bid }}"
