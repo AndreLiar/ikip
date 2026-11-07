@@ -2,6 +2,8 @@
 
 _Write-once concept note. First used by [MISSION-012](../missions/MISSION-012/mission.md). Decision: [ADR 0019](../../adr/0019-structure-aware-chunking.md). Opens Epic 3._
 
+> 🇫🇷 Version française détaillée (exploration des 5 stratégies) : [`chunking-strategies.fr.md`](./chunking-strategies.fr.md)
+
 ## Why chunk at all
 You can't embed a 100-page manual as one vector (it averages everything → meaningless) nor a single sentence (no context). Retrieval works on **chunks** — pieces big enough to carry meaning, small enough to be precise and citable. **Chunking decides retrieval quality more than the embedding model does**: bad chunks can't be rescued by good embeddings.
 
