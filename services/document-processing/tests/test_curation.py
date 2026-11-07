@@ -19,6 +19,13 @@ def test_curate_html_strips_tags() -> None:
     assert "Torque & bolts" in doc.text  # entity unescaped
 
 
+def test_curate_sniffs_html_without_content_type() -> None:
+    # ingestion jobs don't persist content_type, so curation must detect HTML by content
+    raw = b"<!doctype html><html><body><h1>Pods</h1><p>A Pod runs containers.</p></body></html>"
+    doc = curate_document(raw, source="pods")  # no content_type passed
+    assert "<" not in doc.text and "A Pod runs containers." in doc.text
+
+
 def test_curate_no_revision_leaves_none() -> None:
     doc = curate_document(b"Some manual text without a revision marker.", source="m.txt")
     assert doc.metadata.revision is None  # caller applies a deterministic fallback

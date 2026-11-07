@@ -18,6 +18,10 @@ from ikip_docproc.metadata import DocumentMetadata, build_metadata
 
 _TAG = re.compile(r"<[^>]+>")
 _SCRIPT_STYLE = re.compile(r"<(script|style)[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+# Sniff HTML by content, since the content-type isn't always threaded through
+# (ingestion jobs don't persist it). A connector that fetches an HTML page yields
+# bytes starting with a doctype/<html>; strip tags even when content_type is None.
+_HTML_SNIFF = re.compile(r"<!doctype\s+html|<html[\s>]", re.IGNORECASE)
 
 
 class TextExtractor(Protocol):
@@ -36,7 +40,10 @@ class CuratedDocument:
 
 def _decode_text(raw: bytes, content_type: str | None) -> str:
     text = raw.decode("utf-8", errors="replace")
-    if content_type and "html" in content_type.lower():
+    is_html = (content_type is not None and "html" in content_type.lower()) or bool(
+        _HTML_SNIFF.search(text[:4096])
+    )
+    if is_html:
         text = _SCRIPT_STYLE.sub(" ", text)
         text = _TAG.sub(" ", text)
         text = html.unescape(text)
