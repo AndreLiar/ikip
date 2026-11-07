@@ -43,6 +43,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [chunking](./concepts/chunking.md) | chunking strategies, structure-aware + overlap, tokens, citation chain · 🇫🇷 [strategies](./concepts/chunking-strategies.fr.md) |
 | [embeddings](./concepts/embeddings.md) | vectors, dimensions, Matryoshka reduction, model_version (additive re-embed), cost, port+fake |
 | [rag-orchestration](./concepts/rag-orchestration.md) | Dagster (build-time) vs LangGraph (request-time); how LangChain is used behind our ports |
+| [langchain-inventory](./concepts/langchain-inventory.md) | the 5 LangChain bricks used (+ where/port), what we built ourselves, what we deliberately avoid |
 | [retrieval](./concepts/retrieval.md) | lexical (tsvector/GIN, simple) vs vector (pgvector/HNSW, cosine); citations; IkipRetriever BaseRetriever |
 | [hybrid-retrieval](./concepts/hybrid-retrieval.md) | RRF fusion, Reranker port (identity→cross-encoder), version-aware filters, abstention |
 | [grounded-answers](./concepts/grounded-answers.md) | LangGraph flow, opaque handles + server-resolved citations, grounding validation, reasoning vs temperature |

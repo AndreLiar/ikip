@@ -37,5 +37,6 @@ The one real trap it avoids: LangChain's **legacy `PGVector`** store brings its 
 5. LangGraph shows up at **Story 3.5** for the cited-answer / abstention graph.
 
 ## Related
+- Concrete inventory of the LangChain bricks actually used: [langchain-inventory](./langchain-inventory.md).
 - Decisions: [ADR 0002](../../adr/0002-dual-orchestration-dagster-langgraph.md) · [ADR 0021](../../adr/0021-framework-boundary-langchain-langgraph-vs-data-plane.md) · [ADR 0004](../../adr/0004-hybrid-retrieval-on-postgres.md) · [ADR 0003](../../adr/0003-local-first-ports-and-adapters.md).
 - Concepts: [why-rag](./why-rag.md) · [embeddings](./embeddings.md) · [dagster-orchestration](./dagster-orchestration.md) · [multi-tenancy](./multi-tenancy.md).
