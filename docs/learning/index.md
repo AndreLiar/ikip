@@ -23,6 +23,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-016](./missions/MISSION-016/mission.md) | LangGraph grounded-answer service (gpt-5.4-mini, server-resolved citations, grounding validation) | Epic 3 / Story 3.5 |
 | [MISSION-017](./missions/MISSION-017/mission.md) | Retrieval & answer quality baseline (deterministic metrics, gold set, regression reports) | Epic 3 / Story 3.6 |
 | [MISSION-018](./missions/MISSION-018/mission.md) | Caching (Cache port, tenant/version-aware keys, invalidation, exact-match answer cache) | Epic 3 / Story 3.7 |
+| [MISSION-019](./missions/MISSION-019/mission.md) | Wire Epic 3 hooks: cache invalidation at ingestion + hybrid-retrieval/ask endpoints | Epic 3 / integration |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |

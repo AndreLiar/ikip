@@ -15,7 +15,7 @@ from ikip_common.auth import Principal
 from ikip_common.db.models import UserRole
 from pydantic import BaseModel
 
-from ikip_api import auth, health
+from ikip_api import auth, health, retrieval
 from ikip_api.auth import CurrentPrincipal, require_role
 from ikip_api.logging_config import configure_logging
 
@@ -37,6 +37,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="IKIP API", version="0.1.0")
     app.include_router(health.router, prefix=API_V1_PREFIX, tags=["health"])
     app.include_router(auth.router, prefix=API_V1_PREFIX)
+    app.include_router(retrieval.router, prefix=API_V1_PREFIX)
 
     @app.get(f"{API_V1_PREFIX}/me", response_model=WhoAmI, tags=["auth"])
     def whoami(principal: CurrentPrincipal) -> WhoAmI:

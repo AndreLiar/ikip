@@ -89,9 +89,24 @@ def curated_documents(context) -> dg.MaterializeResult:  # noqa: ANN001
     description="Deduplicate + version curated documents (Story 2.5); emit a quality report.",
 )
 def document_versions(context) -> dg.MaterializeResult:  # noqa: ANN001
+    import uuid
+
+    from ikip_common.cache import build_cache, invalidate_tenant_answers
+
     from ikip_ingestion.quality_report import DataQualityReport
 
     report = DataQualityReport()  # populated from job/dedup counts in a full run
+
+    # Versions are published here via publish_document_version (wraps
+    # DocumentRepository.ingest_version). Each publish supersedes the prior current
+    # version, so the tenant's answer cache MUST be invalidated or an obsolete,
+    # still-cited answer could be served (ADR 0009 / Story 3.7). A full run invalidates
+    # per publishing tenant; the skeleton bumps the epoch once if anything was published.
+    published = report.new_documents + report.new_versions
+    if _DEFAULT_TENANT and published:
+        invalidate_tenant_answers(build_cache(), uuid.UUID(_DEFAULT_TENANT))
+        context.log.info("invalidated answer cache after %d version publishes", published)
+
     context.log.info("deduplicating + versioning curated documents")
     return dg.MaterializeResult(metadata={"stage": "versions", **report.as_dict()})
 
