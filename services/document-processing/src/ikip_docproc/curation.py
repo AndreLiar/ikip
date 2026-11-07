@@ -48,6 +48,17 @@ def _title_from(source: str) -> str:
     return tail.rsplit(".", 1)[0].replace("-", " ").replace("_", " ").strip() or source
 
 
+def _looks_like_pdf(raw_bytes: bytes, content_type: str | None) -> bool:
+    return (content_type is not None and "pdf" in content_type.lower()) or raw_bytes[:5] == b"%PDF-"
+
+
+def _default_pdf_extractor() -> TextExtractor:
+    # Lazy: only imports the heavy engines (PyMuPDF/Tesseract) when a PDF is actually seen.
+    from ikip_docproc.engines import PdfExtractor
+
+    return PdfExtractor()
+
+
 def curate_document(
     raw_bytes: bytes,
     *,
@@ -57,6 +68,11 @@ def curate_document(
 ) -> CuratedDocument:
     """Produce curated text + metadata from a raw artifact. With `extractor` given, read
     the PDF text layer; otherwise decode text-first."""
+    # Pick the real PDF extractor (PyMuPDF → OCR) when the artifact is a PDF and no
+    # extractor was injected; otherwise decode text-first. Injected extractor always wins.
+    if extractor is None and _looks_like_pdf(raw_bytes, content_type):
+        extractor = _default_pdf_extractor()
+
     if extractor is not None:
         extraction = extractor.extract(raw_bytes)
         raw_text = extraction.text
