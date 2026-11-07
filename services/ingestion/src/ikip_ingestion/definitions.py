@@ -89,25 +89,76 @@ def curated_documents(context) -> dg.MaterializeResult:  # noqa: ANN001
     description="Deduplicate + version curated documents (Story 2.5); emit a quality report.",
 )
 def document_versions(context) -> dg.MaterializeResult:  # noqa: ANN001
+    # Curate + version each PENDING ingestion job: load its raw artifact from R2,
+    # curate (extract/clean/metadata) and publish a deduplicated DocumentVersion with a
+    # curated artifact. publish_document_version supersedes prior versions AND invalidates
+    # the tenant answer cache (ADR 0009). Idempotent: exact duplicates are skipped.
     import uuid
 
-    from ikip_common.cache import build_cache, invalidate_tenant_answers
+    from ikip_common.cache import build_cache
+    from ikip_common.db import make_session_factory
+    from ikip_common.db.documents import DocumentRepository
+    from ikip_common.db.ingestion import IngestionJobRepository
+    from ikip_common.db.models import IngestionJob, IngestionState
+    from ikip_common.storage import R2ObjectStorage
+    from sqlalchemy import select
 
+    from ikip_ingestion.curate import curate_and_version
     from ikip_ingestion.quality_report import DataQualityReport
 
-    report = DataQualityReport()  # populated from job/dedup counts in a full run
+    report = DataQualityReport()
+    if not _DEFAULT_TENANT:
+        context.log.warning("IKIP_INGEST_TENANT_ID not set — nothing to version.")
+        return dg.MaterializeResult(metadata={"stage": "versions", **report.as_dict()})
 
-    # Versions are published here via publish_document_version (wraps
-    # DocumentRepository.ingest_version). Each publish supersedes the prior current
-    # version, so the tenant's answer cache MUST be invalidated or an obsolete,
-    # still-cited answer could be served (ADR 0009 / Story 3.7). A full run invalidates
-    # per publishing tenant; the skeleton bumps the epoch once if anything was published.
-    published = report.new_documents + report.new_versions
-    if _DEFAULT_TENANT and published:
-        invalidate_tenant_answers(build_cache(), uuid.UUID(_DEFAULT_TENANT))
-        context.log.info("invalidated answer cache after %d version publishes", published)
+    tenant_id = uuid.UUID(_DEFAULT_TENANT)
+    storage = R2ObjectStorage()
+    cache = build_cache()
 
-    context.log.info("deduplicating + versioning curated documents")
+    with make_session_factory()() as session:
+        repo = DocumentRepository(session, tenant_id)
+        jobs = IngestionJobRepository(session, tenant_id)
+        pending = session.execute(
+            select(IngestionJob).where(
+                IngestionJob.tenant_id == tenant_id,
+                IngestionJob.state == IngestionState.pending,
+                IngestionJob.raw_object_key.is_not(None),
+            )
+        ).scalars()
+        for job in pending:
+            report.total += 1
+            jobs.transition(job, IngestionState.running)
+            try:
+                raw = storage.get(job.raw_object_key)
+                res = curate_and_version(
+                    tenant_id=tenant_id,
+                    raw_bytes=raw,
+                    source=job.source,
+                    repo=repo,
+                    cache=cache,
+                    storage=storage,
+                )
+                jobs.transition(job, IngestionState.succeeded)
+                report.succeeded += 1
+                if res.skipped_duplicate:
+                    report.duplicates += 1
+                elif res.outcome and res.outcome.created_document:
+                    report.new_documents += 1
+                else:
+                    report.new_versions += 1
+            except Exception as exc:  # noqa: BLE001 — record + dead-letter, keep going
+                jobs.transition(job, IngestionState.failed, error_info={"error": str(exc)})
+                report.failed += 1
+                context.log.error("versioning failed for job %s: %s", job.id, exc)
+        session.commit()
+
+    context.log.info(
+        "versioned: +%d docs, +%d versions, %d dup, %d failed",
+        report.new_documents,
+        report.new_versions,
+        report.duplicates,
+        report.failed,
+    )
     return dg.MaterializeResult(metadata={"stage": "versions", **report.as_dict()})
 
 

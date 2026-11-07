@@ -1,0 +1,70 @@
+"""Curation: raw bytes → clean, curated text + metadata (Story 2.3/2.4 assembly).
+
+Text-first (ADR 0012 / decision): raw bytes are decoded as text (HTML tags stripped),
+then `clean_text` + `build_metadata`. A PDF `NativeExtractor` (PyMuPDF, Story 2.3) is
+an **injectable Protocol** — pass one to extract a PDF's text layer instead; OCR stays
+a later adapter behind the same seam. Pure + engine-free by default → CI-testable.
+"""
+
+from __future__ import annotations
+
+import html
+import re
+from dataclasses import dataclass
+from typing import Protocol
+
+from ikip_docproc.cleaning import clean_text
+from ikip_docproc.metadata import DocumentMetadata, build_metadata
+
+_TAG = re.compile(r"<[^>]+>")
+_SCRIPT_STYLE = re.compile(r"<(script|style)[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+
+
+class TextExtractor(Protocol):
+    """A PDF/native extractor (e.g. PyMuPDF). Returns an object exposing `.text` +
+    `.pages` (see `ikip_docproc.models.DocumentExtraction`)."""
+
+    def extract(self, data: bytes): ...  # noqa: ANN201
+
+
+@dataclass
+class CuratedDocument:
+    text: str
+    metadata: DocumentMetadata
+    page_count: int
+
+
+def _decode_text(raw: bytes, content_type: str | None) -> str:
+    text = raw.decode("utf-8", errors="replace")
+    if content_type and "html" in content_type.lower():
+        text = _SCRIPT_STYLE.sub(" ", text)
+        text = _TAG.sub(" ", text)
+        text = html.unescape(text)
+    return text
+
+
+def _title_from(source: str) -> str:
+    tail = source.rstrip("/").split("/")[-1] or source
+    return tail.rsplit(".", 1)[0].replace("-", " ").replace("_", " ").strip() or source
+
+
+def curate_document(
+    raw_bytes: bytes,
+    *,
+    source: str,
+    content_type: str | None = None,
+    extractor: TextExtractor | None = None,
+) -> CuratedDocument:
+    """Produce curated text + metadata from a raw artifact. With `extractor` given, read
+    the PDF text layer; otherwise decode text-first."""
+    if extractor is not None:
+        extraction = extractor.extract(raw_bytes)
+        raw_text = extraction.text
+        page_count = len(extraction.pages)
+    else:
+        raw_text = _decode_text(raw_bytes, content_type)
+        page_count = 1
+
+    text = clean_text(raw_text)
+    metadata = build_metadata(title=_title_from(source), text=text, page_count=page_count)
+    return CuratedDocument(text=text, metadata=metadata, page_count=page_count)
