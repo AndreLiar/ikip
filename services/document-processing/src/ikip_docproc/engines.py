@@ -18,6 +18,24 @@ from ikip_docproc.models import (
 from ikip_docproc.quality import needs_ocr
 
 
+class PdfExtractor:
+    """Two-stage PDF extractor as a `TextExtractor` (native PyMuPDF → OCR fallback).
+
+    Satisfies `ikip_docproc.curation.TextExtractor` (`.extract(bytes) -> DocumentExtraction`
+    with `.text` + `.pages`), so curation can read a real PDF instead of decoding text.
+    OCR (Tesseract) is applied only to pages whose native text layer is empty/sparse
+    (`extract_document`); pass `ocr=False` for native-only (digital-born PDFs, no tesseract)."""
+
+    def __init__(self, *, ocr: bool = True) -> None:
+        self._native = PyMuPDFExtractor()
+        self._ocr = TesseractOcrEngine() if ocr else None
+
+    def extract(self, data: bytes) -> DocumentExtraction:
+        from ikip_docproc.pipeline import extract_document
+
+        return extract_document(data, native=self._native, ocr=self._ocr)
+
+
 class PyMuPDFExtractor:
     """Stage-1 native extractor using PyMuPDF (fitz)."""
 

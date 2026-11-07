@@ -26,6 +26,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-019](./missions/MISSION-019/mission.md) | Wire Epic 3 hooks: cache invalidation at ingestion + hybrid-retrieval/ask endpoints | Epic 3 / integration |
 | [MISSION-020](./missions/MISSION-020/mission.md) | Build-time embedding pipeline (index_version + Dagster embedded_chunks asset) — closes Epic 2↔3 | Epic 2↔3 / build-time |
 | [MISSION-021](./missions/MISSION-021/mission.md) | Complete Epic 2: curation → version persistence (curate_and_version + real document_versions asset) | Epic 2 / build-time |
+| [MISSION-022](./missions/MISSION-022/mission.md) | Real PDF extraction adapter (PdfExtractor: PyMuPDF→OCR) behind the TextExtractor seam | Epic 2 / Story 2.3 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
