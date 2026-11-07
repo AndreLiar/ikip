@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # --- Cache + job queue: Redis (ADR 0009) ----------------------------
     redis_url: str = Field(alias="REDIS_URL")
 
+    # --- Auth (Story 1.6) -----------------------------------------------
+    # HS256 signing secret for dev-issued JWTs. In prod, auth is Entra ID (OIDC).
+    # >= 32 chars per RFC 7518 §3.2 for HS256 (rejects a weak secret at startup).
+    jwt_secret: SecretStr = Field(alias="JWT_SECRET", min_length=32)
+    jwt_expire_minutes: int = Field(default=60, alias="JWT_EXPIRE_MINUTES")
+    # Enables the dev-only token endpoint; must be False in prod.
+    auth_dev_login: bool = Field(default=False, alias="AUTH_DEV_LOGIN")
+
     # --- LLM observability: Langfuse Cloud (ADR 0013) -------------------
     langfuse_host: str = Field(default="https://cloud.langfuse.com", alias="LANGFUSE_HOST")
     langfuse_public_key: SecretStr | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")

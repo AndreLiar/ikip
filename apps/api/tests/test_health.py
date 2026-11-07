@@ -16,6 +16,8 @@ _ENV = {
     "R2_ACCESS_KEY_ID": "ak",
     "R2_SECRET_ACCESS_KEY": "sk",
     "REDIS_URL": "redis://localhost:6379/0",
+    "JWT_SECRET": "test-secret-0123456789abcdef0123456789",
+    "AUTH_DEV_LOGIN": "true",
 }
 
 
