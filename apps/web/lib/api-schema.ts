@@ -404,6 +404,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Platform Audit Events */
+        get: operations["list_platform_audit_events_api_v1_platform_audit_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Organizations */
+        get: operations["list_organizations_api_v1_platform_organizations_get"];
+        put?: never;
+        /** Create Organization */
+        post: operations["create_organization_api_v1_platform_organizations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/organizations/{tenant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Organization */
+        get: operations["get_organization_api_v1_platform_organizations__tenant_id__get"];
+        /** Update Organization */
+        put: operations["update_organization_api_v1_platform_organizations__tenant_id__put"];
+        post?: never;
+        /**
+         * Delete Organization
+         * @description Permanently delete a tenant and its cascaded data after two explicit confirmations.
+         */
+        delete: operations["delete_organization_api_v1_platform_organizations__tenant_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/retrieve": {
         parameters: {
             query?: never;
@@ -650,6 +707,21 @@ export interface components {
              */
             user_id: string;
         };
+        /** OrganizationCreate */
+        OrganizationCreate: {
+            /** Admin Email */
+            admin_email: string;
+            /** Configuration */
+            configuration?: {
+                [key: string]: unknown;
+            };
+            /** Name */
+            name: string;
+            /** Policies */
+            policies?: {
+                [key: string]: unknown;
+            };
+        };
         /** OrganizationOut */
         OrganizationOut: {
             /**
@@ -661,15 +733,6 @@ export interface components {
             name: string;
             /** Policies */
             policies: {
-                [key: string]: unknown;
-            };
-        };
-        /** OrganizationUpdate */
-        OrganizationUpdate: {
-            /** Name */
-            name: string;
-            /** Policies */
-            policies?: {
                 [key: string]: unknown;
             };
         };
@@ -696,6 +759,58 @@ export interface components {
             user_id?: string | null;
             /** Workspace Id */
             workspace_id?: string | null;
+        };
+        /** PlatformAuditOut */
+        PlatformAuditOut: {
+            /**
+             * Actor User Id
+             * Format: uuid
+             */
+            actor_user_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Operation */
+            operation: string;
+            /**
+             * Target Tenant Id
+             * Format: uuid
+             */
+            target_tenant_id: string;
+        };
+        /** PlatformOrganizationOut */
+        PlatformOrganizationOut: {
+            /** Configuration */
+            configuration: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Policies */
+            policies: {
+                [key: string]: unknown;
+            };
         };
         /** RetrieveRequest */
         RetrieveRequest: {
@@ -847,6 +962,28 @@ export interface components {
         WorkspaceWrite: {
             /** Name */
             name: string;
+        };
+        /** OrganizationUpdate */
+        ikip_api__admin__OrganizationUpdate: {
+            /** Name */
+            name: string;
+            /** Policies */
+            policies?: {
+                [key: string]: unknown;
+            };
+        };
+        /** OrganizationUpdate */
+        ikip_api__platform__OrganizationUpdate: {
+            /** Configuration */
+            configuration?: {
+                [key: string]: unknown;
+            };
+            /** Name */
+            name: string;
+            /** Policies */
+            policies?: {
+                [key: string]: unknown;
+            };
         };
     };
     responses: never;
@@ -1003,7 +1140,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["OrganizationUpdate"];
+                "application/json": components["schemas"]["ikip_api__admin__OrganizationUpdate"];
             };
         };
         responses: {
@@ -1909,6 +2046,209 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WhoAmI"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_platform_audit_events_api_v1_platform_audit_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAuditOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_organizations_api_v1_platform_organizations_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformOrganizationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_organization_api_v1_platform_organizations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformOrganizationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_organization_api_v1_platform_organizations__tenant_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformOrganizationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_organization_api_v1_platform_organizations__tenant_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ikip_api__platform__OrganizationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformOrganizationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_organization_api_v1_platform_organizations__tenant_id__delete: {
+        parameters: {
+            query?: {
+                confirm?: boolean;
+                expected_name?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

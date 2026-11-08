@@ -59,6 +59,21 @@ def require_role(min_role: UserRole):
     return _dep
 
 
+def require_platform_operator(principal: CurrentPrincipal) -> Principal:
+    """Authorize a cross-tenant operator by immutable IdP subject UUID."""
+    configured = {
+        value.strip()
+        for value in get_settings().platform_operator_user_ids.split(",")
+        if value.strip()
+    }
+    if str(principal.user_id) not in configured:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="requires platform operator capability",
+        )
+    return principal
+
+
 # --- dev-only token issuance --------------------------------------------
 
 

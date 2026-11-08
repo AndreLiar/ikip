@@ -76,6 +76,9 @@ class AppUser(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role"), default=UserRole.technician
     )
+    account_status: Mapped[AccountStatus] = mapped_column(
+        Enum(AccountStatus, name="account_status"), default=AccountStatus.active
+    )
 
 
 class Equipment(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
@@ -90,11 +93,6 @@ class Equipment(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     model: Mapped[str] = mapped_column(String(255))
     revision: Mapped[str | None] = mapped_column(String(64), default=None)
     asset_id: Mapped[str | None] = mapped_column(String(255), default=None)
-    account_status: Mapped[AccountStatus] = mapped_column(
-        Enum(AccountStatus, name="account_status"), default=AccountStatus.active
-    )
-
-
 class Workspace(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     __tablename__ = "workspace"
     __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_workspace_tenant_name"),)
@@ -321,6 +319,20 @@ class AuditEvent(UUIDPrimaryKey, TenantScoped, Base):
     operation: Mapped[str] = mapped_column(String(128), index=True)
     resource_type: Mapped[str | None] = mapped_column(String(64), default=None)
     resource_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    event_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+
+class PlatformAuditEvent(UUIDPrimaryKey, Base):
+    """Cross-tenant operator audit retained even when a tenant is deleted."""
+
+    __tablename__ = "platform_audit_event"
+
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    operation: Mapped[str] = mapped_column(String(128), index=True)
+    target_tenant_id: Mapped[uuid.UUID] = mapped_column(index=True)
     event_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True

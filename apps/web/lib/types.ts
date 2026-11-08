@@ -23,6 +23,7 @@ export type EquipmentWrite = Schemas['EquipmentWrite'];
 export type AdminUser = Schemas['UserOut'];
 export type Workspace = Schemas['WorkspaceOut'];
 export type Organization = Schemas['OrganizationOut'];
+export type PlatformOrganization = Schemas['PlatformOrganizationOut'];
 
 // `mode` is an enum on RetrieveRequest; expose it as a named type for the UI selector.
 export type SearchMode = NonNullable<RetrieveRequest['mode']>;

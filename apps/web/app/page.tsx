@@ -65,6 +65,8 @@ export default function Home(): React.JSX.Element {
         <Link href="/documents">Manage document library</Link>
         {' · '}
         <Link href="/admin">Administration</Link>
+        {' · '}
+        <Link href="/platform">Platform operations</Link>
       </nav>
 
       <form

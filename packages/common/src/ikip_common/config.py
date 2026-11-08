@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # Enables the dev-only token endpoint; must be False in prod.
     auth_dev_login: bool = Field(default=False, alias="AUTH_DEV_LOGIN")
     rate_limit_per_minute: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE", ge=1)
+    # Comma-separated Entra/OIDC subject UUIDs allowed to operate across tenants.
+    # This capability is deliberately independent from tenant roles.
+    platform_operator_user_ids: str = Field(default="", alias="PLATFORM_OPERATOR_USER_IDS")
 
     # --- LLM observability: Langfuse Cloud (ADR 0013) -------------------
     langfuse_host: str = Field(default="https://cloud.langfuse.com", alias="LANGFUSE_HOST")
