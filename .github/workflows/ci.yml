@@ -46,3 +46,45 @@ jobs:
             echo "::error::Potential secret committed"; exit 1
           fi
           echo "No obvious secrets found."
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm version comes from package.json "packageManager" (pnpm@9.12.0); don't
+      # also set `version` here or action-setup errors on a version mismatch.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: OpenAPI client is up to date
+        # Deterministic drift guard: regenerate the TS types from the committed
+        # openapi.json and fail if they differ from what's committed. (The openapi.json
+        # itself is produced by `uv run python -m ikip_api.openapi` when the API changes.)
+        run: |
+          pnpm --filter @ikip/web gen:api
+          git diff --exit-code apps/web/lib/api-schema.ts \
+            || { echo "::error::api-schema.ts is stale — run 'pnpm --filter @ikip/web gen:api'"; exit 1; }
+
+      - name: Prettier check (web)
+        run: pnpm exec prettier --check "apps/web/**/*.{ts,tsx,css,json,mjs}"
+
+      - name: Lint (eslint)
+        run: pnpm --filter @ikip/web lint
+
+      - name: Typecheck
+        run: pnpm --filter @ikip/web typecheck
+
+      - name: Unit tests (vitest)
+        run: pnpm --filter @ikip/web test
+
+      - name: Build (next)
+        run: pnpm --filter @ikip/web build

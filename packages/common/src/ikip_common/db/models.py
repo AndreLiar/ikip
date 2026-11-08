@@ -133,6 +133,9 @@ class DocumentVersion(UUIDPrimaryKey, Timestamped, Base):
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     # Key of the curated artifact for this version in object storage.
     curated_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+    # Key of the ORIGINAL source artifact (raw tier) — the PDF/HTML the user confirms
+    # evidence against (Story 4.5). Preferred over curated for the source viewer.
+    source_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
 
 
 class Section(UUIDPrimaryKey, Timestamped, Base):

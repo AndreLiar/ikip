@@ -45,11 +45,17 @@ def test_azure_embeds_at_512_dims() -> None:
     assert vectors[0] != vectors[1]
 
 
-def test_azure_is_deterministic() -> None:
+def test_azure_is_stable() -> None:
+    import math
+
     from ikip_common.llm import AzureOpenAIEmbeddingClient
 
     client = AzureOpenAIEmbeddingClient()
     a = client.embed(["surchauffe moteur"])[0]
     b = client.embed(["surchauffe moteur"])[0]
-    # same input -> (near-)identical vector
-    assert max(abs(x - y) for x, y in zip(a, b, strict=True)) < 1e-6
+    # Same input -> essentially the same direction. Assert cosine similarity ~1 rather
+    # than element-wise equality: hosted embeddings aren't bit-identical across calls.
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(x * x for x in b))
+    assert dot / (na * nb) > 0.9999

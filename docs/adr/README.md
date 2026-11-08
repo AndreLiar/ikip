@@ -62,3 +62,4 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0020](./0020-embedding-model-text-embedding-3-small.md)         | Embedding model `text-embedding-3-small` @ 512 dims (Matryoshka reduction)             | Accepted           |
 | [0021](./0021-framework-boundary-langchain-langgraph-vs-data-plane.md) | Framework boundary: reuse LangChain/LangGraph components behind our business ports (domain keeps schema, citations, tenant isolation, versioning) | Accepted           |
 | [0022](./0022-grounded-answer-langgraph-gpt5-mini.md)            | Grounded-answer service: LangGraph + gpt-5.4-mini, server-resolved citations, post-generation grounding validation | Accepted           |
+| [0023](./0023-web-bff-next-over-direct-cors.md)                  | Web app → API via a Next.js BFF (server route handlers), not direct browser→API CORS   | Accepted           |

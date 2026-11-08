@@ -61,6 +61,7 @@ def test_curate_and_version_stores_curated_and_publishes() -> None:
         repo=repo,
         cache=cache,
         storage=storage,
+        source_object_key="raw/t/doc/abc.bin",
     )
 
     assert res.skipped_duplicate is False and res.outcome is not None
@@ -71,6 +72,8 @@ def test_curate_and_version_stores_curated_and_publishes() -> None:
     # version published with the manufacturer revision parsed from the text
     assert repo.calls[0]["revision"] == "C"
     assert repo.calls[0]["curated_object_key"] == res.curated_object_key
+    # the original source artifact key is threaded onto the version (Story 4.5)
+    assert repo.calls[0]["source_object_key"] == "raw/t/doc/abc.bin"
     # publishing invalidated the tenant answer cache (ADR 0009)
     assert current_answer_epoch(cache, repo.tenant_id) == 1
 

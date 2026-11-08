@@ -62,8 +62,8 @@ def test_retrieve_returns_results_with_citations() -> None:
 
     captured = {}
 
-    def fake_service(*, tenant_id, query, k, current_only, document_type):
-        captured.update(tenant_id=tenant_id, query=query, k=k, current_only=current_only)
+    def fake_service(*, tenant_id, query, k, mode, current_only, document_type):
+        captured.update(tenant_id=tenant_id, query=query, k=k, mode=mode, current_only=current_only)
         return RetrieveResponse(
             abstained=False,
             results=[
@@ -94,6 +94,36 @@ def test_retrieve_returns_results_with_citations() -> None:
     assert body["results"][0]["citation"]["page_start"] == 142
     # the endpoint bound the query to the authenticated tenant (FR21/NFR10)
     assert captured["tenant_id"] == tenant and captured["k"] == 3
+    assert captured["mode"] == "hybrid"  # default mode
+
+
+def test_retrieve_accepts_search_mode() -> None:
+    from ikip_api.retrieval import RetrieveResponse, get_retrieve_service
+
+    seen = {}
+
+    def fake_service(*, mode, **_):
+        seen["mode"] = mode
+        return RetrieveResponse(abstained=True, results=[])
+
+    app = _app()
+    app.dependency_overrides[get_retrieve_service] = lambda: fake_service
+    client = TestClient(app)
+    token = _token(client, uuid.uuid4())
+    for mode in ("lexical", "vector", "hybrid"):
+        client.post(
+            "/api/v1/retrieve",
+            json={"query": "E42", "mode": mode},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert seen["mode"] == mode
+    # invalid mode rejected by schema
+    bad = client.post(
+        "/api/v1/retrieve",
+        json={"query": "x", "mode": "fuzzy"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert bad.status_code == 422
 
 
 def test_retrieve_surfaces_abstention() -> None:

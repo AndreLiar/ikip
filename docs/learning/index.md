@@ -28,6 +28,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-021](./missions/MISSION-021/mission.md) | Complete Epic 2: curation → version persistence (curate_and_version + real document_versions asset) | Epic 2 / build-time |
 | [MISSION-022](./missions/MISSION-022/mission.md) | Real PDF extraction adapter (PdfExtractor: PyMuPDF→OCR) behind the TextExtractor seam | Epic 2 / Story 2.3 |
 | [MISSION-023](./missions/MISSION-023/mission.md) | Ingestion robustness: HTML de-boilerplate, content_type persistence, tunable embedding batch | Epic 2/3 / polish |
+| [MISSION-024](./missions/MISSION-024/mission.md) | Technician Assistant UI (Next.js BFF) + keyword/semantic/hybrid search modes | Epic 4 / Story 4.4 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
