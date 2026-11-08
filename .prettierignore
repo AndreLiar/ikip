@@ -4,3 +4,6 @@ dist
 out
 docs/architecture/img
 pnpm-lock.yaml
+# Auto-generated (formatted by its generator, not Prettier):
+apps/web/lib/api-schema.ts
+apps/web/openapi.json

@@ -10,14 +10,27 @@ export interface UpstreamResult {
   body: unknown;
 }
 
-export async function proxyPost(path: string, payload: unknown): Promise<UpstreamResult> {
+function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (API_TOKEN) headers['Authorization'] = `Bearer ${API_TOKEN}`;
+  return headers;
+}
 
+export async function proxyPost(path: string, payload: unknown): Promise<UpstreamResult> {
   const resp = await fetch(`${API_URL}${path}`, {
     method: 'POST',
-    headers,
+    headers: authHeaders(),
     body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+  const body = await resp.json().catch(() => ({ detail: 'invalid upstream response' }));
+  return { status: resp.status, body };
+}
+
+export async function proxyGet(path: string): Promise<UpstreamResult> {
+  const resp = await fetch(`${API_URL}${path}`, {
+    method: 'GET',
+    headers: authHeaders(),
     cache: 'no-store',
   });
   const body = await resp.json().catch(() => ({ detail: 'invalid upstream response' }));

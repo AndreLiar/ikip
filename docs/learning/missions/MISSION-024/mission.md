@@ -30,8 +30,14 @@ Story 4.4 AC1 requires **keyword, semantic AND hybrid** search. The API's `/retr
 - `apps/api/src/ikip_api/retrieval.py` (mode) + test.
 - `apps/web/**` (app, components, lib, tests, config). `.github/workflows/ci.yml` web job. [ADR 0023](../../../adr/0023-web-bff-next-over-direct-cors.md).
 
-## Follow-ups (noted)
-- Story 4.5 document viewer (R2 presigned URL + highlight); real per-user auth (Entra ID → per-request token exchange) replacing the shared dev token; OpenAPI-generated TS client (Story 4.1); Tailwind/design system.
+## Done-now additions (folded into this slice)
+- **OpenAPI-generated TS client (Story 4.1):** `ikip_api.openapi` dumps the schema → `apps/web/openapi.json`; `pnpm gen:api` (openapi-typescript) → `lib/api-schema.ts`; `lib/types.ts` now aliases the generated schema (no hand-maintained drift). A CI drift guard regenerates and fails on diff.
+- **Story 4.5 (partial): source access.** `GET /api/v1/documents/{version_id}/source-url` authorizes the version∈tenant **then** issues a short-lived R2 presigned URL (authorize-before-serve, AC3). Citations are now **clickable** (`CitationChip` → BFF → presigned URL, opened at `#page=N`). Serves the stored artifact (curated text today).
+
+## Follow-ups (still deferred, argued)
+- **Full Story 4.5** (open the original **PDF** at the exact page + highlight) needs a **PDF corpus** and the **source PDF key threaded onto `document_version`** (today only `curated_object_key` is stored; the raw key lives on `ingestion_job`). The endpoint shape is stable; only the resolved key changes.
+- **Real per-user auth (Entra ID)** — a distinct hardening story (app registration + OIDC in Next + JWKS validation on the API); the shared dev token behind the BFF suffices for the MVP/demo.
+- Tailwind/design system.
 
 ## Concepts
 Reuses [auth-rbac](../../concepts/auth-rbac.md), [grounded-answers](../../concepts/grounded-answers.md), [retrieval](../../concepts/retrieval.md), [multi-tenancy](../../concepts/multi-tenancy.md).

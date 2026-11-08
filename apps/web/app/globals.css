@@ -169,6 +169,17 @@ button:disabled {
   margin: 0.15rem 0.3rem 0.15rem 0;
 }
 
+.citation--link {
+  cursor: pointer;
+  background: #fff;
+  font: inherit;
+}
+
+.citation--link:hover {
+  background: #eef4fb;
+  text-decoration: underline;
+}
+
 .badge-obsolete {
   color: var(--safety-fg);
 }

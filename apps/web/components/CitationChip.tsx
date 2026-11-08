@@ -1,11 +1,18 @@
+'use client';
+
+import { useState } from 'react';
+
+import { openSource } from '@/lib/source';
 import type { Citation } from '@/lib/types';
 
 /**
- * A resolvable citation (FR16): document revision + section + page. "Clickable" in the
- * sense of an actionable reference; opening the source PDF at the cited page is Story 4.5
- * (R2 presigned URL) — deferred, so here it's an inert chip carrying the full reference.
+ * A resolvable citation (FR16): document revision + section + page. Clickable — it opens
+ * the cited source via a short-lived presigned URL at the cited page (Story 4.5). Opening
+ * a PDF at an exact page + highlight is the full 4.5; here we open whatever artifact is
+ * stored (text today), jumping to `#page=N` when the source is a PDF.
  */
 export function CitationChip({ citation }: { citation: Citation }): React.JSX.Element {
+  const [error, setError] = useState(false);
   const parts: string[] = [];
   if (citation.revision) parts.push(`rev ${citation.revision}`);
   if (citation.hierarchy_path) parts.push(`§${citation.hierarchy_path}`);
@@ -17,10 +24,43 @@ export function CitationChip({ citation }: { citation: Citation }): React.JSX.El
     );
   }
   const obsolete = citation.is_current === false;
-  return (
-    <span className="citation" data-testid="citation" title={citation.heading ?? undefined}>
-      {parts.join(' · ') || 'source'}
+  const label = parts.join(' · ') || 'source';
+  const canOpen = Boolean(citation.document_version_id);
+
+  async function open(): Promise<void> {
+    if (!citation.document_version_id) return;
+    setError(false);
+    try {
+      await openSource(citation.document_version_id, citation.page_start ?? null);
+    } catch {
+      setError(true);
+    }
+  }
+
+  const content = (
+    <>
+      {label}
       {obsolete ? <span className="badge-obsolete"> obsolete</span> : null}
-    </span>
+      {error ? <span className="badge-obsolete"> unavailable</span> : null}
+    </>
+  );
+
+  if (!canOpen) {
+    return (
+      <span className="citation" data-testid="citation" title={citation.heading ?? undefined}>
+        {content}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="citation citation--link"
+      data-testid="citation"
+      title={citation.heading ?? 'Open source'}
+      onClick={() => void open()}
+    >
+      {content}
+    </button>
   );
 }
