@@ -18,6 +18,13 @@ const job = {
   attempts: 0,
   created_at: '2026-01-01T00:00:00Z',
 };
+const equipment = {
+  id: 'e1',
+  manufacturer: 'Siemens',
+  model: 'S7-1500',
+  revision: 'A',
+  asset_id: 'LINE-1',
+};
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -35,10 +42,12 @@ describe('document library', () => {
       const url = String(input);
       if (url.startsWith('/api/documents?')) return response([document]);
       if (url === '/api/ingestion-jobs') return response([job]);
+      if (url === '/api/equipment') return response([equipment]);
       if (url === '/api/documents/d1/versions') {
         return response([{ id: 'v1', revision: 'B', is_current: true }]);
       }
       if (url === '/api/documents/d1') return response({ ...document, type: 'datasheet' });
+      if (url === '/api/equipment/e1/documents/d1') return new Response(null, { status: 204 });
       return response({}, 404);
     });
   });
@@ -77,6 +86,18 @@ describe('document library', () => {
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/documents/d1',
         expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ type: 'datasheet' }) }),
+      ),
+    );
+  });
+
+  it('associates a document with equipment', async () => {
+    render(<DocumentsPage />);
+    const selector = await screen.findByLabelText('Equipment for Pump Manual');
+    fireEvent.change(selector, { target: { value: 'e1' } });
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/equipment/e1/documents/d1',
+        expect.objectContaining({ method: 'PUT' }),
       ),
     );
   });

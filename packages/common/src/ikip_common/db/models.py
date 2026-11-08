@@ -20,6 +20,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    PrimaryKeyConstraint,
     String,
     UniqueConstraint,
 )
@@ -74,6 +75,20 @@ class AppUser(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role"), default=UserRole.technician
     )
+
+
+class Equipment(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """Tenant-owned equipment model or physical asset (Story 4.3)."""
+
+    __tablename__ = "equipment"
+    __table_args__ = (
+        Index("ix_equipment_tenant_model", "tenant_id", "manufacturer", "model", "revision"),
+    )
+
+    manufacturer: Mapped[str] = mapped_column(String(255))
+    model: Mapped[str] = mapped_column(String(255))
+    revision: Mapped[str | None] = mapped_column(String(64), default=None)
+    asset_id: Mapped[str | None] = mapped_column(String(255), default=None)
     account_status: Mapped[AccountStatus] = mapped_column(
         Enum(AccountStatus, name="account_status"), default=AccountStatus.active
     )
@@ -136,6 +151,18 @@ class DocumentVersion(UUIDPrimaryKey, Timestamped, Base):
     # Key of the ORIGINAL source artifact (raw tier) — the PDF/HTML the user confirms
     # evidence against (Story 4.5). Preferred over curated for the source viewer.
     source_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+
+
+class DocumentEquipment(Base):
+    """Tenant-safe N:M association between documents and equipment."""
+
+    __tablename__ = "document_equipment"
+    __table_args__ = (PrimaryKeyConstraint("document_id", "equipment_id"),)
+
+    document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("document.id", ondelete="CASCADE"))
+    equipment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("equipment.id", ondelete="CASCADE"), index=True
+    )
 
 
 class Section(UUIDPrimaryKey, Timestamped, Base):

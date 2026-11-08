@@ -62,7 +62,7 @@ def test_retrieve_returns_results_with_citations() -> None:
 
     captured = {}
 
-    def fake_service(*, tenant_id, query, k, mode, current_only, document_type):
+    def fake_service(*, tenant_id, query, k, mode, current_only, document_type, equipment_id):
         captured.update(tenant_id=tenant_id, query=query, k=k, mode=mode, current_only=current_only)
         return RetrieveResponse(
             abstained=False,

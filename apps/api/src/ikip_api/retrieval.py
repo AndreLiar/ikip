@@ -48,6 +48,7 @@ class RetrieveRequest(BaseModel):
     mode: Literal["lexical", "vector", "hybrid"] = "hybrid"
     current_only: bool = True
     document_type: str | None = None
+    equipment_id: uuid.UUID | None = None
 
 
 class RetrievedChunk(BaseModel):
@@ -95,6 +96,7 @@ class RetrieveService(Protocol):
         mode: str,
         current_only: bool,
         document_type: str | None,
+        equipment_id: uuid.UUID | None,
     ) -> RetrieveResponse: ...
 
 
@@ -146,7 +148,9 @@ def get_retrieve_service() -> RetrieveService:
     hybrid (RRF), per the request `mode` (Story 4.4 AC1). Tenant-scoped, one DB session
     per request; heavy stack lazy-imported."""
 
-    def service(*, tenant_id, query, k, mode, current_only, document_type) -> RetrieveResponse:  # noqa: ANN001
+    def service(  # noqa: ANN001
+        *, tenant_id, query, k, mode, current_only, document_type, equipment_id
+    ) -> RetrieveResponse:
         from ikip_common.db import make_session_factory
         from ikip_common.db.retrieval import (
             RetrievalFilters,
@@ -156,7 +160,11 @@ def get_retrieve_service() -> RetrieveService:
         from ikip_common.llm import build_embedding_client
         from ikip_common.llm.hybrid import hybrid_retrieve
 
-        filters = RetrievalFilters(current_only=current_only, document_type=document_type)
+        filters = RetrievalFilters(
+            current_only=current_only,
+            document_type=document_type,
+            equipment_id=equipment_id,
+        )
         with make_session_factory()() as session:
             if mode == "lexical":
                 hits = lexical_search(session, tenant_id, query, limit=k, filters=filters)
@@ -260,6 +268,7 @@ def retrieve(
         mode=req.mode,
         current_only=req.current_only,
         document_type=req.document_type,
+        equipment_id=req.equipment_id,
     )
 
 

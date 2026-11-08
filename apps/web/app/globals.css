@@ -242,6 +242,7 @@ button:disabled {
 }
 
 .upload-form,
+.equipment-form,
 .document-list > li {
   display: flex;
   align-items: center;
@@ -254,6 +255,18 @@ button:disabled {
   padding: 1rem;
   background: var(--notice-bg);
   border-radius: 6px;
+}
+
+.equipment-form {
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.equipment-form input {
+  font: inherit;
+  padding: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
 }
 
 .upload-form label {

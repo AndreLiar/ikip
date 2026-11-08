@@ -3,14 +3,16 @@
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 
-import type { DocumentSummary, DocumentVersion, IngestionJob } from '@/lib/types';
+import type { DocumentSummary, DocumentVersion, Equipment, IngestionJob } from '@/lib/types';
 
 export default function DocumentsPage(): React.JSX.Element {
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [jobs, setJobs] = useState<IngestionJob[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [versions, setVersions] = useState<Record<string, DocumentVersion[]>>({});
   const [query, setQuery] = useState('');
   const [documentType, setDocumentType] = useState('');
+  const [equipmentId, setEquipmentId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -18,14 +20,19 @@ export default function DocumentsPage(): React.JSX.Element {
     const params = new URLSearchParams();
     if (query.trim()) params.set('query', query.trim());
     if (documentType.trim()) params.set('type', documentType.trim());
-    const [documentResponse, jobResponse] = await Promise.all([
+    if (equipmentId) params.set('equipment_id', equipmentId);
+    const [documentResponse, jobResponse, equipmentResponse] = await Promise.all([
       fetch(`/api/documents?${params}`, { cache: 'no-store' }),
       fetch('/api/ingestion-jobs', { cache: 'no-store' }),
+      fetch('/api/equipment', { cache: 'no-store' }),
     ]);
-    if (!documentResponse.ok || !jobResponse.ok) throw new Error('library could not be loaded');
+    if (!documentResponse.ok || !jobResponse.ok || !equipmentResponse.ok) {
+      throw new Error('library could not be loaded');
+    }
     setDocuments((await documentResponse.json()) as DocumentSummary[]);
     setJobs((await jobResponse.json()) as IngestionJob[]);
-  }, [documentType, query]);
+    setEquipment((await equipmentResponse.json()) as Equipment[]);
+  }, [documentType, equipmentId, query]);
 
   useEffect(() => {
     void refresh().catch((reason: unknown) =>
@@ -86,9 +93,19 @@ export default function DocumentsPage(): React.JSX.Element {
     await refresh();
   }
 
+  async function associate(documentId: string, selectedEquipmentId: string): Promise<void> {
+    if (!selectedEquipmentId) return;
+    const response = await fetch(`/api/equipment/${selectedEquipmentId}/documents/${documentId}`, {
+      method: 'PUT',
+    });
+    if (!response.ok) setError(`association failed (${response.status})`);
+  }
+
   return (
     <main className="shell library">
       <Link href="/">← Technician assistant</Link>
+      {' · '}
+      <Link href="/equipment">Equipment catalog</Link>
       <h1>Document library</h1>
       <p className="sub">Upload manuals, track ingestion, and inspect retained revisions.</p>
 
@@ -96,6 +113,17 @@ export default function DocumentsPage(): React.JSX.Element {
         <label>
           Document file
           <input name="file" type="file" required />
+        </label>
+        <label>
+          Equipment
+          <select value={equipmentId} onChange={(event) => setEquipmentId(event.target.value)}>
+            <option value="">All equipment</option>
+            {equipment.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.manufacturer} {item.model} {item.revision ?? ''}
+              </option>
+            ))}
+          </select>
         </label>
         <button disabled={busy} type="submit">
           {busy ? 'Uploading…' : 'Upload'}
@@ -146,6 +174,21 @@ export default function DocumentsPage(): React.JSX.Element {
                 <option value="maintenance-manual">Maintenance manual</option>
                 <option value="datasheet">Datasheet</option>
                 <option value="procedure">Procedure</option>
+              </select>
+            </label>
+            <label>
+              Associate equipment
+              <select
+                aria-label={`Equipment for ${document.title}`}
+                defaultValue=""
+                onChange={(event) => void associate(document.id, event.target.value)}
+              >
+                <option value="">Choose…</option>
+                {equipment.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.manufacturer} {item.model}
+                  </option>
+                ))}
               </select>
             </label>
             {versions[document.id] ? (

@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Document */
+        patch: operations["update_document_api_v1_documents__document_id__patch"];
+        trace?: never;
+    };
     "/api/v1/documents/{document_id}/versions": {
         parameters: {
             query?: never;
@@ -118,6 +135,60 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/equipment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Equipment */
+        get: operations["list_equipment_api_v1_equipment_get"];
+        put?: never;
+        /** Create Equipment */
+        post: operations["create_equipment_api_v1_equipment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/equipment/{equipment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Equipment */
+        put: operations["update_equipment_api_v1_equipment__equipment_id__put"];
+        post?: never;
+        /** Delete Equipment */
+        delete: operations["delete_equipment_api_v1_equipment__equipment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/equipment/{equipment_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Associate Document */
+        put: operations["associate_document_api_v1_equipment__equipment_id__documents__document_id__put"];
+        post?: never;
+        /** Dissociate Document */
+        delete: operations["dissociate_document_api_v1_equipment__equipment_id__documents__document_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -234,8 +305,6 @@ export interface components {
         Body_upload_document_api_v1_documents_upload_post: {
             /** File */
             file: string;
-            /** Title */
-            title?: string | null;
         };
         /** Citation */
         Citation: {
@@ -301,6 +370,38 @@ export interface components {
             /** Version Count */
             version_count: number;
         };
+        /** DocumentUpdate */
+        DocumentUpdate: {
+            /** Type */
+            type: string | null;
+        };
+        /** EquipmentOut */
+        EquipmentOut: {
+            /** Asset Id */
+            asset_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Manufacturer */
+            manufacturer: string;
+            /** Model */
+            model: string;
+            /** Revision */
+            revision?: string | null;
+        };
+        /** EquipmentWrite */
+        EquipmentWrite: {
+            /** Asset Id */
+            asset_id?: string | null;
+            /** Manufacturer */
+            manufacturer: string;
+            /** Model */
+            model: string;
+            /** Revision */
+            revision?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -345,6 +446,8 @@ export interface components {
             current_only: boolean;
             /** Document Type */
             document_type?: string | null;
+            /** Equipment Id */
+            equipment_id?: string | null;
             /**
              * K
              * @default 5
@@ -559,7 +662,11 @@ export interface operations {
     };
     list_documents_api_v1_documents_get: {
         parameters: {
-            query?: never;
+            query?: {
+                query?: string | null;
+                type?: string | null;
+                equipment_id?: string | null;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -604,12 +711,49 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["UploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_document_api_v1_documents__document_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentSummary"];
                 };
             };
             /** @description Validation Error */
@@ -677,6 +821,206 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SourceUrlResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_equipment_api_v1_equipment_get: {
+        parameters: {
+            query?: {
+                query?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_equipment_api_v1_equipment_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_equipment_api_v1_equipment__equipment_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                equipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EquipmentWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EquipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_equipment_api_v1_equipment__equipment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                equipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    associate_document_api_v1_equipment__equipment_id__documents__document_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                equipment_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dissociate_document_api_v1_equipment__equipment_id__documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                equipment_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

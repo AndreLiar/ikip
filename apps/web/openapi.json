@@ -132,17 +132,6 @@
             "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
           }
         },
         "required": [
@@ -391,6 +380,124 @@
         "title": "DocumentSummary",
         "type": "object"
       },
+      "DocumentUpdate": {
+        "properties": {
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "DocumentUpdate",
+        "type": "object"
+      },
+      "EquipmentOut": {
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manufacturer": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Manufacturer",
+            "type": "string"
+          },
+          "model": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          }
+        },
+        "required": [
+          "manufacturer",
+          "model",
+          "id"
+        ],
+        "title": "EquipmentOut",
+        "type": "object"
+      },
+      "EquipmentWrite": {
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "manufacturer": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Manufacturer",
+            "type": "string"
+          },
+          "model": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          }
+        },
+        "required": [
+          "manufacturer",
+          "model"
+        ],
+        "title": "EquipmentWrite",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -490,6 +597,18 @@
               }
             ],
             "title": "Document Type"
+          },
+          "equipment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipment Id"
           },
           "k": {
             "default": 5,
@@ -926,6 +1045,57 @@
         "operationId": "list_documents_api_v1_documents_get",
         "parameters": [
           {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "equipment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Equipment Id"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -1006,7 +1176,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
@@ -1028,6 +1198,75 @@
           }
         },
         "summary": "Upload Document",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}": {
+      "patch": {
+        "operationId": "update_document_api_v1_documents__document_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Document",
         "tags": [
           "library"
         ]
@@ -1155,6 +1394,374 @@
         ]
       }
     },
+    "/api/v1/equipment": {
+      "get": {
+        "operationId": "list_equipment_api_v1_equipment_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EquipmentOut"
+                  },
+                  "title": "Response List Equipment Api V1 Equipment Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Equipment",
+        "tags": [
+          "equipment"
+        ]
+      },
+      "post": {
+        "operationId": "create_equipment_api_v1_equipment_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Equipment",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/v1/equipment/{equipment_id}": {
+      "delete": {
+        "operationId": "delete_equipment_api_v1_equipment__equipment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Equipment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Equipment",
+        "tags": [
+          "equipment"
+        ]
+      },
+      "put": {
+        "operationId": "update_equipment_api_v1_equipment__equipment_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Equipment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Equipment",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/v1/equipment/{equipment_id}/documents/{document_id}": {
+      "delete": {
+        "operationId": "dissociate_document_api_v1_equipment__equipment_id__documents__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Equipment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dissociate Document",
+        "tags": [
+          "equipment"
+        ]
+      },
+      "put": {
+        "operationId": "associate_document_api_v1_equipment__equipment_id__documents__document_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Equipment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Associate Document",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health_api_v1_health_get",
@@ -1186,6 +1793,8 @@
             "required": false,
             "schema": {
               "default": 20,
+              "maximum": 100,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }

@@ -78,7 +78,12 @@ class DocumentNotFoundError(Exception):
 
 class LibraryService(Protocol):
     def list_documents(
-        self, *, tenant_id: uuid.UUID, query: str | None, document_type: str | None
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        query: str | None,
+        document_type: str | None,
+        equipment_id: uuid.UUID | None,
     ) -> list[DocumentSummary]: ...
     def list_versions(
         self, *, tenant_id: uuid.UUID, document_id: uuid.UUID
@@ -108,10 +113,15 @@ class _DbLibraryService:
     """Default service backed by the DB + R2 (lazy-imported)."""
 
     def list_documents(
-        self, *, tenant_id: uuid.UUID, query: str | None, document_type: str | None
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        query: str | None,
+        document_type: str | None,
+        equipment_id: uuid.UUID | None,
     ) -> list[DocumentSummary]:
         from ikip_common.db import make_session_factory
-        from ikip_common.db.models import Document, DocumentVersion
+        from ikip_common.db.models import Document, DocumentEquipment, DocumentVersion
         from sqlalchemy import func, select
 
         with make_session_factory()() as session:
@@ -139,6 +149,15 @@ class _DbLibraryService:
                 statement = statement.where(Document.title.ilike(f"%{query}%"))
             if document_type:
                 statement = statement.where(Document.type == document_type)
+            if equipment_id:
+                statement = statement.where(
+                    select(DocumentEquipment.document_id)
+                    .where(
+                        DocumentEquipment.document_id == Document.id,
+                        DocumentEquipment.equipment_id == equipment_id,
+                    )
+                    .exists()
+                )
             rows = session.execute(statement).all()
             return [
                 DocumentSummary(
@@ -277,11 +296,13 @@ def list_documents(
     service: Annotated[LibraryService, Depends(get_library_service)],
     query: Annotated[str | None, Query(max_length=200)] = None,
     document_type: Annotated[str | None, Query(alias="type", max_length=64)] = None,
+    equipment_id: uuid.UUID | None = None,
 ) -> list[DocumentSummary]:
     return service.list_documents(
         tenant_id=principal.tenant_id,
         query=query.strip() if query else None,
         document_type=document_type,
+        equipment_id=equipment_id,
     )
 
 

@@ -24,7 +24,15 @@ from dataclasses import dataclass
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ikip_common.db.models import FTS_CONFIG, Chunk, Document, DocumentVersion, Embedding, Section
+from ikip_common.db.models import (
+    FTS_CONFIG,
+    Chunk,
+    Document,
+    DocumentEquipment,
+    DocumentVersion,
+    Embedding,
+    Section,
+)
 from ikip_common.llm.base import Vector
 
 logger = logging.getLogger("ikip.retrieval")
@@ -61,6 +69,7 @@ class RetrievalFilters:
 
     current_only: bool = True
     document_type: str | None = None
+    equipment_id: uuid.UUID | None = None
     metadata: dict | None = None
 
 
@@ -71,6 +80,15 @@ def _apply_filters(stmt, filters: RetrievalFilters | None):
         stmt = stmt.where(DocumentVersion.is_current.is_(True))
     if filters.document_type is not None:
         stmt = stmt.where(Document.type == filters.document_type)
+    if filters.equipment_id is not None:
+        stmt = stmt.where(
+            select(DocumentEquipment.document_id)
+            .where(
+                DocumentEquipment.document_id == Document.id,
+                DocumentEquipment.equipment_id == filters.equipment_id,
+            )
+            .exists()
+        )
     if filters.metadata:
         stmt = stmt.where(Chunk.chunk_metadata.contains(filters.metadata))
     return stmt

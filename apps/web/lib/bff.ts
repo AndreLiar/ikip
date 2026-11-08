@@ -38,6 +38,27 @@ export async function proxyPatch(path: string, payload: unknown): Promise<Upstre
   return { status: resp.status, body };
 }
 
+export async function proxyPut(path: string, payload?: unknown): Promise<UpstreamResult> {
+  const resp = await fetch(`${API_URL}${path}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: payload === undefined ? undefined : JSON.stringify(payload),
+    cache: 'no-store',
+  });
+  const body = await resp.json().catch(() => null);
+  return { status: resp.status, body };
+}
+
+export async function proxyDelete(path: string): Promise<UpstreamResult> {
+  const resp = await fetch(`${API_URL}${path}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  const body = await resp.json().catch(() => null);
+  return { status: resp.status, body };
+}
+
 export async function proxyGet(path: string): Promise<UpstreamResult> {
   const resp = await fetch(`${API_URL}${path}`, {
     method: 'GET',

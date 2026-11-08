@@ -45,7 +45,7 @@ class _FakeLibrary:
     def __init__(self) -> None:
         self.uploads: list[dict] = []
 
-    def list_documents(self, *, tenant_id, query, document_type):
+    def list_documents(self, *, tenant_id, query, document_type, equipment_id):
         from ikip_api.library import DocumentSummary
 
         return [
