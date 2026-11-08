@@ -66,11 +66,21 @@ class _FakeEquipment:
 
 def _client(fake: _FakeEquipment) -> TestClient:
     from ikip_api.equipment import get_equipment_service
+    from ikip_api.governance import get_governance_service
     from ikip_api.main import create_app
 
     app = create_app()
     app.dependency_overrides[get_equipment_service] = lambda: fake
+    app.dependency_overrides[get_governance_service] = lambda: _FakeGovernance()
     return TestClient(app)
+
+
+class _FakeGovernance:
+    def authorize(self, principal, operation):
+        return None
+
+    def record(self, principal, operation, **kwargs):
+        return None
 
 
 def _token(client: TestClient, tenant: uuid.UUID, role: UserRole) -> str:

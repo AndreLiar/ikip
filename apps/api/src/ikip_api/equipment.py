@@ -11,6 +11,7 @@ from ikip_common.db.models import UserRole
 from pydantic import BaseModel, Field
 
 from ikip_api.auth import CurrentPrincipal, require_role
+from ikip_api.governance import GovernanceService, get_governance_service
 
 router = APIRouter(prefix="/equipment", tags=["equipment"])
 
@@ -198,8 +199,14 @@ def create_equipment(
     data: EquipmentWrite,
     principal: Annotated[Principal, Depends(require_role(UserRole.manager))],
     service: Annotated[EquipmentService, Depends(get_equipment_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> EquipmentOut:
-    return service.create(tenant_id=principal.tenant_id, data=data)
+    governance.authorize(principal, "equipment.create")
+    result = service.create(tenant_id=principal.tenant_id, data=data)
+    governance.record(
+        principal, "equipment.create", resource_type="equipment", resource_id=result.id
+    )
+    return result
 
 
 @router.put("/{equipment_id}", response_model=EquipmentOut)
@@ -208,9 +215,15 @@ def update_equipment(
     data: EquipmentWrite,
     principal: Annotated[Principal, Depends(require_role(UserRole.manager))],
     service: Annotated[EquipmentService, Depends(get_equipment_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> EquipmentOut:
     try:
-        return service.update(tenant_id=principal.tenant_id, equipment_id=equipment_id, data=data)
+        governance.authorize(principal, "equipment.update")
+        result = service.update(tenant_id=principal.tenant_id, equipment_id=equipment_id, data=data)
+        governance.record(
+            principal, "equipment.update", resource_type="equipment", resource_id=equipment_id
+        )
+        return result
     except CatalogNotFoundError as exc:
         raise _not_found() from exc
 
@@ -220,9 +233,14 @@ def delete_equipment(
     equipment_id: uuid.UUID,
     principal: Annotated[Principal, Depends(require_role(UserRole.manager))],
     service: Annotated[EquipmentService, Depends(get_equipment_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> Response:
     try:
+        governance.authorize(principal, "equipment.delete")
         service.delete(tenant_id=principal.tenant_id, equipment_id=equipment_id)
+        governance.record(
+            principal, "equipment.delete", resource_type="equipment", resource_id=equipment_id
+        )
     except CatalogNotFoundError as exc:
         raise _not_found() from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -234,12 +252,21 @@ def associate_document(
     document_id: uuid.UUID,
     principal: Annotated[Principal, Depends(require_role(UserRole.manager))],
     service: Annotated[EquipmentService, Depends(get_equipment_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> Response:
     try:
+        governance.authorize(principal, "equipment.associate")
         service.associate(
             tenant_id=principal.tenant_id,
             equipment_id=equipment_id,
             document_id=document_id,
+        )
+        governance.record(
+            principal,
+            "equipment.associate",
+            resource_type="document",
+            resource_id=document_id,
+            metadata={"equipment_id": str(equipment_id)},
         )
     except CatalogNotFoundError as exc:
         raise _not_found() from exc
@@ -252,12 +279,21 @@ def dissociate_document(
     document_id: uuid.UUID,
     principal: Annotated[Principal, Depends(require_role(UserRole.manager))],
     service: Annotated[EquipmentService, Depends(get_equipment_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> Response:
     try:
+        governance.authorize(principal, "equipment.dissociate")
         service.dissociate(
             tenant_id=principal.tenant_id,
             equipment_id=equipment_id,
             document_id=document_id,
+        )
+        governance.record(
+            principal,
+            "equipment.dissociate",
+            resource_type="document",
+            resource_id=document_id,
+            metadata={"equipment_id": str(equipment_id)},
         )
     except CatalogNotFoundError as exc:
         raise _not_found() from exc

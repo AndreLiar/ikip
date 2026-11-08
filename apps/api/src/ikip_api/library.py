@@ -25,6 +25,7 @@ from ikip_common.db.models import UserRole
 from pydantic import BaseModel
 
 from ikip_api.auth import CurrentPrincipal, require_role
+from ikip_api.governance import GovernanceService, get_governance_service
 
 router = APIRouter()
 
@@ -330,6 +331,7 @@ def update_document(
     update: DocumentUpdate,
     principal: Annotated[Principal, Depends(require_role(UserRole.manager))],
     service: Annotated[LibraryService, Depends(get_library_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> DocumentSummary:
     document_type = update.type.strip() if update.type else None
     if document_type is not None and len(document_type) > 64:
@@ -337,11 +339,20 @@ def update_document(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="type too long"
         )
     try:
-        return service.update_document_type(
+        governance.authorize(principal, "document.categorize")
+        result = service.update_document_type(
             tenant_id=principal.tenant_id,
             document_id=document_id,
             document_type=document_type,
         )
+        governance.record(
+            principal,
+            "document.categorize",
+            resource_type="document",
+            resource_id=document_id,
+            metadata={"type": document_type},
+        )
+        return result
     except DocumentNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="document not found"
@@ -358,6 +369,7 @@ async def upload_document(
     # Upload is a write — knowledge manager+ (RBAC, Story 1.6); reads need any role.
     principal: Annotated[Principal, Depends(require_role(UserRole.manager))],
     service: Annotated[LibraryService, Depends(get_library_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
     file: UploadFile,
 ) -> UploadResponse:
     content = await file.read()
@@ -368,12 +380,24 @@ async def upload_document(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="file exceeds the 25 MiB upload limit",
         )
-    return service.upload(
+    governance.authorize(principal, "document.upload")
+    result = service.upload(
         tenant_id=principal.tenant_id,
         filename=file.filename or "upload.bin",
         content=content,
         content_type=file.content_type,
     )
+    governance.record(
+        principal,
+        "document.upload",
+        resource_type="ingestion_job",
+        metadata={
+            "job_id": result.job_id,
+            "filename": file.filename or "upload.bin",
+            "bytes": len(content),
+        },
+    )
+    return result
 
 
 @router.get("/ingestion-jobs", response_model=list[JobInfo], tags=["library"])

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -263,3 +263,21 @@ class EvaluationCase(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     expected_behavior: Mapped[str] = mapped_column(String(16))  # ExpectedBehavior value
     relevant_chunk_ids: Mapped[list] = mapped_column(JSONB, default=list)
     notes: Mapped[str | None] = mapped_column(String(1024), default=None)
+
+
+class AuditEvent(UUIDPrimaryKey, TenantScoped, Base):
+    """Immutable record of a security- or usage-relevant operation (Story 4.8)."""
+
+    __tablename__ = "audit_event"
+    __table_args__ = (Index("ix_audit_tenant_time", "tenant_id", "created_at"),)
+
+    # Deliberately no FK: external OIDC actors may be audited before local user
+    # provisioning, and an immutable audit trail must retain their subject UUID.
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(default=None, index=True)
+    operation: Mapped[str] = mapped_column(String(128), index=True)
+    resource_type: Mapped[str | None] = mapped_column(String(64), default=None)
+    resource_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    event_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )

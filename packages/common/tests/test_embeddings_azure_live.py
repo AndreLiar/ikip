@@ -1,6 +1,7 @@
 """Live Azure OpenAI embedding test (Story 3.2) through our adapter.
 
-Skipped unless AZURE_OPENAI_* are configured (and the `embeddings` group installed).
+Skipped unless RUN_AZURE_LIVE_TESTS=1, AZURE_OPENAI_* are configured, and the
+`embeddings` group is installed.
 Verifies the real adapter (AzureOpenAIEmbeddingClient wrapping LangChain's
 AzureOpenAIEmbeddings) returns 512-dim vectors (ADR 0020) and is deterministic.
 Not run in the fast CI `validate` job; run locally / in an integration job.
@@ -15,7 +16,7 @@ from dotenv import find_dotenv, load_dotenv
 # has no .env -> the test skips).
 load_dotenv(find_dotenv(usecwd=True))
 
-_CONFIGURED = all(
+_CONFIGURED = os.environ.get("RUN_AZURE_LIVE_TESTS") == "1" and all(
     os.environ.get(k)
     for k in (
         "AZURE_OPENAI_ENDPOINT",
@@ -24,7 +25,10 @@ _CONFIGURED = all(
         "AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
     )
 )
-pytestmark = pytest.mark.skipif(not _CONFIGURED, reason="AZURE_OPENAI_* not configured")
+pytestmark = pytest.mark.skipif(
+    not _CONFIGURED,
+    reason="set RUN_AZURE_LIVE_TESTS=1 with AZURE_OPENAI_* to run live tests",
+)
 
 
 def test_azure_embeds_at_512_dims() -> None:

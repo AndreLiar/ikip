@@ -30,9 +30,20 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _app():
+    from ikip_api.governance import get_governance_service
     from ikip_api.main import create_app
 
-    return create_app()
+    app = create_app()
+    app.dependency_overrides[get_governance_service] = lambda: _FakeGovernance()
+    return app
+
+
+class _FakeGovernance:
+    def authorize(self, principal, operation):
+        return None
+
+    def record(self, principal, operation, **kwargs):
+        return None
 
 
 def _token(client: TestClient, tenant: uuid.UUID, role: UserRole = UserRole.technician) -> str:

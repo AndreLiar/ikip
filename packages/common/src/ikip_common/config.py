@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=60, alias="JWT_EXPIRE_MINUTES")
     # Enables the dev-only token endpoint; must be False in prod.
     auth_dev_login: bool = Field(default=False, alias="AUTH_DEV_LOGIN")
+    rate_limit_per_minute: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE", ge=1)
 
     # --- LLM observability: Langfuse Cloud (ADR 0013) -------------------
     langfuse_host: str = Field(default="https://cloud.langfuse.com", alias="LANGFUSE_HOST")

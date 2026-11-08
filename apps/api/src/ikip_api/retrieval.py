@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from ikip_api.auth import CurrentPrincipal
+from ikip_api.governance import GovernanceService, get_governance_service
 
 router = APIRouter()
 
@@ -260,8 +261,10 @@ def retrieve(
     req: RetrieveRequest,
     principal: CurrentPrincipal,
     service: Annotated[RetrieveService, Depends(get_retrieve_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> RetrieveResponse:
-    return service(
+    governance.authorize(principal, "retrieval.search")
+    result = service(
         tenant_id=principal.tenant_id,
         query=req.query,
         k=req.k,
@@ -270,6 +273,13 @@ def retrieve(
         document_type=req.document_type,
         equipment_id=req.equipment_id,
     )
+    governance.record(
+        principal,
+        "retrieval.search",
+        resource_type="query",
+        metadata={"mode": req.mode, "results": len(result.results)},
+    )
+    return result
 
 
 @router.post("/ask", response_model=AskResponse, tags=["retrieval"])
@@ -277,10 +287,19 @@ def ask(
     req: AskRequest,
     principal: CurrentPrincipal,
     service: Annotated[AskService, Depends(get_ask_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> AskResponse:
-    return service(
+    governance.authorize(principal, "assistant.ask")
+    result = service(
         tenant_id=principal.tenant_id,
         query=req.query,
         equipment_model=req.equipment_model,
         revision=req.revision,
     )
+    governance.record(
+        principal,
+        "assistant.ask",
+        resource_type="query",
+        metadata={"status": result.status},
+    )
+    return result
