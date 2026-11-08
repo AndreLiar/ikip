@@ -74,6 +74,7 @@ class DocumentRepository(TenantScopedRepository[Document]):
         fingerprint: str,
         revision: str,
         curated_object_key: str | None = None,
+        source_object_key: str | None = None,
         publication_date: date | None = None,
         effective_date: date | None = None,
         source: str | None = None,
@@ -90,6 +91,7 @@ class DocumentRepository(TenantScopedRepository[Document]):
                 checksum,
                 revision,
                 curated_object_key,
+                source_object_key,
                 publication_date,
                 effective_date,
             )
@@ -100,7 +102,13 @@ class DocumentRepository(TenantScopedRepository[Document]):
         self.add(doc)  # stamps tenant_id
         self.session.flush()
         version = self._add_version(
-            doc, checksum, revision, curated_object_key, publication_date, effective_date
+            doc,
+            checksum,
+            revision,
+            curated_object_key,
+            source_object_key,
+            publication_date,
+            effective_date,
         )
         return IngestOutcome(document=doc, version=version, created_document=True)
 
@@ -110,6 +118,7 @@ class DocumentRepository(TenantScopedRepository[Document]):
         checksum: str,
         revision: str,
         curated_object_key: str | None,
+        source_object_key: str | None,
         publication_date: date | None,
         effective_date: date | None,
     ) -> DocumentVersion:
@@ -122,6 +131,7 @@ class DocumentRepository(TenantScopedRepository[Document]):
             revision=revision,
             checksum=checksum,
             curated_object_key=curated_object_key,
+            source_object_key=source_object_key,
             publication_date=publication_date,
             effective_date=effective_date,
             is_current=True,

@@ -34,8 +34,11 @@ Story 4.4 AC1 requires **keyword, semantic AND hybrid** search. The API's `/retr
 - **OpenAPI-generated TS client (Story 4.1):** `ikip_api.openapi` dumps the schema → `apps/web/openapi.json`; `pnpm gen:api` (openapi-typescript) → `lib/api-schema.ts`; `lib/types.ts` now aliases the generated schema (no hand-maintained drift). A CI drift guard regenerates and fails on diff.
 - **Story 4.5 (partial): source access.** `GET /api/v1/documents/{version_id}/source-url` authorizes the version∈tenant **then** issues a short-lived R2 presigned URL (authorize-before-serve, AC3). Citations are now **clickable** (`CitationChip` → BFF → presigned URL, opened at `#page=N`). Serves the stored artifact (curated text today).
 
+## Source-key plumbing (done-now, unblocks full 4.5)
+- `document_version.source_object_key` (nullable String + reversible migration `6dff50d415b4`) stores the **original** source artifact key (raw tier). Threaded: `ingest_version`/`_add_version` → `publish_document_version` → `curate_and_version(source_object_key=…)` → the `document_versions` asset passes `job.raw_object_key`. The source-url endpoint now **prefers `source_object_key`** (the original PDF/HTML) over the curated text, falling back to curated.
+
 ## Follow-ups (still deferred, argued)
-- **Full Story 4.5** (open the original **PDF** at the exact page + highlight) needs a **PDF corpus** and the **source PDF key threaded onto `document_version`** (today only `curated_object_key` is stored; the raw key lives on `ingestion_job`). The endpoint shape is stable; only the resolved key changes.
+- **Full Story 4.5 viewer** (render the PDF at the exact page + **highlight** the cited region) now only needs a **PDF corpus** ingested — the data plane is ready (source key stored, endpoint serves it, citation opens `#page=N`). Highlight needs a PDF.js viewer component.
 - **Real per-user auth (Entra ID)** — a distinct hardening story (app registration + OIDC in Next + JWKS validation on the API); the shared dev token behind the BFF suffices for the MVP/demo.
 - Tailwind/design system.
 

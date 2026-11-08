@@ -54,11 +54,15 @@ def get_source_url_service() -> SourceUrlService:
 
         with make_session_factory()() as session:
             # Authorize-before-serve: the version must belong to the caller's tenant.
-            key = session.execute(
-                select(DocumentVersion.curated_object_key)
+            row = session.execute(
+                select(DocumentVersion.source_object_key, DocumentVersion.curated_object_key)
                 .join(Document, DocumentVersion.document_id == Document.id)
                 .where(DocumentVersion.id == version_id, Document.tenant_id == tenant_id)
-            ).scalar_one_or_none()
+            ).one_or_none()
+            if row is None:
+                raise SourceNotFoundError(str(version_id))
+            # Prefer the ORIGINAL source artifact (PDF/HTML) over the curated text.
+            key = row[0] or row[1]
             if not key:
                 raise SourceNotFoundError(str(version_id))
             url = R2ObjectStorage().presigned_url(key, expires_s=expires_s)

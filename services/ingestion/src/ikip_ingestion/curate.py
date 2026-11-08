@@ -50,6 +50,7 @@ def curate_and_version(
     cache: Cache,
     storage: ObjectStorage,
     content_type: str | None = None,
+    source_object_key: str | None = None,
     extractor: TextExtractor | None = None,
 ) -> CurationOutcome:
     """Curate a raw artifact and publish it as a document version. Exact duplicates
@@ -74,6 +75,7 @@ def curate_and_version(
             fingerprint=fingerprint,
             revision=revision,
             curated_object_key=key,
+            source_object_key=source_object_key,
             source=source,
         )
     except DuplicateDocumentError:

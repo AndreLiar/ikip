@@ -19,7 +19,11 @@
             "type": "string"
           }
         },
-        "required": ["text", "safety_critical", "citations"],
+        "required": [
+          "text",
+          "safety_critical",
+          "citations"
+        ],
         "title": "AnsweredClaimOut",
         "type": "object"
       },
@@ -53,7 +57,9 @@
             "title": "Revision"
           }
         },
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "title": "AskRequest",
         "type": "object"
       },
@@ -269,7 +275,11 @@
             "type": "string"
           }
         },
-        "required": ["service", "ok", "detail"],
+        "required": [
+          "service",
+          "ok",
+          "detail"
+        ],
         "title": "DependencyStatus",
         "type": "object"
       },
@@ -297,7 +307,9 @@
             "title": "User Id"
           }
         },
-        "required": ["tenant_id"],
+        "required": [
+          "tenant_id"
+        ],
         "title": "DevTokenRequest",
         "type": "object"
       },
@@ -328,7 +340,10 @@
             "type": "string"
           },
           "status": {
-            "enum": ["ok", "degraded"],
+            "enum": [
+              "ok",
+              "degraded"
+            ],
             "title": "Status",
             "type": "string"
           },
@@ -337,7 +352,12 @@
             "type": "string"
           }
         },
-        "required": ["status", "service", "version", "dependencies"],
+        "required": [
+          "status",
+          "service",
+          "version",
+          "dependencies"
+        ],
         "title": "HealthResponse",
         "type": "object"
       },
@@ -368,7 +388,11 @@
           },
           "mode": {
             "default": "hybrid",
-            "enum": ["lexical", "vector", "hybrid"],
+            "enum": [
+              "lexical",
+              "vector",
+              "hybrid"
+            ],
             "title": "Mode",
             "type": "string"
           },
@@ -378,7 +402,9 @@
             "type": "string"
           }
         },
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "title": "RetrieveRequest",
         "type": "object"
       },
@@ -396,7 +422,10 @@
             "type": "array"
           }
         },
-        "required": ["abstained", "results"],
+        "required": [
+          "abstained",
+          "results"
+        ],
         "title": "RetrieveResponse",
         "type": "object"
       },
@@ -410,7 +439,10 @@
             "type": "string"
           }
         },
-        "required": ["content", "citation"],
+        "required": [
+          "content",
+          "citation"
+        ],
         "title": "RetrievedChunk",
         "type": "object"
       },
@@ -436,7 +468,10 @@
             "type": "string"
           }
         },
-        "required": ["url", "expires_s"],
+        "required": [
+          "url",
+          "expires_s"
+        ],
         "title": "SourceUrlResponse",
         "type": "object"
       },
@@ -452,12 +487,18 @@
             "type": "string"
           }
         },
-        "required": ["access_token"],
+        "required": [
+          "access_token"
+        ],
         "title": "TokenResponse",
         "type": "object"
       },
       "UserRole": {
-        "enum": ["admin", "manager", "technician"],
+        "enum": [
+          "admin",
+          "manager",
+          "technician"
+        ],
         "title": "UserRole",
         "type": "string"
       },
@@ -493,7 +534,11 @@
             "type": "string"
           }
         },
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError",
         "type": "object"
       },
@@ -512,7 +557,11 @@
             "type": "string"
           }
         },
-        "required": ["user_id", "tenant_id", "role"],
+        "required": [
+          "user_id",
+          "tenant_id",
+          "role"
+        ],
         "title": "WhoAmI",
         "type": "object"
       }
@@ -572,7 +621,9 @@
           }
         },
         "summary": "Admin Ping",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/ask": {
@@ -629,7 +680,9 @@
           }
         },
         "summary": "Ask",
-        "tags": ["retrieval"]
+        "tags": [
+          "retrieval"
+        ]
       }
     },
     "/api/v1/auth/dev-token": {
@@ -668,7 +721,9 @@
           }
         },
         "summary": "Dev Token",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/documents/{version_id}/source-url": {
@@ -725,7 +780,9 @@
           }
         },
         "summary": "Source Url",
-        "tags": ["documents"]
+        "tags": [
+          "documents"
+        ]
       }
     },
     "/api/v1/health": {
@@ -744,7 +801,9 @@
           }
         },
         "summary": "Health",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/api/v1/me": {
@@ -791,7 +850,9 @@
           }
         },
         "summary": "Whoami",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/retrieve": {
@@ -848,7 +909,9 @@
           }
         },
         "summary": "Retrieve",
-        "tags": ["retrieval"]
+        "tags": [
+          "retrieval"
+        ]
       }
     }
   }
