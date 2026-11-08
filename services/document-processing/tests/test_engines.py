@@ -35,6 +35,9 @@ def test_pymupdf_extracts_native_text_with_page_refs() -> None:
     assert "E42" in doc.pages[0].text
     assert doc.pages[0].method is ExtractionMethod.native
     assert not doc.pages[0].needs_ocr  # native text present -> no OCR needed
+    assert doc.pages[0].regions
+    assert "E42" in doc.pages[0].regions[0].text
+    assert all(0 <= value <= 1 for value in doc.pages[0].regions[0].bbox)
 
 
 def test_pymupdf_flags_empty_page_for_ocr() -> None:

@@ -34,9 +34,20 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _app():
+    from ikip_api.governance import get_governance_service
     from ikip_api.main import create_app
 
-    return create_app()
+    app = create_app()
+    app.dependency_overrides[get_governance_service] = lambda: _FakeGovernance()
+    return app
+
+
+class _FakeGovernance:
+    def authorize(self, principal, operation):
+        return None
+
+    def record(self, principal, operation, **kwargs):
+        return None
 
 
 def _token(client: TestClient, tenant_id: uuid.UUID, role: UserRole = UserRole.technician) -> str:
@@ -62,7 +73,9 @@ def test_retrieve_returns_results_with_citations() -> None:
 
     captured = {}
 
-    def fake_service(*, tenant_id, query, k, mode, current_only, document_type):
+    def fake_service(
+        *, tenant_id, query, k, mode, current_only, document_type, equipment_id, user_id
+    ):
         captured.update(tenant_id=tenant_id, query=query, k=k, mode=mode, current_only=current_only)
         return RetrieveResponse(
             abstained=False,
@@ -161,7 +174,7 @@ def test_ask_returns_grounded_answer() -> None:
         get_ask_service,
     )
 
-    def fake_ask(*, tenant_id, query, equipment_model, revision):
+    def fake_ask(*, tenant_id, query, equipment_model, revision, user_id):
         return AskResponse(
             status="answered",
             answer="E42 = pump overheat. [E1]",

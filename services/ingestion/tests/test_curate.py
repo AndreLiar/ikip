@@ -105,3 +105,41 @@ def test_exact_duplicate_skipped_no_invalidation() -> None:
     # curated artifact is still written (idempotent, checksum-keyed), but no version/cache change
     assert res.curated_object_key in storage.objects
     assert current_answer_epoch(cache, repo.tenant_id) == 0
+
+
+def test_pdf_layout_sidecar_is_stored_and_published() -> None:
+    from ikip_docproc.models import DocumentExtraction, ExtractionMethod, PageExtraction, TextRegion
+
+    class _Extractor:
+        def extract(self, data: bytes) -> DocumentExtraction:
+            return DocumentExtraction(
+                pages=[
+                    PageExtraction(
+                        page=3,
+                        text="Fault E42 reset procedure",
+                        method=ExtractionMethod.native,
+                        regions=[
+                            TextRegion(
+                                page=3,
+                                text="Fault E42 reset procedure",
+                                bbox=(0.1, 0.2, 0.8, 0.3),
+                            )
+                        ],
+                    )
+                ]
+            )
+
+    repo, cache, storage = _FakeRepo(), FakeCache(), _FakeStorage()
+    result = curate_and_version(
+        tenant_id=repo.tenant_id,
+        raw_bytes=b"%PDF-fake",
+        source="manual.pdf",
+        repo=repo,
+        cache=cache,
+        storage=storage,
+        extractor=_Extractor(),
+    )
+    assert result.layout_object_key is not None
+    assert result.layout_object_key.endswith(".layout.json")
+    assert b'"bbox":[0.1,0.2,0.8,0.3]' in storage.objects[result.layout_object_key]
+    assert repo.calls[0]["layout_object_key"] == result.layout_object_key

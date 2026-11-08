@@ -17,6 +17,7 @@ function cite(over: Partial<Citation> = {}): Citation {
     page_start: 142,
     page_end: 142,
     score: 0.9,
+    regions: [],
     ...over,
   };
 }
@@ -63,6 +64,22 @@ describe('CitationChip', () => {
     await waitFor(() => expect(screen.getByTestId('viewer-frame')).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText('close viewer'));
     expect(screen.queryByTestId('viewer')).not.toBeInTheDocument();
+  });
+
+  it('selects the PDF region viewer when a citation has bounding boxes', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ url: 'https://r2/x.pdf', expires_s: 300 }),
+      })),
+    );
+    render(
+      <CitationChip citation={cite({ regions: [{ page: 142, bbox: [0.1, 0.2, 0.8, 0.3] }] })} />,
+    );
+    fireEvent.click(screen.getByTestId('citation'));
+    await waitFor(() => expect(screen.getByTestId('pdf-highlight')).toBeInTheDocument());
+    expect(screen.queryByTestId('viewer-frame')).not.toBeInTheDocument();
   });
 
   it('is a non-clickable span when there is no version id', () => {

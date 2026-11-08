@@ -14,6 +14,7 @@ from ikip_docproc.models import (
     ExtractionMethod,
     PageExtraction,
     TableRef,
+    TextRegion,
 )
 from ikip_docproc.quality import needs_ocr
 
@@ -45,7 +46,8 @@ class PyMuPDFExtractor:
         pages: list[PageExtraction] = []
         with pymupdf.open(stream=pdf_bytes, filetype="pdf") as doc:
             for i, page in enumerate(doc, start=1):
-                text = page.get_text("text") or ""
+                regions = self._text_regions(page, i)
+                text = "\n".join(region.text for region in regions)
                 tables = self._find_tables(page, i)
                 pages.append(
                     PageExtraction(
@@ -54,6 +56,7 @@ class PyMuPDFExtractor:
                         method=ExtractionMethod.native,
                         needs_ocr=needs_ocr(text),
                         tables=tables,
+                        regions=regions,
                     )
                 )
         return DocumentExtraction(pages=pages)
@@ -65,6 +68,25 @@ class PyMuPDFExtractor:
         except Exception:  # noqa: BLE001 — table detection is best-effort
             return []
         return [TableRef(page=page_no, bbox=tuple(t.bbox)) for t in getattr(found, "tables", [])]
+
+    @staticmethod
+    def _text_regions(page, page_no: int) -> list[TextRegion]:
+        width, height = float(page.rect.width), float(page.rect.height)
+        if width <= 0 or height <= 0:
+            return []
+        regions: list[TextRegion] = []
+        for block in page.get_text("blocks") or []:
+            x0, y0, x1, y1, text = block[:5]
+            if not str(text).strip():
+                continue
+            regions.append(
+                TextRegion(
+                    page=page_no,
+                    text=str(text).strip(),
+                    bbox=(x0 / width, y0 / height, x1 / width, y1 / height),
+                )
+            )
+        return regions
 
 
 class TesseractOcrEngine:

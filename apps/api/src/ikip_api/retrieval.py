@@ -20,11 +20,17 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from ikip_api.auth import CurrentPrincipal
+from ikip_api.governance import GovernanceService, get_governance_service
 
 router = APIRouter()
 
 
 # --- wire schemas ----------------------------------------------------------
+
+
+class CitationRegion(BaseModel):
+    page: int
+    bbox: tuple[float, float, float, float]
 
 
 class Citation(BaseModel):
@@ -39,6 +45,7 @@ class Citation(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     score: float | None = None
+    regions: list[CitationRegion] = Field(default_factory=list)
 
 
 class RetrieveRequest(BaseModel):
@@ -48,6 +55,7 @@ class RetrieveRequest(BaseModel):
     mode: Literal["lexical", "vector", "hybrid"] = "hybrid"
     current_only: bool = True
     document_type: str | None = None
+    equipment_id: uuid.UUID | None = None
 
 
 class RetrievedChunk(BaseModel):
@@ -95,6 +103,8 @@ class RetrieveService(Protocol):
         mode: str,
         current_only: bool,
         document_type: str | None,
+        equipment_id: uuid.UUID | None,
+        user_id: uuid.UUID,
     ) -> RetrieveResponse: ...
 
 
@@ -106,6 +116,7 @@ class AskService(Protocol):
         query: str,
         equipment_model: str | None,
         revision: str | None,
+        user_id: uuid.UUID,
     ) -> AskResponse: ...
 
 
@@ -122,6 +133,7 @@ def _citation_from_metadata(meta: dict, *, score: float | None = None) -> Citati
         page_start=meta.get("page_start"),
         page_end=meta.get("page_end"),
         score=score if score is not None else meta.get("rrf_score"),
+        regions=meta.get("regions", []),
     )
 
 
@@ -138,6 +150,7 @@ def _citation_from_hit(hit) -> Citation:  # noqa: ANN001  (SearchHit; avoid heav
         page_start=hit.page_start,
         page_end=hit.page_end,
         score=hit.score,
+        regions=hit.regions,
     )
 
 
@@ -146,7 +159,9 @@ def get_retrieve_service() -> RetrieveService:
     hybrid (RRF), per the request `mode` (Story 4.4 AC1). Tenant-scoped, one DB session
     per request; heavy stack lazy-imported."""
 
-    def service(*, tenant_id, query, k, mode, current_only, document_type) -> RetrieveResponse:  # noqa: ANN001
+    def service(  # noqa: ANN001
+        *, tenant_id, query, k, mode, current_only, document_type, equipment_id, user_id
+    ) -> RetrieveResponse:
         from ikip_common.db import make_session_factory
         from ikip_common.db.retrieval import (
             RetrievalFilters,
@@ -156,7 +171,12 @@ def get_retrieve_service() -> RetrieveService:
         from ikip_common.llm import build_embedding_client
         from ikip_common.llm.hybrid import hybrid_retrieve
 
-        filters = RetrievalFilters(current_only=current_only, document_type=document_type)
+        filters = RetrievalFilters(
+            current_only=current_only,
+            document_type=document_type,
+            equipment_id=equipment_id,
+            user_id=user_id,
+        )
         with make_session_factory()() as session:
             if mode == "lexical":
                 hits = lexical_search(session, tenant_id, query, limit=k, filters=filters)
@@ -194,7 +214,9 @@ def get_retrieve_service() -> RetrieveService:
 def get_ask_service() -> AskService:
     """Default (production) grounded-answer service with caching (Stories 3.5 + 3.7)."""
 
-    def service(*, tenant_id, query, equipment_model, revision) -> AskResponse:  # noqa: ANN001
+    def service(  # noqa: ANN001
+        *, tenant_id, query, equipment_model, revision, user_id
+    ) -> AskResponse:
         from ikip_common.cache import build_cache
         from ikip_common.db import make_session_factory
         from ikip_common.db.models import Document, DocumentVersion
@@ -212,7 +234,14 @@ def get_ask_service() -> AskService:
                     .where(Document.tenant_id == tenant_id, DocumentVersion.is_current.is_(True))
                 ).scalars()
             ]
-            retrieve = make_hybrid_retrieve(session, tenant_id, build_embedding_client())
+            from ikip_common.db.retrieval import RetrievalFilters
+
+            retrieve = make_hybrid_retrieve(
+                session,
+                tenant_id,
+                build_embedding_client(),
+                filters=RetrievalFilters(user_id=user_id),
+            )
             result, hit = cached_grounded_answer(
                 query,
                 cache=build_cache(),
@@ -252,15 +281,26 @@ def retrieve(
     req: RetrieveRequest,
     principal: CurrentPrincipal,
     service: Annotated[RetrieveService, Depends(get_retrieve_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> RetrieveResponse:
-    return service(
+    governance.authorize(principal, "retrieval.search")
+    result = service(
         tenant_id=principal.tenant_id,
         query=req.query,
         k=req.k,
         mode=req.mode,
         current_only=req.current_only,
         document_type=req.document_type,
+        equipment_id=req.equipment_id,
+        user_id=principal.user_id,
     )
+    governance.record(
+        principal,
+        "retrieval.search",
+        resource_type="query",
+        metadata={"mode": req.mode, "results": len(result.results)},
+    )
+    return result
 
 
 @router.post("/ask", response_model=AskResponse, tags=["retrieval"])
@@ -268,10 +308,20 @@ def ask(
     req: AskRequest,
     principal: CurrentPrincipal,
     service: Annotated[AskService, Depends(get_ask_service)],
+    governance: Annotated[GovernanceService, Depends(get_governance_service)],
 ) -> AskResponse:
-    return service(
+    governance.authorize(principal, "assistant.ask")
+    result = service(
         tenant_id=principal.tenant_id,
         query=req.query,
         equipment_model=req.equipment_model,
         revision=req.revision,
+        user_id=principal.user_id,
     )
+    governance.record(
+        principal,
+        "assistant.ask",
+        resource_type="query",
+        metadata={"status": result.status},
+    )
+    return result

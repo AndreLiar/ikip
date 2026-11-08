@@ -176,6 +176,7 @@ def embedded_chunks(context) -> dg.MaterializeResult:  # noqa: ANN001
         context.log.warning("IKIP_INGEST_TENANT_ID not set — nothing to index.")
         return dg.MaterializeResult(metadata={"stage": "embedded", "versions": 0})
 
+    import json
     import uuid
 
     from ikip_common.db import make_session_factory
@@ -202,7 +203,19 @@ def embedded_chunks(context) -> dg.MaterializeResult:  # noqa: ANN001
         ).scalars()
         for dv in current:
             curated_text = storage.get(dv.curated_object_key).decode("utf-8")
-            report = index_version(session, tenant_id, dv.id, curated_text, client)
+            layout_regions = (
+                json.loads(storage.get(dv.layout_object_key).decode("utf-8"))
+                if dv.layout_object_key
+                else None
+            )
+            report = index_version(
+                session,
+                tenant_id,
+                dv.id,
+                curated_text,
+                client,
+                layout_regions=layout_regions,
+            )
             indexed_versions += 1
             total_chunks += report.chunks_created
         session.commit()

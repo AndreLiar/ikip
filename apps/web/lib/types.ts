@@ -14,6 +14,16 @@ export type AskRequest = Schemas['AskRequest'];
 export type AnsweredClaim = Schemas['AnsweredClaimOut'];
 export type AskResponse = Schemas['AskResponse'];
 export type SourceUrlResponse = Schemas['SourceUrlResponse'];
+export type DocumentSummary = Schemas['DocumentSummary'];
+export type DocumentVersion = Schemas['VersionInfo'];
+export type IngestionJob = Schemas['JobInfo'];
+export type UploadResponse = Schemas['UploadResponse'];
+export type Equipment = Schemas['EquipmentOut'];
+export type EquipmentWrite = Schemas['EquipmentWrite'];
+export type AdminUser = Schemas['UserOut'];
+export type Workspace = Schemas['WorkspaceOut'];
+export type Organization = Schemas['OrganizationOut'];
+export type PlatformOrganization = Schemas['PlatformOrganizationOut'];
 
 // `mode` is an enum on RetrieveRequest; expose it as a named type for the UI selector.
 export type SearchMode = NonNullable<RetrieveRequest['mode']>;

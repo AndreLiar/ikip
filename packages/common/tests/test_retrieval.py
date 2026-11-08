@@ -55,17 +55,30 @@ def test_vector_stmt_uses_cosine_and_filters_model_version() -> None:
     assert "tenant_id" in sql
 
 
-def test_filters_add_version_type_and_metadata_clauses() -> None:
-    filters = RetrievalFilters(current_only=True, document_type="manual", metadata={"equip": "P1"})
+def test_filters_add_version_type_equipment_and_metadata_clauses() -> None:
+    filters = RetrievalFilters(
+        current_only=True,
+        document_type="manual",
+        equipment_id=uuid.uuid4(),
+        metadata={"equip": "P1"},
+    )
     sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 10, filters))
     assert "is_current is true" in sql  # version-awareness WHERE (applicable vs obsolete)
     assert "document.type" in sql  # equipment/document kind
+    assert "document_equipment" in sql
     assert "@>" in sql  # JSONB containment for metadata (equipment model/revision)
 
 
 def test_current_only_false_omits_is_current_predicate() -> None:
     sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 10, RetrievalFilters(current_only=False)))
     assert "is_current is true" not in sql  # no version-awareness WHERE predicate
+
+
+def test_acl_filter_allows_public_direct_or_workspace_access() -> None:
+    sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 10, RetrievalFilters(user_id=uuid.uuid4())))
+    assert "document_permission" in sql
+    assert "workspace_membership" in sql
+    assert "not (exists" in sql
 
 
 # --- DB-backed -------------------------------------------------------------

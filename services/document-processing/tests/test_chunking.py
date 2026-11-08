@@ -1,6 +1,6 @@
 """Structure-aware chunking tests (Story 3.1, ADR 0019). Pure."""
 
-from ikip_docproc.chunking import chunk_document, estimate_tokens
+from ikip_docproc.chunking import chunk_document, chunk_regions, estimate_tokens
 
 
 def test_chunks_follow_sections() -> None:
@@ -52,3 +52,12 @@ def test_empty_text_yields_no_chunks() -> None:
 def test_estimate_tokens() -> None:
     assert estimate_tokens("") == 0
     assert estimate_tokens("abcd") == 1  # ~4 chars/token
+
+
+def test_pdf_region_chunk_retains_page_and_normalized_bbox() -> None:
+    chunks = chunk_regions(
+        [{"page": 7, "text": "Fault E42 reset procedure", "bbox": [0.1, 0.2, 0.8, 0.3]}]
+    )
+    assert len(chunks) == 1
+    assert chunks[0].page_start == chunks[0].page_end == 7
+    assert chunks[0].regions == [{"page": 7, "bbox": [0.1, 0.2, 0.8, 0.3]}]

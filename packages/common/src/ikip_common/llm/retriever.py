@@ -47,6 +47,7 @@ def hit_to_document(hit: SearchHit) -> Document:
             "hierarchy_path": hit.hierarchy_path,
             "page_start": hit.page_start,
             "page_end": hit.page_end,
+            "regions": hit.regions,
             "score": hit.score,
         },
     )

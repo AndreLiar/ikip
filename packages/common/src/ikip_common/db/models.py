@@ -9,17 +9,19 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Computed,
     Date,
     DateTime,
     Enum,
     ForeignKey,
     Index,
+    PrimaryKeyConstraint,
     String,
     UniqueConstraint,
 )
@@ -79,6 +81,36 @@ class AppUser(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     )
 
 
+class Equipment(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """Tenant-owned equipment model or physical asset (Story 4.3)."""
+
+    __tablename__ = "equipment"
+    __table_args__ = (
+        Index("ix_equipment_tenant_model", "tenant_id", "manufacturer", "model", "revision"),
+    )
+
+    manufacturer: Mapped[str] = mapped_column(String(255))
+    model: Mapped[str] = mapped_column(String(255))
+    revision: Mapped[str | None] = mapped_column(String(64), default=None)
+    asset_id: Mapped[str | None] = mapped_column(String(255), default=None)
+
+
+class Workspace(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    __tablename__ = "workspace"
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_workspace_tenant_name"),)
+
+    name: Mapped[str] = mapped_column(String(255))
+
+
+class WorkspaceMembership(Base):
+    __tablename__ = "workspace_membership"
+    __table_args__ = (PrimaryKeyConstraint("workspace_id", "user_id"),)
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workspace.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id", ondelete="CASCADE"))
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"))
+
+
 class IngestionJob(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     """Tracks one source file through ingestion (Story 2.1, FR8)."""
 
@@ -133,9 +165,48 @@ class DocumentVersion(UUIDPrimaryKey, Timestamped, Base):
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     # Key of the curated artifact for this version in object storage.
     curated_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+    # JSON sidecar containing normalized text-block regions for PDF highlights.
+    layout_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
     # Key of the ORIGINAL source artifact (raw tier) — the PDF/HTML the user confirms
     # evidence against (Story 4.5). Preferred over curated for the source viewer.
     source_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+
+
+class DocumentEquipment(Base):
+    """Tenant-safe N:M association between documents and equipment."""
+
+    __tablename__ = "document_equipment"
+    __table_args__ = (PrimaryKeyConstraint("document_id", "equipment_id"),)
+
+    document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("document.id", ondelete="CASCADE"))
+    equipment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("equipment.id", ondelete="CASCADE"), index=True
+    )
+
+
+class DocumentPermission(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """Explicit document ACL. No rows means tenant-wide access (migration-safe)."""
+
+    __tablename__ = "document_permission"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id", "user_id", "workspace_id", name="uq_document_permission_subject"
+        ),
+        CheckConstraint(
+            "(user_id IS NOT NULL) <> (workspace_id IS NOT NULL)",
+            name="ck_document_permission_one_subject",
+        ),
+    )
+
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="CASCADE"), default=None
+    )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workspace.id", ondelete="CASCADE"), default=None
+    )
 
 
 class Section(UUIDPrimaryKey, Timestamped, Base):
@@ -236,3 +307,35 @@ class EvaluationCase(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     expected_behavior: Mapped[str] = mapped_column(String(16))  # ExpectedBehavior value
     relevant_chunk_ids: Mapped[list] = mapped_column(JSONB, default=list)
     notes: Mapped[str | None] = mapped_column(String(1024), default=None)
+
+
+class AuditEvent(UUIDPrimaryKey, TenantScoped, Base):
+    """Immutable record of a security- or usage-relevant operation (Story 4.8)."""
+
+    __tablename__ = "audit_event"
+    __table_args__ = (Index("ix_audit_tenant_time", "tenant_id", "created_at"),)
+
+    # Deliberately no FK: external OIDC actors may be audited before local user
+    # provisioning, and an immutable audit trail must retain their subject UUID.
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(default=None, index=True)
+    operation: Mapped[str] = mapped_column(String(128), index=True)
+    resource_type: Mapped[str | None] = mapped_column(String(64), default=None)
+    resource_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    event_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+
+class PlatformAuditEvent(UUIDPrimaryKey, Base):
+    """Cross-tenant operator audit retained even when a tenant is deleted."""
+
+    __tablename__ = "platform_audit_event"
+
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    operation: Mapped[str] = mapped_column(String(128), index=True)
+    target_tenant_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    event_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )

@@ -57,6 +57,7 @@ export function CitationChip({ citation }: { citation: Citation }): React.JSX.El
         <SourceViewer
           versionId={citation.document_version_id!}
           page={citation.page_start ?? null}
+          regions={citation.regions as { page: number; bbox: [number, number, number, number] }[]}
           onClose={() => setOpen(false)}
         />
       ) : null}

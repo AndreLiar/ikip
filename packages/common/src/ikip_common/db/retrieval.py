@@ -19,12 +19,22 @@ import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ikip_common.db.models import FTS_CONFIG, Chunk, Document, DocumentVersion, Embedding, Section
+from ikip_common.db.models import (
+    FTS_CONFIG,
+    Chunk,
+    Document,
+    DocumentEquipment,
+    DocumentPermission,
+    DocumentVersion,
+    Embedding,
+    Section,
+    WorkspaceMembership,
+)
 from ikip_common.llm.base import Vector
 
 logger = logging.getLogger("ikip.retrieval")
@@ -48,6 +58,7 @@ class SearchHit:
     hierarchy_path: str | None
     page_start: int | None
     page_end: int | None
+    regions: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -61,6 +72,8 @@ class RetrievalFilters:
 
     current_only: bool = True
     document_type: str | None = None
+    equipment_id: uuid.UUID | None = None
+    user_id: uuid.UUID | None = None
     metadata: dict | None = None
 
 
@@ -71,6 +84,33 @@ def _apply_filters(stmt, filters: RetrievalFilters | None):
         stmt = stmt.where(DocumentVersion.is_current.is_(True))
     if filters.document_type is not None:
         stmt = stmt.where(Document.type == filters.document_type)
+    if filters.equipment_id is not None:
+        stmt = stmt.where(
+            select(DocumentEquipment.document_id)
+            .where(
+                DocumentEquipment.document_id == Document.id,
+                DocumentEquipment.equipment_id == filters.equipment_id,
+            )
+            .exists()
+        )
+    if filters.user_id is not None:
+        any_acl = select(DocumentPermission.id).where(DocumentPermission.document_id == Document.id)
+        direct_acl = select(DocumentPermission.id).where(
+            DocumentPermission.document_id == Document.id,
+            DocumentPermission.user_id == filters.user_id,
+        )
+        workspace_acl = (
+            select(DocumentPermission.id)
+            .join(
+                WorkspaceMembership,
+                DocumentPermission.workspace_id == WorkspaceMembership.workspace_id,
+            )
+            .where(
+                DocumentPermission.document_id == Document.id,
+                WorkspaceMembership.user_id == filters.user_id,
+            )
+        )
+        stmt = stmt.where(~any_acl.exists() | direct_acl.exists() | workspace_acl.exists())
     if filters.metadata:
         stmt = stmt.where(Chunk.chunk_metadata.contains(filters.metadata))
     return stmt
@@ -109,6 +149,7 @@ def _hit(row) -> SearchHit:
         hierarchy_path=row.hierarchy_path,
         page_start=row.page_start,
         page_end=row.page_end,
+        regions=(row.chunk_metadata or {}).get("regions", []),
     )
 
 
@@ -124,6 +165,7 @@ _CITATION_COLUMNS = (
     Section.hierarchy_path.label("hierarchy_path"),
     Chunk.page_start.label("page_start"),
     Chunk.page_end.label("page_end"),
+    Chunk.chunk_metadata.label("chunk_metadata"),
 )
 
 
