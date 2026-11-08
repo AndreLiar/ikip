@@ -22,7 +22,7 @@ from ikip_common.llm.base import EmbeddingClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ikip_docproc.chunking import ChunkSpec, chunk_document
+from ikip_docproc.chunking import ChunkSpec, chunk_document, chunk_regions
 
 
 @dataclass
@@ -75,6 +75,7 @@ def index_version(
     *,
     max_tokens: int = 400,
     overlap_tokens: int = 40,
+    layout_regions: list[dict] | None = None,
 ) -> IndexReport:
     """Chunk `curated_text`, persist Section/Chunk (if not already present for this
     version), then embed the chunks. Returns counts + the embedding report."""
@@ -84,7 +85,11 @@ def index_version(
         report = embed_and_store(session, tenant_id, embedding_client, existing)
         return IndexReport(sections_created=0, chunks_created=0, embed=report)
 
-    specs = chunk_document(curated_text, max_tokens=max_tokens, overlap_tokens=overlap_tokens)
+    specs = (
+        chunk_regions(layout_regions, max_tokens=max_tokens, overlap_tokens=overlap_tokens)
+        if layout_regions
+        else chunk_document(curated_text, max_tokens=max_tokens, overlap_tokens=overlap_tokens)
+    )
     chunks: list[Chunk] = []
     sections_created = 0
     for planned in plan_sections(specs):
@@ -107,7 +112,11 @@ def index_version(
                 page_start=spec.page_start,
                 page_end=spec.page_end,
                 token_count=spec.token_count,
-                chunk_metadata={"section_path": spec.section_path, "ordinal": spec.ordinal},
+                chunk_metadata={
+                    "section_path": spec.section_path,
+                    "ordinal": spec.ordinal,
+                    "regions": spec.regions,
+                },
             )
             session.add(chunk)
             chunks.append(chunk)

@@ -513,12 +513,26 @@ export interface components {
             page_end?: number | null;
             /** Page Start */
             page_start?: number | null;
+            /** Regions */
+            regions?: components["schemas"]["CitationRegion"][];
             /** Revision */
             revision?: string | null;
             /** Score */
             score?: number | null;
             /** Section Id */
             section_id?: string | null;
+        };
+        /** CitationRegion */
+        CitationRegion: {
+            /** Bbox */
+            bbox: [
+                number,
+                number,
+                number,
+                number
+            ];
+            /** Page */
+            page: number;
         };
         /** DependencyStatus */
         DependencyStatus: {

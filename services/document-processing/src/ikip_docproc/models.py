@@ -23,6 +23,15 @@ class TableRef:
     bbox: tuple[float, float, float, float] | None = None
 
 
+@dataclass(frozen=True)
+class TextRegion:
+    """Text block with a normalized PDF bounding box (x0, y0, x1, y1)."""
+
+    page: int
+    text: str
+    bbox: tuple[float, float, float, float]
+
+
 @dataclass
 class PageExtraction:
     page: int  # 1-based page number (preserves page references, AC1)
@@ -30,6 +39,7 @@ class PageExtraction:
     method: ExtractionMethod
     needs_ocr: bool = False  # set by stage 1 when the native text layer is empty/sparse
     tables: list[TableRef] = field(default_factory=list)
+    regions: list[TextRegion] = field(default_factory=list)
     quality_score: float = 0.0  # 0..1; low -> flagged (AC4)
     low_quality: bool = False
 

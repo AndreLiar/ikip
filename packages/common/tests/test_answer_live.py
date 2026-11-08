@@ -1,7 +1,8 @@
 """Live Azure grounded-answer test (Story 3.5) — real gpt-5.4-mini, no DB.
 
-Skipped unless AZURE_OPENAI_* (chat) are configured. Exercises the real AzureChatClient
-+ LLMGroundingValidator through the LangGraph flow with an in-memory retrieve stub, so
+Skipped unless RUN_AZURE_LIVE_TESTS=1 and AZURE_OPENAI_* (chat) are configured.
+Exercises the real AzureChatClient + LLMGroundingValidator through the LangGraph flow
+with an in-memory retrieve stub, so
 it validates structured output, reasoning_effort and the grounding judge end to end
 without touching Postgres. Not in the fast CI `validate` job.
 """
@@ -15,7 +16,7 @@ load_dotenv(find_dotenv(usecwd=True))
 
 pytest.importorskip("langgraph")
 
-_CONFIGURED = all(
+_CONFIGURED = os.environ.get("RUN_AZURE_LIVE_TESTS") == "1" and all(
     os.environ.get(k)
     for k in (
         "AZURE_OPENAI_ENDPOINT",
@@ -24,7 +25,10 @@ _CONFIGURED = all(
         "AZURE_OPENAI_CHAT_DEPLOYMENT",
     )
 )
-pytestmark = pytest.mark.skipif(not _CONFIGURED, reason="AZURE_OPENAI_* chat not configured")
+pytestmark = pytest.mark.skipif(
+    not _CONFIGURED,
+    reason="set RUN_AZURE_LIVE_TESTS=1 with AZURE_OPENAI_* to run live tests",
+)
 
 
 def _retrieve(docs):

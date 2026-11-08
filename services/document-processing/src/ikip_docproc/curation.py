@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import html
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ikip_docproc.cleaning import clean_text
 from ikip_docproc.metadata import DocumentMetadata, build_metadata
+from ikip_docproc.models import TextRegion
 
 _TAG = re.compile(r"<[^>]+>")
 # Boilerplate regions to drop before extracting text: scripts/styles plus nav/header/
@@ -45,6 +46,7 @@ class CuratedDocument:
     text: str
     metadata: DocumentMetadata
     page_count: int
+    regions: list[TextRegion] = field(default_factory=list)
 
 
 def _strip_html(text: str) -> str:
@@ -102,10 +104,12 @@ def curate_document(
         extraction = extractor.extract(raw_bytes)
         raw_text = extraction.text
         page_count = len(extraction.pages)
+        regions = [region for page in extraction.pages for region in getattr(page, "regions", [])]
     else:
         raw_text = _decode_text(raw_bytes, content_type)
         page_count = 1
+        regions = []
 
     text = clean_text(raw_text)
     metadata = build_metadata(title=_title_from(source), text=text, page_count=page_count)
-    return CuratedDocument(text=text, metadata=metadata, page_count=page_count)
+    return CuratedDocument(text=text, metadata=metadata, page_count=page_count, regions=regions)

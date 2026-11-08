@@ -18,6 +18,7 @@ present, else a deterministic fallback derived from the checksum.
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from dataclasses import dataclass
 
@@ -33,6 +34,7 @@ from ikip_ingestion.version_publish import publish_document_version
 @dataclass
 class CurationOutcome:
     curated_object_key: str
+    layout_object_key: str | None
     skipped_duplicate: bool
     outcome: IngestOutcome | None  # None iff skipped_duplicate
 
@@ -64,6 +66,20 @@ def curate_and_version(
 
     key = tier_key(ArtifactTier.curated, str(tenant_id), _safe(source), f"{checksum}.txt")
     storage.put(key, curated.text.encode("utf-8"), content_type="text/plain")
+    layout_key = None
+    if curated.regions:
+        layout_key = tier_key(
+            ArtifactTier.curated, str(tenant_id), _safe(source), f"{checksum}.layout.json"
+        )
+        layout = [
+            {"page": region.page, "text": region.text, "bbox": list(region.bbox)}
+            for region in curated.regions
+        ]
+        storage.put(
+            layout_key,
+            json.dumps(layout, separators=(",", ":")).encode("utf-8"),
+            content_type="application/json",
+        )
 
     revision = curated.metadata.revision or f"r-{checksum[:8]}"
     try:
@@ -75,9 +91,20 @@ def curate_and_version(
             fingerprint=fingerprint,
             revision=revision,
             curated_object_key=key,
+            layout_object_key=layout_key,
             source_object_key=source_object_key,
             source=source,
         )
     except DuplicateDocumentError:
-        return CurationOutcome(curated_object_key=key, skipped_duplicate=True, outcome=None)
-    return CurationOutcome(curated_object_key=key, skipped_duplicate=False, outcome=outcome)
+        return CurationOutcome(
+            curated_object_key=key,
+            layout_object_key=layout_key,
+            skipped_duplicate=True,
+            outcome=None,
+        )
+    return CurationOutcome(
+        curated_object_key=key,
+        layout_object_key=layout_key,
+        skipped_duplicate=False,
+        outcome=outcome,
+    )

@@ -28,6 +28,11 @@ router = APIRouter()
 # --- wire schemas ----------------------------------------------------------
 
 
+class CitationRegion(BaseModel):
+    page: int
+    bbox: tuple[float, float, float, float]
+
+
 class Citation(BaseModel):
     chunk_id: str | None = None
     document_id: str | None = None
@@ -40,6 +45,7 @@ class Citation(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     score: float | None = None
+    regions: list[CitationRegion] = Field(default_factory=list)
 
 
 class RetrieveRequest(BaseModel):
@@ -127,6 +133,7 @@ def _citation_from_metadata(meta: dict, *, score: float | None = None) -> Citati
         page_start=meta.get("page_start"),
         page_end=meta.get("page_end"),
         score=score if score is not None else meta.get("rrf_score"),
+        regions=meta.get("regions", []),
     )
 
 
@@ -143,6 +150,7 @@ def _citation_from_hit(hit) -> Citation:  # noqa: ANN001  (SearchHit; avoid heav
         page_start=hit.page_start,
         page_end=hit.page_end,
         score=hit.score,
+        regions=hit.regions,
     )
 
 

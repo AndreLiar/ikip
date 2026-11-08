@@ -19,7 +19,7 @@ import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -58,6 +58,7 @@ class SearchHit:
     hierarchy_path: str | None
     page_start: int | None
     page_end: int | None
+    regions: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -148,6 +149,7 @@ def _hit(row) -> SearchHit:
         hierarchy_path=row.hierarchy_path,
         page_start=row.page_start,
         page_end=row.page_end,
+        regions=(row.chunk_metadata or {}).get("regions", []),
     )
 
 
@@ -163,6 +165,7 @@ _CITATION_COLUMNS = (
     Section.hierarchy_path.label("hierarchy_path"),
     Chunk.page_start.label("page_start"),
     Chunk.page_end.label("page_end"),
+    Chunk.chunk_metadata.label("chunk_metadata"),
 )
 
 

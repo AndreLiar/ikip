@@ -42,7 +42,18 @@ Story 4.4 AC1 requires **keyword, semantic AND hybrid** search. The API's `/retr
 - **Live validation (real PDF):** seeded a 2-page PyMuPDF PDF through the pipeline on a throwaway tenant → `document_versions` (PdfExtractor read the text layer; revision "B" parsed; `source_object_key` = the raw PDF key) → `embedded_chunks` (1 chunk). The `source-url` service authorized the tenant and presigned the **raw PDF** key. Tenant + R2 objects torn down after.
 
 ## Follow-ups (still deferred, argued)
-- **Region highlight (AC2):** store per-chunk bounding boxes during PDF extraction, then a PDF.js text-layer highlight. A data-plane + extraction change.
+- **Region highlight (AC2):** completed in the follow-up implementation: PyMuPDF text blocks
+  are stored as normalized page regions in a versioned layout sidecar, propagated to
+  chunk metadata/citations, and rendered by PDF.js as same-origin highlighted overlays.
+  Citations without regions retain the browser-viewer fallback.
+
+## Live validation corpus
+
+- Source catalog: `docs/data-sources.md`, Category 1 (Siemens official documentation).
+- Manual: SIMATIC S7-1500 CPU 1505SP/1507S/1508S equipment manual, served from the
+  official `cache.industry.siemens.com` documentation host.
+- Local-only validation (PDF not committed): 148 pages, 2,812 text regions, all bounding
+  boxes normalized to `[0,1]`; 2,814 layout-aware chunks produced.
 - **Real per-user auth (Entra ID)** — a distinct hardening story; the shared dev token behind the BFF suffices for the MVP/demo.
 - **Real per-user auth (Entra ID)** — a distinct hardening story (app registration + OIDC in Next + JWKS validation on the API); the shared dev token behind the BFF suffices for the MVP/demo.
 - Tailwind/design system.

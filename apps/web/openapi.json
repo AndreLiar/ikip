@@ -307,6 +307,13 @@
             ],
             "title": "Page Start"
           },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/CitationRegion"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
           "revision": {
             "anyOf": [
               {
@@ -342,6 +349,40 @@
           }
         },
         "title": "Citation",
+        "type": "object"
+      },
+      "CitationRegion": {
+        "properties": {
+          "bbox": {
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Bbox",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "bbox"
+        ],
+        "title": "CitationRegion",
         "type": "object"
       },
       "DependencyStatus": {

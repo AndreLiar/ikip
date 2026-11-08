@@ -41,6 +41,7 @@ class ChunkSpec:
     token_count: int = 0
     page_start: int | None = None
     page_end: int | None = None
+    regions: list[dict] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.token_count:
@@ -128,4 +129,38 @@ def chunk_document(
                 )
             )
             ordinal += 1
+    return specs
+
+
+def chunk_regions(
+    regions: list[dict],
+    *,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    overlap_tokens: int = DEFAULT_OVERLAP_TOKENS,
+) -> list[ChunkSpec]:
+    """Chunk extracted PDF blocks while retaining page-normalized highlight regions."""
+    specs: list[ChunkSpec] = []
+    for region in regions:
+        text = str(region["text"]).strip()
+        if not text:
+            continue
+        pieces = (
+            [text]
+            if estimate_tokens(text) <= max_tokens
+            else _pack(_sentences(text), max_tokens=max_tokens, overlap_tokens=overlap_tokens)
+        )
+        page = int(region["page"])
+        location = {"page": page, "bbox": region["bbox"]}
+        for piece in pieces:
+            specs.append(
+                ChunkSpec(
+                    content=piece,
+                    section_path=f"page-{page}",
+                    section_heading=None,
+                    ordinal=len(specs),
+                    page_start=page,
+                    page_end=page,
+                    regions=[location],
+                )
+            )
     return specs
