@@ -93,6 +93,8 @@ class Equipment(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     model: Mapped[str] = mapped_column(String(255))
     revision: Mapped[str | None] = mapped_column(String(64), default=None)
     asset_id: Mapped[str | None] = mapped_column(String(255), default=None)
+
+
 class Workspace(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     __tablename__ = "workspace"
     __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_workspace_tenant_name"),)
