@@ -14,6 +14,7 @@ from datetime import UTC, date, datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Computed,
     Date,
     DateTime,
@@ -94,6 +95,22 @@ class Equipment(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     )
 
 
+class Workspace(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    __tablename__ = "workspace"
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_workspace_tenant_name"),)
+
+    name: Mapped[str] = mapped_column(String(255))
+
+
+class WorkspaceMembership(Base):
+    __tablename__ = "workspace_membership"
+    __table_args__ = (PrimaryKeyConstraint("workspace_id", "user_id"),)
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workspace.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("app_user.id", ondelete="CASCADE"))
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"))
+
+
 class IngestionJob(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     """Tracks one source file through ingestion (Story 2.1, FR8)."""
 
@@ -162,6 +179,31 @@ class DocumentEquipment(Base):
     document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("document.id", ondelete="CASCADE"))
     equipment_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("equipment.id", ondelete="CASCADE"), index=True
+    )
+
+
+class DocumentPermission(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """Explicit document ACL. No rows means tenant-wide access (migration-safe)."""
+
+    __tablename__ = "document_permission"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id", "user_id", "workspace_id", name="uq_document_permission_subject"
+        ),
+        CheckConstraint(
+            "(user_id IS NOT NULL) <> (workspace_id IS NOT NULL)",
+            name="ck_document_permission_one_subject",
+        ),
+    )
+
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="CASCADE"), default=None
+    )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workspace.id", ondelete="CASCADE"), default=None
     )
 
 

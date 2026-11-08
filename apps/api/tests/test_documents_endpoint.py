@@ -49,7 +49,7 @@ def test_source_url_presigns_after_authorize() -> None:
 
     seen = {}
 
-    def fake(*, tenant_id, version_id, expires_s):
+    def fake(*, tenant_id, user_id, version_id, expires_s):
         seen.update(tenant_id=tenant_id, version_id=version_id)
         return SourceUrlResponse(url="https://r2.example/presigned?sig=x", expires_s=expires_s)
 

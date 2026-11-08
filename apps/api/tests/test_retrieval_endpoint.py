@@ -73,7 +73,9 @@ def test_retrieve_returns_results_with_citations() -> None:
 
     captured = {}
 
-    def fake_service(*, tenant_id, query, k, mode, current_only, document_type, equipment_id):
+    def fake_service(
+        *, tenant_id, query, k, mode, current_only, document_type, equipment_id, user_id
+    ):
         captured.update(tenant_id=tenant_id, query=query, k=k, mode=mode, current_only=current_only)
         return RetrieveResponse(
             abstained=False,
@@ -172,7 +174,7 @@ def test_ask_returns_grounded_answer() -> None:
         get_ask_service,
     )
 
-    def fake_ask(*, tenant_id, query, equipment_model, revision):
+    def fake_ask(*, tenant_id, query, equipment_model, revision, user_id):
         return AskResponse(
             status="answered",
             answer="E42 = pump overheat. [E1]",

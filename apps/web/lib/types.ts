@@ -20,6 +20,9 @@ export type IngestionJob = Schemas['JobInfo'];
 export type UploadResponse = Schemas['UploadResponse'];
 export type Equipment = Schemas['EquipmentOut'];
 export type EquipmentWrite = Schemas['EquipmentWrite'];
+export type AdminUser = Schemas['UserOut'];
+export type Workspace = Schemas['WorkspaceOut'];
+export type Organization = Schemas['OrganizationOut'];
 
 // `mode` is an enum on RetrieveRequest; expose it as a named type for the UI selector.
 export type SearchMode = NonNullable<RetrieveRequest['mode']>;

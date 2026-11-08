@@ -74,6 +74,13 @@ def test_current_only_false_omits_is_current_predicate() -> None:
     assert "is_current is true" not in sql  # no version-awareness WHERE predicate
 
 
+def test_acl_filter_allows_public_direct_or_workspace_access() -> None:
+    sql = _sql(_lexical_stmt(uuid.uuid4(), "x", 10, RetrievalFilters(user_id=uuid.uuid4())))
+    assert "document_permission" in sql
+    assert "workspace_membership" in sql
+    assert "not (exists" in sql
+
+
 # --- DB-backed -------------------------------------------------------------
 
 _URL = os.environ.get("TEST_DATABASE_URL")

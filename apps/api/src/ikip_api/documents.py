@@ -38,7 +38,12 @@ class SourceNotFoundError(Exception):
 
 class SourceUrlService(Protocol):
     def __call__(
-        self, *, tenant_id: uuid.UUID, version_id: uuid.UUID, expires_s: int
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        user_id: uuid.UUID,
+        version_id: uuid.UUID,
+        expires_s: int,
     ) -> SourceUrlResponse: ...
 
 
@@ -46,18 +51,45 @@ def get_source_url_service() -> SourceUrlService:
     """Default service: authorize version∈tenant, then presign its artifact. Heavy deps
     (DB, R2) lazy-imported so create_app() stays light in the fast CI job."""
 
-    def service(*, tenant_id, version_id, expires_s) -> SourceUrlResponse:  # noqa: ANN001
+    def service(*, tenant_id, user_id, version_id, expires_s) -> SourceUrlResponse:  # noqa: ANN001
         from ikip_common.db import make_session_factory
-        from ikip_common.db.models import Document, DocumentVersion
+        from ikip_common.db.models import (
+            Document,
+            DocumentPermission,
+            DocumentVersion,
+            WorkspaceMembership,
+        )
         from ikip_common.storage import R2ObjectStorage
         from sqlalchemy import select
 
         with make_session_factory()() as session:
             # Authorize-before-serve: the version must belong to the caller's tenant.
+            any_acl = select(DocumentPermission.id).where(
+                DocumentPermission.document_id == Document.id
+            )
+            direct_acl = select(DocumentPermission.id).where(
+                DocumentPermission.document_id == Document.id,
+                DocumentPermission.user_id == user_id,
+            )
+            workspace_acl = (
+                select(DocumentPermission.id)
+                .join(
+                    WorkspaceMembership,
+                    DocumentPermission.workspace_id == WorkspaceMembership.workspace_id,
+                )
+                .where(
+                    DocumentPermission.document_id == Document.id,
+                    WorkspaceMembership.user_id == user_id,
+                )
+            )
             row = session.execute(
                 select(DocumentVersion.source_object_key, DocumentVersion.curated_object_key)
                 .join(Document, DocumentVersion.document_id == Document.id)
-                .where(DocumentVersion.id == version_id, Document.tenant_id == tenant_id)
+                .where(
+                    DocumentVersion.id == version_id,
+                    Document.tenant_id == tenant_id,
+                    ~any_acl.exists() | direct_acl.exists() | workspace_acl.exists(),
+                )
             ).one_or_none()
             if row is None:
                 raise SourceNotFoundError(str(version_id))
@@ -83,7 +115,10 @@ def source_url(
 ) -> SourceUrlResponse:
     try:
         return service(
-            tenant_id=principal.tenant_id, version_id=version_id, expires_s=DEFAULT_EXPIRES_S
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            version_id=version_id,
+            expires_s=DEFAULT_EXPIRES_S,
         )
     except SourceNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="source not found") from e

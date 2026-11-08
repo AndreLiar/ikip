@@ -98,6 +98,7 @@ class RetrieveService(Protocol):
         current_only: bool,
         document_type: str | None,
         equipment_id: uuid.UUID | None,
+        user_id: uuid.UUID,
     ) -> RetrieveResponse: ...
 
 
@@ -109,6 +110,7 @@ class AskService(Protocol):
         query: str,
         equipment_model: str | None,
         revision: str | None,
+        user_id: uuid.UUID,
     ) -> AskResponse: ...
 
 
@@ -150,7 +152,7 @@ def get_retrieve_service() -> RetrieveService:
     per request; heavy stack lazy-imported."""
 
     def service(  # noqa: ANN001
-        *, tenant_id, query, k, mode, current_only, document_type, equipment_id
+        *, tenant_id, query, k, mode, current_only, document_type, equipment_id, user_id
     ) -> RetrieveResponse:
         from ikip_common.db import make_session_factory
         from ikip_common.db.retrieval import (
@@ -165,6 +167,7 @@ def get_retrieve_service() -> RetrieveService:
             current_only=current_only,
             document_type=document_type,
             equipment_id=equipment_id,
+            user_id=user_id,
         )
         with make_session_factory()() as session:
             if mode == "lexical":
@@ -203,7 +206,9 @@ def get_retrieve_service() -> RetrieveService:
 def get_ask_service() -> AskService:
     """Default (production) grounded-answer service with caching (Stories 3.5 + 3.7)."""
 
-    def service(*, tenant_id, query, equipment_model, revision) -> AskResponse:  # noqa: ANN001
+    def service(  # noqa: ANN001
+        *, tenant_id, query, equipment_model, revision, user_id
+    ) -> AskResponse:
         from ikip_common.cache import build_cache
         from ikip_common.db import make_session_factory
         from ikip_common.db.models import Document, DocumentVersion
@@ -221,7 +226,14 @@ def get_ask_service() -> AskService:
                     .where(Document.tenant_id == tenant_id, DocumentVersion.is_current.is_(True))
                 ).scalars()
             ]
-            retrieve = make_hybrid_retrieve(session, tenant_id, build_embedding_client())
+            from ikip_common.db.retrieval import RetrievalFilters
+
+            retrieve = make_hybrid_retrieve(
+                session,
+                tenant_id,
+                build_embedding_client(),
+                filters=RetrievalFilters(user_id=user_id),
+            )
             result, hit = cached_grounded_answer(
                 query,
                 cache=build_cache(),
@@ -272,6 +284,7 @@ def retrieve(
         current_only=req.current_only,
         document_type=req.document_type,
         equipment_id=req.equipment_id,
+        user_id=principal.user_id,
     )
     governance.record(
         principal,
@@ -295,6 +308,7 @@ def ask(
         query=req.query,
         equipment_model=req.equipment_model,
         revision=req.revision,
+        user_id=principal.user_id,
     )
     governance.record(
         principal,

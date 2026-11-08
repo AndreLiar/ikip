@@ -29,9 +29,11 @@ from ikip_common.db.models import (
     Chunk,
     Document,
     DocumentEquipment,
+    DocumentPermission,
     DocumentVersion,
     Embedding,
     Section,
+    WorkspaceMembership,
 )
 from ikip_common.llm.base import Vector
 
@@ -70,6 +72,7 @@ class RetrievalFilters:
     current_only: bool = True
     document_type: str | None = None
     equipment_id: uuid.UUID | None = None
+    user_id: uuid.UUID | None = None
     metadata: dict | None = None
 
 
@@ -89,6 +92,24 @@ def _apply_filters(stmt, filters: RetrievalFilters | None):
             )
             .exists()
         )
+    if filters.user_id is not None:
+        any_acl = select(DocumentPermission.id).where(DocumentPermission.document_id == Document.id)
+        direct_acl = select(DocumentPermission.id).where(
+            DocumentPermission.document_id == Document.id,
+            DocumentPermission.user_id == filters.user_id,
+        )
+        workspace_acl = (
+            select(DocumentPermission.id)
+            .join(
+                WorkspaceMembership,
+                DocumentPermission.workspace_id == WorkspaceMembership.workspace_id,
+            )
+            .where(
+                DocumentPermission.document_id == Document.id,
+                WorkspaceMembership.user_id == filters.user_id,
+            )
+        )
+        stmt = stmt.where(~any_acl.exists() | direct_acl.exists() | workspace_acl.exists())
     if filters.metadata:
         stmt = stmt.where(Chunk.chunk_metadata.contains(filters.metadata))
     return stmt

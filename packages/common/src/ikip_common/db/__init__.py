@@ -21,6 +21,7 @@ from ikip_common.db.models import (
     Chunk,
     Document,
     DocumentEquipment,
+    DocumentPermission,
     DocumentVersion,
     Embedding,
     Equipment,
@@ -31,6 +32,8 @@ from ikip_common.db.models import (
     Section,
     Tenant,
     UserRole,
+    Workspace,
+    WorkspaceMembership,
 )
 from ikip_common.db.repository import TenantScopedRepository
 from ikip_common.db.retrieval import (
@@ -62,8 +65,11 @@ __all__ = [
     "IllegalStateTransitionError",
     "Document",
     "DocumentEquipment",
+    "DocumentPermission",
     "DocumentVersion",
     "Equipment",
+    "Workspace",
+    "WorkspaceMembership",
     "Section",
     "Chunk",
     "Embedding",

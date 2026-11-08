@@ -63,6 +63,8 @@ export default function Home(): React.JSX.Element {
       <p className="sub">Ask a question or search the equipment documentation.</p>
       <nav>
         <Link href="/documents">Manage document library</Link>
+        {' · '}
+        <Link href="/admin">Administration</Link>
       </nav>
 
       <form
