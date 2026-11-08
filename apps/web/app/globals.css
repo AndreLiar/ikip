@@ -240,3 +240,56 @@ button:disabled {
   width: 100%;
   border: 0;
 }
+
+.upload-form,
+.document-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upload-form {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--notice-bg);
+  border-radius: 6px;
+}
+
+.upload-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.document-list,
+.job-list {
+  list-style: none;
+  padding: 0;
+}
+
+.document-list > li,
+.job-list > li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.document-list > li > ul {
+  flex-basis: 100%;
+}
+
+.job {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--notice-bg);
+}
+
+.job--succeeded {
+  color: #176b32;
+}
+.job--failed,
+.job--dead_letter {
+  color: var(--safety-fg);
+}

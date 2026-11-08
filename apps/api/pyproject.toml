@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.32",
+  "python-multipart>=0.0.12",  # multipart/form-data for document upload (Story 4.2)
   "ikip-common",
   # Clients used by the health check to probe real dependencies.
   "boto3>=1.35",

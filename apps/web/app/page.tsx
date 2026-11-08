@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 import { AnswerPanel } from '@/components/AnswerPanel';
 import { SearchResults } from '@/components/SearchResults';
@@ -60,6 +61,9 @@ export default function Home(): React.JSX.Element {
     <main className="shell">
       <h1>IKIP — Technician Assistant</h1>
       <p className="sub">Ask a question or search the equipment documentation.</p>
+      <nav>
+        <Link href="/documents">Manage document library</Link>
+      </nav>
 
       <form
         className="query-form"

@@ -55,6 +55,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Documents */
+        get: operations["list_documents_api_v1_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Document */
+        post: operations["upload_document_api_v1_documents_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{document_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Versions */
+        get: operations["list_versions_api_v1_documents__document_id__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/documents/{version_id}/source-url": {
         parameters: {
             query?: never;
@@ -81,6 +132,23 @@ export interface paths {
         };
         /** Health */
         get: operations["health_api_v1_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingestion-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Jobs */
+        get: operations["list_jobs_api_v1_ingestion_jobs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -162,6 +230,13 @@ export interface components {
             /** Warnings */
             warnings: string[];
         };
+        /** Body_upload_document_api_v1_documents_upload_post */
+        Body_upload_document_api_v1_documents_upload_post: {
+            /** File */
+            file: string;
+            /** Title */
+            title?: string | null;
+        };
         /** Citation */
         Citation: {
             /** Chunk Id */
@@ -208,6 +283,24 @@ export interface components {
             /** User Id */
             user_id?: string | null;
         };
+        /** DocumentSummary */
+        DocumentSummary: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Current Revision */
+            current_revision: string | null;
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Type */
+            type: string | null;
+            /** Version Count */
+            version_count: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -226,6 +319,22 @@ export interface components {
             status: "ok" | "degraded";
             /** Version */
             version: string;
+        };
+        /** JobInfo */
+        JobInfo: {
+            /** Attempts */
+            attempts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** Source */
+            source: string;
+            /** State */
+            state: string;
         };
         /** RetrieveRequest */
         RetrieveRequest: {
@@ -282,6 +391,15 @@ export interface components {
              */
             token_type: string;
         };
+        /** UploadResponse */
+        UploadResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Source */
+            source: string;
+            /** State */
+            state: string;
+        };
         /**
          * UserRole
          * @enum {string}
@@ -299,6 +417,26 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VersionInfo */
+        VersionInfo: {
+            /** Checksum */
+            checksum: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Effective Date */
+            effective_date: string | null;
+            /** Id */
+            id: string;
+            /** Is Current */
+            is_current: boolean;
+            /** Publication Date */
+            publication_date: string | null;
+            /** Revision */
+            revision: string;
         };
         /** WhoAmI */
         WhoAmI: {
@@ -419,6 +557,105 @@ export interface operations {
             };
         };
     };
+    list_documents_api_v1_documents_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_document_api_v1_documents_upload_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_document_api_v1_documents_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_versions_api_v1_documents__document_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionInfo"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     source_url_api_v1_documents__version_id__source_url_get: {
         parameters: {
             query?: never;
@@ -468,6 +705,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    list_jobs_api_v1_ingestion_jobs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobInfo"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
