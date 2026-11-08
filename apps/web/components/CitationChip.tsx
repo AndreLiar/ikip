@@ -2,17 +2,18 @@
 
 import { useState } from 'react';
 
-import { openSource } from '@/lib/source';
 import type { Citation } from '@/lib/types';
+
+import { SourceViewer } from './SourceViewer';
 
 /**
  * A resolvable citation (FR16): document revision + section + page. Clickable — it opens
- * the cited source via a short-lived presigned URL at the cited page (Story 4.5). Opening
- * a PDF at an exact page + highlight is the full 4.5; here we open whatever artifact is
- * stored (text today), jumping to `#page=N` when the source is a PDF.
+ * an in-app viewer of the cited source at the cited page (Story 4.5), via a short-lived
+ * presigned URL. Region highlight is deferred (needs per-chunk bounding boxes at
+ * extraction time).
  */
 export function CitationChip({ citation }: { citation: Citation }): React.JSX.Element {
-  const [error, setError] = useState(false);
+  const [open, setOpen] = useState(false);
   const parts: string[] = [];
   if (citation.revision) parts.push(`rev ${citation.revision}`);
   if (citation.hierarchy_path) parts.push(`§${citation.hierarchy_path}`);
@@ -27,21 +28,10 @@ export function CitationChip({ citation }: { citation: Citation }): React.JSX.El
   const label = parts.join(' · ') || 'source';
   const canOpen = Boolean(citation.document_version_id);
 
-  async function open(): Promise<void> {
-    if (!citation.document_version_id) return;
-    setError(false);
-    try {
-      await openSource(citation.document_version_id, citation.page_start ?? null);
-    } catch {
-      setError(true);
-    }
-  }
-
   const content = (
     <>
       {label}
       {obsolete ? <span className="badge-obsolete"> obsolete</span> : null}
-      {error ? <span className="badge-obsolete"> unavailable</span> : null}
     </>
   );
 
@@ -53,14 +43,23 @@ export function CitationChip({ citation }: { citation: Citation }): React.JSX.El
     );
   }
   return (
-    <button
-      type="button"
-      className="citation citation--link"
-      data-testid="citation"
-      title={citation.heading ?? 'Open source'}
-      onClick={() => void open()}
-    >
-      {content}
-    </button>
+    <>
+      <button
+        type="button"
+        className="citation citation--link"
+        data-testid="citation"
+        title={citation.heading ?? 'Open source'}
+        onClick={() => setOpen(true)}
+      >
+        {content}
+      </button>
+      {open ? (
+        <SourceViewer
+          versionId={citation.document_version_id!}
+          page={citation.page_start ?? null}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }

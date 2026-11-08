@@ -30,23 +30,39 @@ describe('CitationChip', () => {
     expect(screen.getByTestId('citation')).toHaveTextContent('p.142');
   });
 
-  it('opens the source (presigned, at the cited page) when clicked', async () => {
+  it('opens an in-app viewer at the cited page when clicked', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ url: 'https://r2/x', expires_s: 300 }),
+        json: async () => ({ url: 'https://r2/x.pdf', expires_s: 300 }),
       })),
     );
-    const openSpy = vi.fn();
-    vi.stubGlobal('open', openSpy);
 
     render(<CitationChip citation={cite()} />);
     fireEvent.click(screen.getByTestId('citation'));
 
-    await waitFor(() => expect(openSpy).toHaveBeenCalled());
+    // viewer opens and fetches a presigned URL via the BFF
+    expect(screen.getByTestId('viewer')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('viewer-frame')).toBeInTheDocument());
     expect(fetch).toHaveBeenCalledWith('/api/documents/v1/source-url');
-    expect(openSpy).toHaveBeenCalledWith('https://r2/x#page=142', '_blank', expect.any(String));
+    // the iframe points at the presigned URL, jumped to the cited page
+    expect(screen.getByTestId('viewer-frame')).toHaveAttribute('src', 'https://r2/x.pdf#page=142');
+  });
+
+  it('closes the viewer', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ url: 'https://r2/x.pdf', expires_s: 300 }),
+      })),
+    );
+    render(<CitationChip citation={cite()} />);
+    fireEvent.click(screen.getByTestId('citation'));
+    await waitFor(() => expect(screen.getByTestId('viewer-frame')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('close viewer'));
+    expect(screen.queryByTestId('viewer')).not.toBeInTheDocument();
   });
 
   it('is a non-clickable span when there is no version id', () => {
@@ -54,13 +70,13 @@ describe('CitationChip', () => {
     expect(screen.getByTestId('citation').tagName).toBe('SPAN');
   });
 
-  it('shows unavailable if the source fetch fails', async () => {
+  it('shows an error if the source fetch fails', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) })),
     );
     render(<CitationChip citation={cite()} />);
     fireEvent.click(screen.getByTestId('citation'));
-    await waitFor(() => expect(screen.getByTestId('citation')).toHaveTextContent('unavailable'));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });
 });

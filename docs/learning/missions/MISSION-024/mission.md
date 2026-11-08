@@ -37,8 +37,13 @@ Story 4.4 AC1 requires **keyword, semantic AND hybrid** search. The API's `/retr
 ## Source-key plumbing (done-now, unblocks full 4.5)
 - `document_version.source_object_key` (nullable String + reversible migration `6dff50d415b4`) stores the **original** source artifact key (raw tier). Threaded: `ingest_version`/`_add_version` → `publish_document_version` → `curate_and_version(source_object_key=…)` → the `document_versions` asset passes `job.raw_object_key`. The source-url endpoint now **prefers `source_object_key`** (the original PDF/HTML) over the curated text, falling back to curated.
 
+## Story 4.5 viewer (done) + live PDF validation
+- **`SourceViewer`** modal: clicking a citation opens the source **in-app** via the presigned URL in an `<iframe>` jumped to `#page=N` (the browser's PDF engine honors the page anchor). `CitationChip` opens/closes it. Zero heavy dependency; CI-testable (12 web tests assert the iframe src + page). Chosen over bundling `pdfjs-dist` because the one thing it would add — **region highlight (AC2)** — needs **per-chunk bounding boxes captured at extraction time**, which we don't store; that's the only remaining 4.5 gap and it's a data/extraction change, not a UI one.
+- **Live validation (real PDF):** seeded a 2-page PyMuPDF PDF through the pipeline on a throwaway tenant → `document_versions` (PdfExtractor read the text layer; revision "B" parsed; `source_object_key` = the raw PDF key) → `embedded_chunks` (1 chunk). The `source-url` service authorized the tenant and presigned the **raw PDF** key. Tenant + R2 objects torn down after.
+
 ## Follow-ups (still deferred, argued)
-- **Full Story 4.5 viewer** (render the PDF at the exact page + **highlight** the cited region) now only needs a **PDF corpus** ingested — the data plane is ready (source key stored, endpoint serves it, citation opens `#page=N`). Highlight needs a PDF.js viewer component.
+- **Region highlight (AC2):** store per-chunk bounding boxes during PDF extraction, then a PDF.js text-layer highlight. A data-plane + extraction change.
+- **Real per-user auth (Entra ID)** — a distinct hardening story; the shared dev token behind the BFF suffices for the MVP/demo.
 - **Real per-user auth (Entra ID)** — a distinct hardening story (app registration + OIDC in Next + JWKS validation on the API); the shared dev token behind the BFF suffices for the MVP/demo.
 - Tailwind/design system.
 
