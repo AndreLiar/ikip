@@ -46,3 +46,36 @@ jobs:
             echo "::error::Potential secret committed"; exit 1
           fi
           echo "No obvious secrets found."
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier check (web)
+        run: pnpm exec prettier --check "apps/web/**/*.{ts,tsx,css,json,mjs}"
+
+      - name: Lint (eslint)
+        run: pnpm --filter @ikip/web lint
+
+      - name: Typecheck
+        run: pnpm --filter @ikip/web typecheck
+
+      - name: Unit tests (vitest)
+        run: pnpm --filter @ikip/web test
+
+      - name: Build (next)
+        run: pnpm --filter @ikip/web build

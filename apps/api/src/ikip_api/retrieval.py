@@ -14,7 +14,7 @@ no network, no DB.
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Protocol
+from typing import Annotated, Literal, Protocol
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -44,6 +44,8 @@ class Citation(BaseModel):
 class RetrieveRequest(BaseModel):
     query: str = Field(min_length=1)
     k: int = Field(default=5, ge=1, le=50)
+    # keyword (lexical tsvector) | semantic (vector) | hybrid (RRF fusion) — Story 4.4 AC1.
+    mode: Literal["lexical", "vector", "hybrid"] = "hybrid"
     current_only: bool = True
     document_type: str | None = None
 
@@ -90,6 +92,7 @@ class RetrieveService(Protocol):
         tenant_id: uuid.UUID,
         query: str,
         k: int,
+        mode: str,
         current_only: bool,
         document_type: str | None,
     ) -> RetrieveResponse: ...
@@ -122,31 +125,68 @@ def _citation_from_metadata(meta: dict, *, score: float | None = None) -> Citati
     )
 
 
-def get_retrieve_service() -> RetrieveService:
-    """Default (production) hybrid-retrieval service. Lazy-imports the heavy stack and
-    runs a tenant-scoped hybrid_retrieve per request over a fresh DB session."""
+def _citation_from_hit(hit) -> Citation:  # noqa: ANN001  (SearchHit; avoid heavy import)
+    return Citation(
+        chunk_id=str(hit.chunk_id),
+        document_id=str(hit.document_id),
+        document_version_id=str(hit.document_version_id),
+        revision=hit.revision,
+        is_current=hit.is_current,
+        section_id=str(hit.section_id),
+        heading=hit.heading,
+        hierarchy_path=hit.hierarchy_path,
+        page_start=hit.page_start,
+        page_end=hit.page_end,
+        score=hit.score,
+    )
 
-    def service(*, tenant_id, query, k, current_only, document_type) -> RetrieveResponse:  # noqa: ANN001
+
+def get_retrieve_service() -> RetrieveService:
+    """Default (production) retrieval service — keyword (lexical), semantic (vector) or
+    hybrid (RRF), per the request `mode` (Story 4.4 AC1). Tenant-scoped, one DB session
+    per request; heavy stack lazy-imported."""
+
+    def service(*, tenant_id, query, k, mode, current_only, document_type) -> RetrieveResponse:  # noqa: ANN001
         from ikip_common.db import make_session_factory
-        from ikip_common.db.retrieval import RetrievalFilters
+        from ikip_common.db.retrieval import (
+            RetrievalFilters,
+            lexical_search,
+            vector_search,
+        )
         from ikip_common.llm import build_embedding_client
         from ikip_common.llm.hybrid import hybrid_retrieve
 
-        client = build_embedding_client()
+        filters = RetrievalFilters(current_only=current_only, document_type=document_type)
         with make_session_factory()() as session:
-            outcome = hybrid_retrieve(
-                session,
-                tenant_id,
-                query,
-                client,
-                filters=RetrievalFilters(current_only=current_only, document_type=document_type),
-                limit=k,
-            )
+            if mode == "lexical":
+                hits = lexical_search(session, tenant_id, query, limit=k, filters=filters)
+                results = [
+                    RetrievedChunk(content=h.content, citation=_citation_from_hit(h)) for h in hits
+                ]
+                return RetrieveResponse(abstained=not results, results=results)
+
+            client = build_embedding_client()
+            if mode == "vector":
+                [qvec] = client.embed([query])
+                hits = vector_search(
+                    session,
+                    tenant_id,
+                    qvec,
+                    model_version=client.model_version,
+                    limit=k,
+                    filters=filters,
+                )
+                results = [
+                    RetrievedChunk(content=h.content, citation=_citation_from_hit(h)) for h in hits
+                ]
+                return RetrieveResponse(abstained=not results, results=results)
+
+            outcome = hybrid_retrieve(session, tenant_id, query, client, filters=filters, limit=k)
             results = [
                 RetrievedChunk(content=d.page_content, citation=_citation_from_metadata(d.metadata))
                 for d in outcome.documents
             ]
-        return RetrieveResponse(abstained=outcome.abstained, results=results)
+            return RetrieveResponse(abstained=outcome.abstained, results=results)
 
     return service
 
@@ -217,6 +257,7 @@ def retrieve(
         tenant_id=principal.tenant_id,
         query=req.query,
         k=req.k,
+        mode=req.mode,
         current_only=req.current_only,
         document_type=req.document_type,
     )
