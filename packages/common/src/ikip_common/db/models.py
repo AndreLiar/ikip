@@ -339,3 +339,57 @@ class PlatformAuditEvent(UUIDPrimaryKey, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
     )
+
+
+class Conversation(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A user's Q&A thread (Story 4.6). Scoped to tenant AND owner so history is
+    private per user. Retention is enforced by `created_at` + the tenant's policy
+    (Epic 6); no hard delete here."""
+
+    __tablename__ = "conversation"
+    __table_args__ = (Index("ix_conversation_tenant_user", "tenant_id", "user_id"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str | None] = mapped_column(String(512), default=None)
+
+
+class ConversationMessage(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """One turn in a conversation (Story 4.6 AC1). `role` ∈ {'user','assistant'};
+    assistant turns keep their grounded answer + citations (JSONB) so the thread
+    reproduces exactly what the user saw (FR16)."""
+
+    __tablename__ = "conversation_message"
+    __table_args__ = (Index("ix_message_conversation_time", "conversation_id", "created_at"),)
+
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversation.id", ondelete="CASCADE"), index=True
+    )
+    role: Mapped[str] = mapped_column(String(16))  # 'user' | 'assistant'
+    content: Mapped[str] = mapped_column()
+    # Assistant turns: the structured answer payload (status, claims, citations,
+    # warnings, abstention_reason) as returned to the UI. Empty for user turns.
+    answer_payload: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+
+class AnswerFeedback(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A user's rating / issue report on an assistant answer (Story 4.6 AC2). Retrievable
+    for failure analysis (Epic 5, AC3). `rating` ∈ {-1,0,1} (down/neutral/up); `reason`
+    is a free-text or category; `flagged` marks an incorrect answer/source to triage."""
+
+    __tablename__ = "answer_feedback"
+    __table_args__ = (
+        UniqueConstraint("message_id", "user_id", name="uq_feedback_message_user"),
+        Index("ix_feedback_tenant_flagged", "tenant_id", "flagged"),
+    )
+
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversation_message.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id", ondelete="CASCADE"), index=True
+    )
+    rating: Mapped[int] = mapped_column(default=0)  # -1 | 0 | 1
+    flagged: Mapped[bool] = mapped_column(Boolean, default=False)
+    reason: Mapped[str | None] = mapped_column(String(2048), default=None)

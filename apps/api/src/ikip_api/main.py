@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from ikip_api import (
     admin,
     auth,
+    conversations,
     documents,
     equipment,
     governance,
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(governance.router, prefix=API_V1_PREFIX)
     app.include_router(admin.router, prefix=API_V1_PREFIX)
     app.include_router(platform.router, prefix=API_V1_PREFIX)
+    app.include_router(conversations.router, prefix=API_V1_PREFIX)
 
     @app.get(f"{API_V1_PREFIX}/me", response_model=WhoAmI, tags=["auth"])
     def whoami(principal: CurrentPrincipal) -> WhoAmI:
