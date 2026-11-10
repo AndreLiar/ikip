@@ -1,14 +1,15 @@
-"""Document source access (Epic 4, Story 4.5 — partial).
+"""Document source access (Epic 4, Story 4.5).
 
 `GET /api/v1/documents/{version_id}/source-url` authorizes the caller's tenant for a
 document version, THEN issues a short-lived R2 presigned URL to its stored artifact
 (ADR 0014) — authorize-before-serve (Story 4.5 AC3, FR21/NFR10). The browser opens it
 to confirm the evidence behind a citation.
 
-Scope now: serves the artifact we store (`curated_object_key`). Opening the original
-**PDF at the exact cited page + highlight** (full AC1/AC2) is deferred — it needs a PDF
-corpus and the source PDF key threaded onto the version. The endpoint shape is stable;
-only the key it resolves changes when that lands.
+Prefers the original source artifact (`source_object_key`, the PDF/HTML) over the
+curated text. The cited page + region highlight (AC1/AC2) is served by the web viewer:
+retrieval attaches page-normalized `regions` (page + bbox) to each citation, and
+`PdfRegionViewer` renders the PDF at that page with the region overlaid. Highlight data
+is populated for PDFs whose extraction captured block regions (the layout sidecar).
 """
 
 from __future__ import annotations
