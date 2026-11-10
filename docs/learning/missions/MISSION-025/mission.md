@@ -29,9 +29,20 @@
 - `apps/api/conversations.py` + `tests/test_conversations_endpoint.py` (6); main.py router.
 - `apps/web/components/FeedbackBar.tsx` + `app/api/feedback/[messageId]/route.ts`; AnswerPanel integration; `test/FeedbackBar.test.tsx`.
 
+## End-to-end glue (done)
+`/ask` now persists the turn: `AskRequest` accepts an optional `conversation_id`; the
+endpoint records the user question + the assistant answer (payload incl. citations) via
+the injected `ConversationService`, and returns `conversation_id` + `message_id` on
+`AskResponse`. The web page passes `answer.message_id` to `AnswerPanel`, which shows the
+`FeedbackBar` — so rating/flagging a real answer works end to end. A bad/foreign
+`conversation_id` is ignored (answer still returns); persistence failures don't break the
+answer. Tests: ask endpoint asserts the returned ids; page test asserts the feedback bar
+appears after an answer.
+
 ## Follow-ups (noted)
-- Persist the live `/ask` turn automatically (create conversation + assistant message, return its id) so the FeedbackBar wires end-to-end in the UI — small glue once a "session" concept exists.
-- Epic 6 retention sweep (hard delete past policy window).
+- Epic 6 retention sweep (hard delete past the policy window).
+- A conversation sidebar (list + resume a thread) — the API (`GET /conversations`,
+  `/conversations/{id}/messages`) already supports it.
 
 ## Concepts
 Reuses [auth-rbac](../../concepts/auth-rbac.md), [multi-tenancy](../../concepts/multi-tenancy.md), [grounded-answers](../../concepts/grounded-answers.md).

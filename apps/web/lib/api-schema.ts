@@ -568,6 +568,8 @@ export interface components {
         };
         /** AskRequest */
         AskRequest: {
+            /** Conversation Id */
+            conversation_id?: string | null;
             /** Equipment Model */
             equipment_model?: string | null;
             /** Query */
@@ -585,6 +587,10 @@ export interface components {
             cache_hit: boolean;
             /** Claims */
             claims: components["schemas"]["AnsweredClaimOut"][];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Message Id */
+            message_id?: string | null;
             /** Not Certified Notice */
             not_certified_notice: string;
             /** Status */
