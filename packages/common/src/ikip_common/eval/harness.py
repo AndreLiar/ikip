@@ -34,6 +34,11 @@ class GoldCase:
     question: str
     expected_behavior: str  # "answered" | "abstained"
     relevant_chunk_ids: list[str] = field(default_factory=list)
+    # Story 5.1: failure-mode label (equipment_identifier | outdated_manual |
+    # conflicting_sources | unanswerable | table | scanned_pdf | malicious_document) and an
+    # optional reference answer used by Ragas (answer_correctness / context_recall).
+    category: str = ""
+    ground_truth: str | None = None
 
 
 @dataclass
@@ -54,6 +59,9 @@ class CaseResult:
     # --- cost / latency ---
     latency_ms: float
     estimated_cost_usd: float
+    # --- material for LLM-judged (Ragas) metrics (Story 5.2) ---
+    answer: str = ""
+    contexts: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -120,6 +128,8 @@ def _evaluate_case(
         estimated_cost_usd=estimate_cost_usd(
             case.question + "\n" + evidence_text, result.answer or ""
         ),
+        answer=result.answer or "",
+        contexts=[d.page_content for d in outcome.documents] if outcome else [],
     )
 
 

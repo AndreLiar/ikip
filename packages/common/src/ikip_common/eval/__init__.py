@@ -8,6 +8,7 @@ coverage) + a no-network harness and JSON regression reports. The LLM-judged met
 the grounded-answer graph (needs the `embeddings` group) and is exercised with fakes.
 """
 
+from ikip_common.eval.compare import ComparisonReport, MetricPair, compare
 from ikip_common.eval.metrics import (
     CitationResolution,
     GroundingCoverage,
@@ -16,6 +17,12 @@ from ikip_common.eval.metrics import (
     estimate_cost_usd,
     percentile,
     recall_at_k,
+)
+from ikip_common.eval.ragas_eval import (
+    EvalSample,
+    FakeRagasEvaluator,
+    RagasEvaluator,
+    RagasScores,
 )
 
 __all__ = [
@@ -26,4 +33,12 @@ __all__ = [
     "GroundingCoverage",
     "percentile",
     "estimate_cost_usd",
+    # Story 5.2 — Ragas + comparison
+    "RagasEvaluator",
+    "FakeRagasEvaluator",
+    "RagasScores",
+    "EvalSample",
+    "compare",
+    "ComparisonReport",
+    "MetricPair",
 ]

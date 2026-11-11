@@ -16,6 +16,12 @@ Documented, reproducible commands:
   uv run --group embeddings python -m ikip_common.eval safety \
       --gold packages/common/tests/fixtures/safety/v1.json
 
+  # Story 5.2 Ragas LLM-judged metrics + custom-vs-Ragas comparison (live Azure + DB).
+  # Bounded sample in CI, full nightly/on-demand (cost + non-determinism control).
+  uv run --group embeddings --group ragas python -m ikip_common.eval compare \
+      --gold packages/common/tests/fixtures/gold/failure_modes.json --tenant <uuid> \
+      --sample 5 --runs 3 --out eval-results
+
 The per-push CI gate does NOT call `run`/`check` (no network): they run the harness with a
 FakeChatClient over versioned fixtures (see tests). `safety` is the exception — it is a
 required, network-free release gate (scripted fakes) wired into CI. This CLI is otherwise
@@ -41,6 +47,8 @@ def _load_gold(path: str) -> tuple[str, list]:
             question=c["question"],
             expected_behavior=c["expected_behavior"],
             relevant_chunk_ids=c.get("relevant_chunk_ids", []),
+            category=c.get("category", ""),
+            ground_truth=c.get("ground_truth"),
         )
         for c in doc["cases"]
     ]
@@ -118,6 +126,98 @@ def _safety(args: argparse.Namespace) -> int:
         out.mkdir(parents=True, exist_ok=True)
         (out / "safety.json").write_text(json.dumps(report.to_dict(), indent=2, sort_keys=True))
     return 0 if report.all_passed else 1
+
+
+def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases, EvalReport)
+    """Run the deterministic harness over a gold set against real Azure + DB. Shared by the
+    `ragas` and `compare` commands so both score the SAME answers/contexts from one run."""
+    from sqlalchemy.orm import Session
+
+    from ikip_common.db.session import make_engine
+    from ikip_common.eval.harness import evaluate_dataset
+    from ikip_common.llm import build_chat_client, build_embedding_client
+    from ikip_common.llm.answer import make_hybrid_retrieve
+
+    version, cases = _load_gold(args.gold)
+    if getattr(args, "sample", 0):
+        cases = cases[: args.sample]  # bounded sample (AC5: cost/variance control)
+    tenant_id = uuid.UUID(args.tenant)
+    with Session(make_engine()) as session:
+        retrieve = make_hybrid_retrieve(session, tenant_id, build_embedding_client(), limit=args.k)
+        report = evaluate_dataset(
+            cases,
+            retrieve=retrieve,
+            chat_client=build_chat_client(),
+            k=args.k,
+            gold_set_version=version,
+        )
+    return version, cases, report
+
+
+def _samples_from(cases, report):  # noqa: ANN001, ANN202
+    from ikip_common.eval.ragas_eval import EvalSample
+
+    gt = {c.case_key: c.ground_truth for c in cases}
+    return [
+        EvalSample(
+            case_key=c["case_key"],
+            question=next(x.question for x in cases if x.case_key == c["case_key"]),
+            answer=c.get("answer", ""),
+            contexts=c.get("contexts", []),
+            ground_truth=gt.get(c["case_key"]),
+        )
+        for c in report.cases
+    ]
+
+
+def _ragas(args: argparse.Namespace) -> int:
+    """Live Ragas run over a gold set (Azure judge). Writes ragas.json + pushes scores to
+    Langfuse (AC3). [untested live] — needs Azure creds + the `ragas` group."""
+    from ikip_common.eval.ragas_eval import build_ragas_evaluator, build_score_publisher
+
+    version, cases, report = _live_report(args)
+    samples = _samples_from(cases, report)
+    scores = build_ragas_evaluator().evaluate(samples)
+    build_score_publisher().publish(scores, run_name=f"ragas:{version}")
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "ragas.json").write_text(json.dumps(scores.to_dict(), indent=2, sort_keys=True))
+    print(json.dumps(scores.means, indent=2, sort_keys=True))
+    return 0
+
+
+def _compare(args: argparse.Namespace) -> int:
+    """Run BOTH metric systems on the same gold set and report agreement/divergence, cost
+    and variance (AC4). Writes comparison.json. [untested live] — Azure + `ragas` group."""
+    from ikip_common.eval.compare import MetricPair, compare
+    from ikip_common.eval.ragas_eval import build_ragas_evaluator, build_score_publisher
+
+    version, cases, report = _live_report(args)
+    samples = _samples_from(cases, report)
+    evaluator = build_ragas_evaluator()
+    runs = [evaluator.evaluate(samples) for _ in range(max(1, args.runs))]
+    scores = runs[0]
+    build_score_publisher().publish(scores, run_name=f"compare:{version}")
+    by_case = {c["case_key"]: c for c in report.cases}
+    pairs = [
+        MetricPair(
+            case_key=s.case_key,
+            custom_groundedness=by_case[s.case_key]["citation_grounding_coverage"],
+            ragas_faithfulness=scores.per_case[s.case_key]["faithfulness"],
+        )
+        for s in samples
+    ]
+    comparison = compare(
+        pairs,
+        gold_set_version=version,
+        ragas_cost_usd=scores.cost_usd,
+        ragas_runs=[r.means for r in runs],
+    )
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "comparison.json").write_text(json.dumps(comparison.to_dict(), indent=2, sort_keys=True))
+    print(json.dumps(comparison.to_dict(), indent=2, sort_keys=True))
+    return 0
 
 
 def _safety_passed(gold: str) -> bool:
@@ -199,6 +299,23 @@ def main(argv: list[str] | None = None) -> int:
     p_safety.add_argument("--gold", default="packages/common/tests/fixtures/safety/v1.json")
     p_safety.add_argument("--out", default="", help="optional dir to write safety.json")
     p_safety.set_defaults(func=_safety)
+
+    p_ragas = sub.add_parser("ragas", help="live Ragas LLM-judged metrics (Story 5.2)")
+    p_ragas.add_argument("--gold", required=True)
+    p_ragas.add_argument("--tenant", required=True)
+    p_ragas.add_argument("--k", type=int, default=5)
+    p_ragas.add_argument("--sample", type=int, default=0, help="bounded sample size (0=all)")
+    p_ragas.add_argument("--out", default="eval-results")
+    p_ragas.set_defaults(func=_ragas)
+
+    p_compare = sub.add_parser("compare", help="custom-vs-Ragas comparison report (Story 5.2)")
+    p_compare.add_argument("--gold", required=True)
+    p_compare.add_argument("--tenant", required=True)
+    p_compare.add_argument("--k", type=int, default=5)
+    p_compare.add_argument("--sample", type=int, default=0, help="bounded sample size (0=all)")
+    p_compare.add_argument("--runs", type=int, default=1, help="repeat Ragas N× for variance")
+    p_compare.add_argument("--out", default="eval-results")
+    p_compare.set_defaults(func=_compare)
 
     p_config = sub.add_parser("config", help="versioned prompt/model config registry (Story 5.5)")
     csub = p_config.add_subparsers(dest="action", required=True)

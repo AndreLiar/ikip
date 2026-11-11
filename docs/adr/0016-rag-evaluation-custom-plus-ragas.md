@@ -19,6 +19,13 @@ Use **both**, with a clear split, and **compare them** as a deliverable:
 
 Both are orchestrated by **pytest** and wired into CI gates (Story 5.5): deterministic metrics run on every push; **LLM-judged (Ragas) metrics run on a bounded sample** with thresholds + tolerance (cost/non-determinism control), and in full on demand / nightly.
 
+## Update (2026-11-11) — Implemented (Stories 5.1 + 5.2)
+
+- **Gold datasets (5.1):** `packages/common/tests/fixtures/gold/failure_modes.json` (versioned) covers the seven failure modes (equipment identifiers, outdated manuals, conflicting sources, unanswerable, tables, scanned PDFs, malicious documents); each case carries question + relevant evidence + expected behavior (incl. abstention) + optional `ground_truth`.
+- **Ragas behind a port (5.2):** `eval/ragas_eval.py` — `RagasEvaluator` port, `RagasAdapter` (Azure judge, lazy `ragas` group), `FakeRagasEvaluator` (CI); scores pushed to Langfuse via a `ScorePublisher` port (no-op without creds).
+- **Comparison (5.2 AC4):** `eval/compare.py` aligns custom citation-grounding coverage with Ragas faithfulness and reports correlation / mean-abs-diff / agreement / divergent cases / cost / run-to-run variance + a release-gating recommendation.
+- **CI split (5.2 AC5):** deterministic metrics + the comparison math gate every push (`test_ragas_eval.py`); Ragas (live, costly) runs nightly/on-demand (`.github/workflows/ragas-eval.yml`, secret-guarded). CLI: `python -m ikip_common.eval {run,ragas,compare}`. See [MISSION-029](../learning/missions/MISSION-029/mission.md).
+
 ## Consequences
 **Positive**
 - Standard, well-tested RAG metrics (Ragas) instead of bespoke ones; stronger and more comparable to the literature.

@@ -1,0 +1,204 @@
+"""Ragas LLM-judged metrics behind a port (Story 5.2, ADR 0016).
+
+Custom deterministic metrics (metrics.py) own Recall@K + citation resolution — fast, free,
+reproducible, they gate every push. Ragas adds the *LLM-judged* metrics — `faithfulness`
+(groundedness), `answer_relevancy`, `context_precision`, `context_recall` — judged by Azure
+OpenAI. Those cost tokens and are non-deterministic, so they run on a bounded sample in CI
+and in full nightly/on-demand.
+
+Ragas is wrapped behind the `RagasEvaluator` port (ADR 0021): `RagasAdapter` lazy-imports
+the library + builds the Azure judge; `FakeRagasEvaluator` gives deterministic scores so the
+comparison logic (compare.py) is CI-testable with no network. Scores are pushed to Langfuse
+behind the `ScorePublisher` port (no-op without creds).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import asdict, dataclass, field
+
+RAGAS_METRICS = ("faithfulness", "answer_relevancy", "context_precision", "context_recall")
+
+
+@dataclass
+class EvalSample:
+    """One (question → answer) with its retrieved contexts and an optional reference."""
+
+    case_key: str
+    question: str
+    answer: str
+    contexts: list[str]
+    ground_truth: str | None = None
+
+
+@dataclass
+class RagasScores:
+    """Per-sample scores keyed by metric, plus means. `per_case[case_key][metric] -> float`."""
+
+    per_case: dict[str, dict[str, float]]
+    means: dict[str, float]
+    judge_model: str
+    cost_usd: float = 0.0
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def _means(per_case: dict[str, dict[str, float]]) -> dict[str, float]:
+    means: dict[str, float] = {}
+    for metric in RAGAS_METRICS:
+        vals = [c[metric] for c in per_case.values() if metric in c]
+        means[metric] = sum(vals) / len(vals) if vals else 0.0
+    return means
+
+
+class RagasEvaluator:
+    """Port: judge a batch of samples and return LLM-judged metric scores."""
+
+    def evaluate(self, samples: Sequence[EvalSample]) -> RagasScores:  # pragma: no cover
+        raise NotImplementedError
+
+
+@dataclass
+class FakeRagasEvaluator(RagasEvaluator):
+    """Deterministic stand-in: returns scripted scores (default or per-case overrides), so
+    the comparison harness + CLI are testable with no LLM/network."""
+
+    default: float = 0.9
+    overrides: dict[str, dict[str, float]] = field(default_factory=dict)
+    judge_model: str = "fake-judge"
+    cost_usd: float = 0.0
+
+    def evaluate(self, samples: Sequence[EvalSample]) -> RagasScores:
+        per_case: dict[str, dict[str, float]] = {}
+        for s in samples:
+            over = self.overrides.get(s.case_key, {})
+            per_case[s.case_key] = {m: over.get(m, self.default) for m in RAGAS_METRICS}
+        return RagasScores(
+            per_case=per_case,
+            means=_means(per_case),
+            judge_model=self.judge_model,
+            cost_usd=self.cost_usd,
+        )
+
+
+class RagasAdapter(RagasEvaluator):
+    """Real Ragas evaluator judged by Azure OpenAI (lazy import; needs the `ragas` group).
+
+    [untested live] — exercised via FakeRagasEvaluator in CI; a real judged run needs Azure
+    credentials and the `ragas` dependency group.
+    """
+
+    def __init__(self, settings=None) -> None:  # noqa: ANN001
+        from ikip_common.config import get_settings
+
+        self._settings = settings or get_settings()
+
+    def _judge(self):  # noqa: ANN202 — ragas wrappers, lazy
+        from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+        from ragas.embeddings import LangchainEmbeddingsWrapper
+        from ragas.llms import LangchainLLMWrapper
+
+        s = self._settings
+        llm = AzureChatOpenAI(
+            azure_deployment=s.azure_openai_chat_deployment,
+            api_version=s.azure_openai_api_version,
+            azure_endpoint=s.azure_openai_endpoint,
+            api_key=s.azure_openai_api_key.get_secret_value() if s.azure_openai_api_key else None,
+        )
+        emb = AzureOpenAIEmbeddings(
+            azure_deployment=s.azure_openai_embedding_deployment,
+            api_version=s.azure_openai_api_version,
+            azure_endpoint=s.azure_openai_endpoint,
+            api_key=s.azure_openai_api_key.get_secret_value() if s.azure_openai_api_key else None,
+        )
+        return LangchainLLMWrapper(llm), LangchainEmbeddingsWrapper(emb)
+
+    def evaluate(self, samples: Sequence[EvalSample]) -> RagasScores:
+        from ragas import evaluate as ragas_evaluate
+        from ragas.metrics import (
+            answer_relevancy,
+            context_precision,
+            context_recall,
+            faithfulness,
+        )
+
+        from datasets import Dataset
+
+        llm, emb = self._judge()
+        rows = {
+            "question": [s.question for s in samples],
+            "answer": [s.answer for s in samples],
+            "contexts": [s.contexts for s in samples],
+            "ground_truth": [s.ground_truth or "" for s in samples],
+        }
+        result = ragas_evaluate(
+            Dataset.from_dict(rows),
+            metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
+            llm=llm,
+            embeddings=emb,
+        )
+        df = result.to_pandas()
+        per_case: dict[str, dict[str, float]] = {}
+        for i, s in enumerate(samples):
+            per_case[s.case_key] = {
+                m: float(df.iloc[i][m]) for m in RAGAS_METRICS if m in df.columns
+            }
+        model = self._settings.azure_openai_chat_deployment or "azure-judge"
+        return RagasScores(per_case=per_case, means=_means(per_case), judge_model=model)
+
+
+def build_ragas_evaluator(settings=None) -> RagasEvaluator:  # noqa: ANN001
+    """Real Azure-judged Ragas evaluator. Raises at evaluate-time if the `ragas` group or
+    Azure creds are missing — callers in CI inject FakeRagasEvaluator instead."""
+    return RagasAdapter(settings)
+
+
+# --- Langfuse score publishing (AC3) ---------------------------------------
+
+
+class ScorePublisher:
+    """Port: push evaluation scores to the observability backend (Langfuse)."""
+
+    def publish(self, scores: RagasScores, *, run_name: str) -> None:  # pragma: no cover
+        raise NotImplementedError
+
+
+class NullScorePublisher(ScorePublisher):
+    def publish(self, scores: RagasScores, *, run_name: str) -> None:
+        return None
+
+
+class LangfuseScorePublisher(ScorePublisher):
+    """Push mean Ragas scores to Langfuse as named scores (lazy SDK import)."""
+
+    def __init__(self, settings=None) -> None:  # noqa: ANN001
+        from langfuse import Langfuse
+
+        from ikip_common.config import get_settings
+
+        self._Langfuse = Langfuse
+        self._settings = settings or get_settings()
+
+    def publish(self, scores: RagasScores, *, run_name: str) -> None:
+        s = self._settings
+        client = self._Langfuse(
+            public_key=s.langfuse_public_key.get_secret_value(),
+            secret_key=s.langfuse_secret_key.get_secret_value(),
+            host=s.langfuse_host,
+        )
+        for metric, value in scores.means.items():
+            client.create_score(name=f"ragas.{metric}", value=value, comment=run_name)
+
+
+def build_score_publisher(settings=None) -> ScorePublisher:  # noqa: ANN001
+    """Langfuse publisher when creds + SDK are available, else a no-op."""
+    from ikip_common.config import get_settings
+
+    s = settings or get_settings()
+    if s.langfuse_public_key is None or s.langfuse_secret_key is None:
+        return NullScorePublisher()
+    try:
+        return LangfuseScorePublisher(s)
+    except ImportError:
+        return NullScorePublisher()
