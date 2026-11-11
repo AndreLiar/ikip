@@ -167,6 +167,7 @@ def test_retrieve_validates_query() -> None:
 
 
 def test_ask_returns_grounded_answer() -> None:
+    from ikip_api.conversations import get_conversation_service
     from ikip_api.retrieval import (
         AnsweredClaimOut,
         AskResponse,
@@ -193,6 +194,7 @@ def test_ask_returns_grounded_answer() -> None:
 
     app = _app()
     app.dependency_overrides[get_ask_service] = lambda: fake_ask
+    app.dependency_overrides[get_conversation_service] = lambda: _FakeConvs()
     client = TestClient(app)
     token = _token(client, uuid.uuid4())
     resp = client.post(
@@ -203,3 +205,31 @@ def test_ask_returns_grounded_answer() -> None:
     assert body["status"] == "answered"
     assert body["claims"][0]["citations"][0]["revision"] == "A"
     assert body["not_certified_notice"]  # always present (AC5)
+    # the turn was persisted (Story 4.6 glue): assistant message id returned for feedback
+    assert body["conversation_id"] == "conv-1"
+    assert body["message_id"] == "assistant-msg"
+
+
+class _FakeConvs:
+    """Minimal ConversationService stand-in for the ask-persistence glue."""
+
+    def create(self, *, tenant_id, user_id, title):
+        from datetime import UTC, datetime
+
+        from ikip_api.conversations import ConversationOut
+
+        return ConversationOut(id="conv-1", title=title, created_at=datetime.now(UTC))
+
+    def add_message(self, *, tenant_id, user_id, conversation_id, role, content, answer_payload):
+        from datetime import UTC, datetime
+
+        from ikip_api.conversations import MessageOut
+
+        mid = "assistant-msg" if role == "assistant" else "user-msg"
+        return MessageOut(
+            id=mid,
+            role=role,
+            content=content,
+            answer_payload=answer_payload,
+            created_at=datetime.now(UTC),
+        )

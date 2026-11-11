@@ -147,7 +147,9 @@ export default function Home(): React.JSX.Element {
         </p>
       ) : null}
 
-      {tab === 'ask' && answer ? <AnswerPanel answer={answer} /> : null}
+      {tab === 'ask' && answer ? (
+        <AnswerPanel answer={answer} messageId={answer.message_id ?? undefined} />
+      ) : null}
       {tab === 'search' && results ? <SearchResults results={results} /> : null}
     </main>
   );

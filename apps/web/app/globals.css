@@ -261,6 +261,26 @@ button:disabled {
   pointer-events: none;
 }
 
+.feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.feedback button {
+  background: #fff;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.5rem;
+}
+
+.feedback--done {
+  color: var(--accent);
+}
+
 .upload-form,
 .equipment-form,
 .document-list > li {

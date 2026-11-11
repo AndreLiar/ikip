@@ -2,7 +2,10 @@
   "components": {
     "schemas": {
       "AccountStatus": {
-        "enum": ["active", "suspended"],
+        "enum": [
+          "active",
+          "suspended"
+        ],
         "title": "AccountStatus",
         "type": "string"
       },
@@ -24,12 +27,28 @@
             "type": "string"
           }
         },
-        "required": ["text", "safety_critical", "citations"],
+        "required": [
+          "text",
+          "safety_critical",
+          "citations"
+        ],
         "title": "AnsweredClaimOut",
         "type": "object"
       },
       "AskRequest": {
         "properties": {
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
           "equipment_model": {
             "anyOf": [
               {
@@ -58,7 +77,9 @@
             "title": "Revision"
           }
         },
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "title": "AskRequest",
         "type": "object"
       },
@@ -96,6 +117,28 @@
             },
             "title": "Claims",
             "type": "array"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
           },
           "not_certified_notice": {
             "title": "Not Certified Notice",
@@ -202,7 +245,9 @@
             "type": "string"
           }
         },
-        "required": ["file"],
+        "required": [
+          "file"
+        ],
         "title": "Body_upload_document_api_v1_documents_upload_post",
         "type": "object"
       },
@@ -367,8 +412,59 @@
             "type": "integer"
           }
         },
-        "required": ["page", "bbox"],
+        "required": [
+          "page",
+          "bbox"
+        ],
         "title": "CitationRegion",
+        "type": "object"
+      },
+      "ConversationCreate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ConversationCreate",
+        "type": "object"
+      },
+      "ConversationOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at"
+        ],
+        "title": "ConversationOut",
         "type": "object"
       },
       "DependencyStatus": {
@@ -393,7 +489,11 @@
             "type": "string"
           }
         },
-        "required": ["service", "ok", "detail"],
+        "required": [
+          "service",
+          "ok",
+          "detail"
+        ],
         "title": "DependencyStatus",
         "type": "object"
       },
@@ -421,7 +521,9 @@
             "title": "User Id"
           }
         },
-        "required": ["tenant_id"],
+        "required": [
+          "tenant_id"
+        ],
         "title": "DevTokenRequest",
         "type": "object"
       },
@@ -467,7 +569,14 @@
             "type": "integer"
           }
         },
-        "required": ["id", "title", "type", "current_revision", "version_count", "created_at"],
+        "required": [
+          "id",
+          "title",
+          "type",
+          "current_revision",
+          "version_count",
+          "created_at"
+        ],
         "title": "DocumentSummary",
         "type": "object"
       },
@@ -485,7 +594,9 @@
             "title": "Type"
           }
         },
-        "required": ["type"],
+        "required": [
+          "type"
+        ],
         "title": "DocumentUpdate",
         "type": "object"
       },
@@ -533,7 +644,11 @@
             "title": "Revision"
           }
         },
-        "required": ["manufacturer", "model", "id"],
+        "required": [
+          "manufacturer",
+          "model",
+          "id"
+        ],
         "title": "EquipmentOut",
         "type": "object"
       },
@@ -576,8 +691,91 @@
             "title": "Revision"
           }
         },
-        "required": ["manufacturer", "model"],
+        "required": [
+          "manufacturer",
+          "model"
+        ],
         "title": "EquipmentWrite",
+        "type": "object"
+      },
+      "FeedbackCreate": {
+        "properties": {
+          "flagged": {
+            "default": false,
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "rating": {
+            "default": 0,
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Rating",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "FeedbackCreate",
+        "type": "object"
+      },
+      "FeedbackOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "message_id",
+          "user_id",
+          "rating",
+          "flagged",
+          "reason",
+          "created_at"
+        ],
+        "title": "FeedbackOut",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -607,7 +805,10 @@
             "type": "string"
           },
           "status": {
-            "enum": ["ok", "degraded"],
+            "enum": [
+              "ok",
+              "degraded"
+            ],
             "title": "Status",
             "type": "string"
           },
@@ -616,7 +817,12 @@
             "type": "string"
           }
         },
-        "required": ["status", "service", "version", "dependencies"],
+        "required": [
+          "status",
+          "service",
+          "version",
+          "dependencies"
+        ],
         "title": "HealthResponse",
         "type": "object"
       },
@@ -644,7 +850,13 @@
             "type": "string"
           }
         },
-        "required": ["id", "source", "state", "attempts", "created_at"],
+        "required": [
+          "id",
+          "source",
+          "state",
+          "attempts",
+          "created_at"
+        ],
         "title": "JobInfo",
         "type": "object"
       },
@@ -660,8 +872,69 @@
             "type": "string"
           }
         },
-        "required": ["user_id"],
+        "required": [
+          "user_id"
+        ],
         "title": "MembershipWrite",
+        "type": "object"
+      },
+      "MessageCreate": {
+        "properties": {
+          "answer_payload": {
+            "additionalProperties": true,
+            "title": "Answer Payload",
+            "type": "object"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "pattern": "^(user|assistant)$",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "MessageCreate",
+        "type": "object"
+      },
+      "MessageOut": {
+        "properties": {
+          "answer_payload": {
+            "additionalProperties": true,
+            "title": "Answer Payload",
+            "type": "object"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "content",
+          "answer_payload",
+          "created_at"
+        ],
+        "title": "MessageOut",
         "type": "object"
       },
       "OrganizationCreate": {
@@ -690,7 +963,10 @@
             "type": "object"
           }
         },
-        "required": ["name", "admin_email"],
+        "required": [
+          "name",
+          "admin_email"
+        ],
         "title": "OrganizationCreate",
         "type": "object"
       },
@@ -711,7 +987,11 @@
             "type": "object"
           }
         },
-        "required": ["id", "name", "policies"],
+        "required": [
+          "id",
+          "name",
+          "policies"
+        ],
         "title": "OrganizationOut",
         "type": "object"
       },
@@ -752,7 +1032,10 @@
             "title": "Workspace Id"
           }
         },
-        "required": ["id", "document_id"],
+        "required": [
+          "id",
+          "document_id"
+        ],
         "title": "PermissionOut",
         "type": "object"
       },
@@ -856,7 +1139,13 @@
             "type": "object"
           }
         },
-        "required": ["id", "name", "configuration", "policies", "created_at"],
+        "required": [
+          "id",
+          "name",
+          "configuration",
+          "policies",
+          "created_at"
+        ],
         "title": "PlatformOrganizationOut",
         "type": "object"
       },
@@ -899,7 +1188,11 @@
           },
           "mode": {
             "default": "hybrid",
-            "enum": ["lexical", "vector", "hybrid"],
+            "enum": [
+              "lexical",
+              "vector",
+              "hybrid"
+            ],
             "title": "Mode",
             "type": "string"
           },
@@ -909,7 +1202,9 @@
             "type": "string"
           }
         },
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "title": "RetrieveRequest",
         "type": "object"
       },
@@ -927,7 +1222,10 @@
             "type": "array"
           }
         },
-        "required": ["abstained", "results"],
+        "required": [
+          "abstained",
+          "results"
+        ],
         "title": "RetrieveResponse",
         "type": "object"
       },
@@ -941,7 +1239,10 @@
             "type": "string"
           }
         },
-        "required": ["content", "citation"],
+        "required": [
+          "content",
+          "citation"
+        ],
         "title": "RetrievedChunk",
         "type": "object"
       },
@@ -967,7 +1268,10 @@
             "type": "string"
           }
         },
-        "required": ["url", "expires_s"],
+        "required": [
+          "url",
+          "expires_s"
+        ],
         "title": "SourceUrlResponse",
         "type": "object"
       },
@@ -983,7 +1287,9 @@
             "type": "string"
           }
         },
-        "required": ["access_token"],
+        "required": [
+          "access_token"
+        ],
         "title": "TokenResponse",
         "type": "object"
       },
@@ -1002,7 +1308,11 @@
             "type": "string"
           }
         },
-        "required": ["job_id", "state", "source"],
+        "required": [
+          "job_id",
+          "state",
+          "source"
+        ],
         "title": "UploadResponse",
         "type": "object"
       },
@@ -1029,12 +1339,19 @@
             "default": "technician"
           }
         },
-        "required": ["email", "id"],
+        "required": [
+          "email",
+          "id"
+        ],
         "title": "UserOut",
         "type": "object"
       },
       "UserRole": {
-        "enum": ["admin", "manager", "technician"],
+        "enum": [
+          "admin",
+          "manager",
+          "technician"
+        ],
         "title": "UserRole",
         "type": "string"
       },
@@ -1056,7 +1373,9 @@
             "default": "technician"
           }
         },
-        "required": ["email"],
+        "required": [
+          "email"
+        ],
         "title": "UserWrite",
         "type": "object"
       },
@@ -1092,7 +1411,11 @@
             "type": "string"
           }
         },
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError",
         "type": "object"
       },
@@ -1171,7 +1494,11 @@
             "type": "string"
           }
         },
-        "required": ["user_id", "tenant_id", "role"],
+        "required": [
+          "user_id",
+          "tenant_id",
+          "role"
+        ],
         "title": "WhoAmI",
         "type": "object"
       },
@@ -1189,7 +1516,10 @@
             "type": "string"
           }
         },
-        "required": ["name", "id"],
+        "required": [
+          "name",
+          "id"
+        ],
         "title": "WorkspaceOut",
         "type": "object"
       },
@@ -1202,7 +1532,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "title": "WorkspaceWrite",
         "type": "object"
       },
@@ -1220,7 +1552,9 @@
             "type": "object"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "title": "OrganizationUpdate",
         "type": "object"
       },
@@ -1243,7 +1577,9 @@
             "type": "object"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "title": "OrganizationUpdate",
         "type": "object"
       }
@@ -1313,7 +1649,9 @@
           }
         },
         "summary": "List Document Permissions",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       },
       "post": {
         "operationId": "grant_document_permission_api_v1_admin_documents__document_id__permissions_post",
@@ -1382,7 +1720,9 @@
           }
         },
         "summary": "Grant Document Permission",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/admin/documents/{document_id}/permissions/{permission_id}": {
@@ -1442,7 +1782,9 @@
           }
         },
         "summary": "Revoke Document Permission",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/admin/organization": {
@@ -1489,7 +1831,9 @@
           }
         },
         "summary": "Get Organization",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       },
       "put": {
         "operationId": "update_organization_api_v1_admin_organization_put",
@@ -1544,7 +1888,9 @@
           }
         },
         "summary": "Update Organization",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/admin/ping": {
@@ -1595,7 +1941,9 @@
           }
         },
         "summary": "Admin Ping",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/admin/users": {
@@ -1646,7 +1994,9 @@
           }
         },
         "summary": "List Users",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       },
       "post": {
         "operationId": "create_user_api_v1_admin_users_post",
@@ -1701,7 +2051,9 @@
           }
         },
         "summary": "Create User",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/admin/users/{user_id}": {
@@ -1751,7 +2103,9 @@
           }
         },
         "summary": "Delete User",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       },
       "put": {
         "operationId": "update_user_api_v1_admin_users__user_id__put",
@@ -1816,7 +2170,9 @@
           }
         },
         "summary": "Update User",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/admin/workspaces": {
@@ -1867,7 +2223,9 @@
           }
         },
         "summary": "List Workspaces",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       },
       "post": {
         "operationId": "create_workspace_api_v1_admin_workspaces_post",
@@ -1922,7 +2280,9 @@
           }
         },
         "summary": "Create Workspace",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/admin/workspaces/{workspace_id}": {
@@ -1972,7 +2332,9 @@
           }
         },
         "summary": "Delete Workspace",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       },
       "put": {
         "operationId": "update_workspace_api_v1_admin_workspaces__workspace_id__put",
@@ -2037,7 +2399,9 @@
           }
         },
         "summary": "Update Workspace",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/admin/workspaces/{workspace_id}/members": {
@@ -2097,7 +2461,9 @@
           }
         },
         "summary": "Put Membership",
-        "tags": ["administration"]
+        "tags": [
+          "administration"
+        ]
       }
     },
     "/api/v1/ask": {
@@ -2154,7 +2520,9 @@
           }
         },
         "summary": "Ask",
-        "tags": ["retrieval"]
+        "tags": [
+          "retrieval"
+        ]
       }
     },
     "/api/v1/audit-events": {
@@ -2217,7 +2585,9 @@
           }
         },
         "summary": "List Audit Events",
-        "tags": ["governance"]
+        "tags": [
+          "governance"
+        ]
       }
     },
     "/api/v1/auth/dev-token": {
@@ -2256,7 +2626,249 @@
           }
         },
         "summary": "Dev Token",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/conversations": {
+      "get": {
+        "operationId": "list_conversations_api_v1_conversations_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response List Conversations Api V1 Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Conversations",
+        "tags": [
+          "conversations"
+        ]
+      },
+      "post": {
+        "operationId": "create_conversation_api_v1_conversations_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Conversation",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/messages": {
+      "get": {
+        "operationId": "list_messages_api_v1_conversations__conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response List Messages Api V1 Conversations  Conversation Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Messages",
+        "tags": [
+          "conversations"
+        ]
+      },
+      "post": {
+        "operationId": "add_message_api_v1_conversations__conversation_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Message",
+        "tags": [
+          "conversations"
+        ]
       }
     },
     "/api/v1/documents": {
@@ -2358,7 +2970,9 @@
           }
         },
         "summary": "List Documents",
-        "tags": ["library"]
+        "tags": [
+          "library"
+        ]
       }
     },
     "/api/v1/documents/upload": {
@@ -2415,7 +3029,9 @@
           }
         },
         "summary": "Upload Document",
-        "tags": ["library"]
+        "tags": [
+          "library"
+        ]
       }
     },
     "/api/v1/documents/{document_id}": {
@@ -2482,7 +3098,9 @@
           }
         },
         "summary": "Update Document",
-        "tags": ["library"]
+        "tags": [
+          "library"
+        ]
       }
     },
     "/api/v1/documents/{document_id}/versions": {
@@ -2543,7 +3161,9 @@
           }
         },
         "summary": "List Versions",
-        "tags": ["library"]
+        "tags": [
+          "library"
+        ]
       }
     },
     "/api/v1/documents/{version_id}/source-url": {
@@ -2600,7 +3220,9 @@
           }
         },
         "summary": "Source Url",
-        "tags": ["documents"]
+        "tags": [
+          "documents"
+        ]
       }
     },
     "/api/v1/equipment": {
@@ -2668,7 +3290,9 @@
           }
         },
         "summary": "List Equipment",
-        "tags": ["equipment"]
+        "tags": [
+          "equipment"
+        ]
       },
       "post": {
         "operationId": "create_equipment_api_v1_equipment_post",
@@ -2723,7 +3347,9 @@
           }
         },
         "summary": "Create Equipment",
-        "tags": ["equipment"]
+        "tags": [
+          "equipment"
+        ]
       }
     },
     "/api/v1/equipment/{equipment_id}": {
@@ -2773,7 +3399,9 @@
           }
         },
         "summary": "Delete Equipment",
-        "tags": ["equipment"]
+        "tags": [
+          "equipment"
+        ]
       },
       "put": {
         "operationId": "update_equipment_api_v1_equipment__equipment_id__put",
@@ -2838,7 +3466,9 @@
           }
         },
         "summary": "Update Equipment",
-        "tags": ["equipment"]
+        "tags": [
+          "equipment"
+        ]
       }
     },
     "/api/v1/equipment/{equipment_id}/documents/{document_id}": {
@@ -2898,7 +3528,9 @@
           }
         },
         "summary": "Dissociate Document",
-        "tags": ["equipment"]
+        "tags": [
+          "equipment"
+        ]
       },
       "put": {
         "operationId": "associate_document_api_v1_equipment__equipment_id__documents__document_id__put",
@@ -2956,7 +3588,84 @@
           }
         },
         "summary": "Associate Document",
-        "tags": ["equipment"]
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/v1/feedback": {
+      "get": {
+        "operationId": "list_feedback_api_v1_feedback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "flagged_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Flagged Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedbackOut"
+                  },
+                  "title": "Response List Feedback Api V1 Feedback Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feedback",
+        "tags": [
+          "conversations"
+        ]
       }
     },
     "/api/v1/health": {
@@ -2975,7 +3684,9 @@
           }
         },
         "summary": "Health",
-        "tags": ["health"]
+        "tags": [
+          "health"
+        ]
       }
     },
     "/api/v1/ingestion-jobs": {
@@ -3038,7 +3749,9 @@
           }
         },
         "summary": "List Jobs",
-        "tags": ["library"]
+        "tags": [
+          "library"
+        ]
       }
     },
     "/api/v1/me": {
@@ -3085,7 +3798,78 @@
           }
         },
         "summary": "Whoami",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/messages/{message_id}/feedback": {
+      "post": {
+        "operationId": "submit_feedback_api_v1_messages__message_id__feedback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Feedback",
+        "tags": [
+          "conversations"
+        ]
       }
     },
     "/api/v1/platform/audit-events": {
@@ -3148,7 +3932,9 @@
           }
         },
         "summary": "List Platform Audit Events",
-        "tags": ["platform"]
+        "tags": [
+          "platform"
+        ]
       }
     },
     "/api/v1/platform/organizations": {
@@ -3199,7 +3985,9 @@
           }
         },
         "summary": "List Organizations",
-        "tags": ["platform"]
+        "tags": [
+          "platform"
+        ]
       },
       "post": {
         "operationId": "create_organization_api_v1_platform_organizations_post",
@@ -3254,7 +4042,9 @@
           }
         },
         "summary": "Create Organization",
-        "tags": ["platform"]
+        "tags": [
+          "platform"
+        ]
       }
     },
     "/api/v1/platform/organizations/{tenant_id}": {
@@ -3332,7 +4122,9 @@
           }
         },
         "summary": "Delete Organization",
-        "tags": ["platform"]
+        "tags": [
+          "platform"
+        ]
       },
       "get": {
         "operationId": "get_organization_api_v1_platform_organizations__tenant_id__get",
@@ -3387,7 +4179,9 @@
           }
         },
         "summary": "Get Organization",
-        "tags": ["platform"]
+        "tags": [
+          "platform"
+        ]
       },
       "put": {
         "operationId": "update_organization_api_v1_platform_organizations__tenant_id__put",
@@ -3452,7 +4246,9 @@
           }
         },
         "summary": "Update Organization",
-        "tags": ["platform"]
+        "tags": [
+          "platform"
+        ]
       }
     },
     "/api/v1/retrieve": {
@@ -3509,7 +4305,9 @@
           }
         },
         "summary": "Retrieve",
-        "tags": ["retrieval"]
+        "tags": [
+          "retrieval"
+        ]
       }
     }
   }

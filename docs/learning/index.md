@@ -29,6 +29,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-022](./missions/MISSION-022/mission.md) | Real PDF extraction adapter (PdfExtractor: PyMuPDF→OCR) behind the TextExtractor seam | Epic 2 / Story 2.3 |
 | [MISSION-023](./missions/MISSION-023/mission.md) | Ingestion robustness: HTML de-boilerplate, content_type persistence, tunable embedding batch | Epic 2/3 / polish |
 | [MISSION-024](./missions/MISSION-024/mission.md) | Technician Assistant UI (Next.js BFF) + keyword/semantic/hybrid search modes | Epic 4 / Story 4.4 |
+| [MISSION-025](./missions/MISSION-025/mission.md) | Conversation history & feedback (Story 4.6) — Epic 4 8/8 | Epic 4 / Story 4.6 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |

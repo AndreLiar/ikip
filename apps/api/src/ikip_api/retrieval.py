@@ -20,6 +20,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from ikip_api.auth import CurrentPrincipal
+from ikip_api.conversations import (
+    ConversationService,
+    NotFoundError,
+    get_conversation_service,
+)
 from ikip_api.governance import GovernanceService, get_governance_service
 
 router = APIRouter()
@@ -72,6 +77,9 @@ class AskRequest(BaseModel):
     query: str = Field(min_length=1)
     equipment_model: str | None = None
     revision: str | None = None
+    # Optional: append to an existing conversation; a new one is created when omitted
+    # and persistence is enabled (Story 4.6).
+    conversation_id: uuid.UUID | None = None
 
 
 class AnsweredClaimOut(BaseModel):
@@ -88,6 +96,10 @@ class AskResponse(BaseModel):
     abstention_reason: str | None
     not_certified_notice: str
     cache_hit: bool
+    # Set when the turn was persisted (Story 4.6): the conversation it belongs to and
+    # the assistant message id — the web FeedbackBar uses message_id to rate/flag it.
+    conversation_id: str | None = None
+    message_id: str | None = None
 
 
 # --- service ports (dependency-injected; overridden in tests) --------------
@@ -309,6 +321,7 @@ def ask(
     principal: CurrentPrincipal,
     service: Annotated[AskService, Depends(get_ask_service)],
     governance: Annotated[GovernanceService, Depends(get_governance_service)],
+    conversations: Annotated[ConversationService, Depends(get_conversation_service)],
 ) -> AskResponse:
     governance.authorize(principal, "assistant.ask")
     result = service(
@@ -324,4 +337,44 @@ def ask(
         resource_type="query",
         metadata={"status": result.status},
     )
+    # Persist the turn (Story 4.6): record the user question + the assistant answer so
+    # history is reproducible and the UI can attach feedback to this message.
+    _persist_turn(conversations, principal, req, result)
     return result
+
+
+def _persist_turn(
+    conversations: ConversationService,
+    principal: object,  # Principal; avoid heavy import
+    req: AskRequest,
+    result: AskResponse,
+) -> None:
+    tenant_id = principal.tenant_id  # type: ignore[attr-defined]
+    user_id = principal.user_id  # type: ignore[attr-defined]
+    try:
+        conv_id = (
+            str(req.conversation_id)
+            if req.conversation_id is not None
+            else conversations.create(tenant_id=tenant_id, user_id=user_id, title=req.query[:80]).id
+        )
+        conversations.add_message(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            conversation_id=conv_id,
+            role="user",
+            content=req.query,
+            answer_payload={},
+        )
+        assistant = conversations.add_message(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            conversation_id=conv_id,
+            role="assistant",
+            content=result.answer or (result.abstention_reason or ""),
+            answer_payload=result.model_dump(),
+        )
+        result.conversation_id = conv_id
+        result.message_id = assistant.id
+    except NotFoundError:
+        # A conversation_id that isn't the caller's — don't persist; the answer still returns.
+        return

@@ -23,6 +23,8 @@ const ANSWER: AskResponse = {
   abstention_reason: null,
   not_certified_notice: 'not certified',
   cache_hit: false,
+  conversation_id: 'conv-1',
+  message_id: 'msg-1',
 };
 
 describe('Home (technician assistant)', () => {
@@ -38,6 +40,8 @@ describe('Home (technician assistant)', () => {
     expect(screen.getByText(/smallest deployable unit/)).toBeInTheDocument();
     // the browser called the same-origin BFF route, not the API directly (no token in browser)
     expect(fetch).toHaveBeenCalledWith('/api/ask', expect.objectContaining({ method: 'POST' }));
+    // the persisted turn (message_id) surfaces the feedback bar (Story 4.6 glue)
+    expect(screen.getByTestId('feedback')).toBeInTheDocument();
   });
 
   it('searches passages in the selected mode', async () => {

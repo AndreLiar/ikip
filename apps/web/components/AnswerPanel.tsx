@@ -1,13 +1,21 @@
 import type { AskResponse } from '@/lib/types';
 
 import { CitationChip } from './CitationChip';
+import { FeedbackBar } from './FeedbackBar';
 
 /**
  * Renders a grounded answer (Story 4.4 AC2/AC3): per-claim citations, safety-critical
  * flags, surfaced warnings, the explicit abstention state, and the always-present
  * not-certified notice. Never shows unverified content — the API already dropped it.
+ * When the answer was persisted (messageId given), shows a feedback bar (Story 4.6).
  */
-export function AnswerPanel({ answer }: { answer: AskResponse }): React.JSX.Element {
+export function AnswerPanel({
+  answer,
+  messageId,
+}: {
+  answer: AskResponse;
+  messageId?: string;
+}): React.JSX.Element {
   if (answer.status === 'abstained') {
     return (
       <section className="answer answer--abstained" data-testid="abstention" role="status">
@@ -51,6 +59,7 @@ export function AnswerPanel({ answer }: { answer: AskResponse }): React.JSX.Elem
       ) : null}
 
       <p className="notice">{answer.not_certified_notice}</p>
+      {messageId ? <FeedbackBar messageId={messageId} /> : null}
     </section>
   );
 }
