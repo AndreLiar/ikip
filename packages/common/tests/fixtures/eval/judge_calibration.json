@@ -1,0 +1,49 @@
+{
+  "calibration_set_version": "judge-cal-v1",
+  "description": "Human-labeled grounding judgments (Story 5.2, judge-quality gap). Each case is a (claim, cited evidence) pair with a HUMAN verdict (supported | partial | unsupported). `eval calibrate` runs our real LLMGroundingValidator (the Azure judge) over these and reports how often it agrees with the humans — a ground truth on the JUDGE itself, so we don't trust it blindly. reviewed=false until an SME signs off.",
+  "reviewed": false,
+  "cases": [
+    {
+      "case_key": "supported-direct",
+      "claim": "Fault E42 indicates a pump overheat.",
+      "evidence": { "E1": "Fault E42 indicates pump overheat; the controller trips the motor." },
+      "evidence_markers": ["E1"],
+      "human_label": "supported"
+    },
+    {
+      "case_key": "unsupported-not-in-evidence",
+      "claim": "The pump must be lubricated every 500 hours.",
+      "evidence": { "E1": "Fault E42 indicates pump overheat." },
+      "evidence_markers": ["E1"],
+      "human_label": "unsupported"
+    },
+    {
+      "case_key": "unsupported-contradicted",
+      "claim": "Vessel V-3 maximum operating pressure is 10 bar.",
+      "evidence": { "E1": "Vessel V-3 maximum operating pressure: 8 bar." },
+      "evidence_markers": ["E1"],
+      "human_label": "unsupported"
+    },
+    {
+      "case_key": "partial-overreach",
+      "claim": "De-energize and apply lockout/tagout, then test for zero energy before servicing.",
+      "evidence": { "E1": "De-energize before servicing the pump." },
+      "evidence_markers": ["E1"],
+      "human_label": "partial"
+    },
+    {
+      "case_key": "supported-paraphrase",
+      "claim": "The CX-7 chiller currently uses coolant G-48.",
+      "evidence": { "E1": "Current revision: the CX-7 chiller uses coolant type G-48; G-30 is superseded." },
+      "evidence_markers": ["E1"],
+      "human_label": "supported"
+    },
+    {
+      "case_key": "unsupported-fabricated-number",
+      "claim": "Motor M-5 has a rated current of 20 A.",
+      "evidence": { "E1": "Commissioning sheet: motor M-5 rated current 11 A." },
+      "evidence_markers": ["E1"],
+      "human_label": "unsupported"
+    }
+  ]
+}

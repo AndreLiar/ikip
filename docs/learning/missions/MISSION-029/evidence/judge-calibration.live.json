@@ -1,0 +1,59 @@
+{
+  "accuracy": 1.0,
+  "binary_accuracy": 1.0,
+  "by_human_label": {
+    "partial": {
+      "correct": 1,
+      "n": 1
+    },
+    "supported": {
+      "correct": 2,
+      "n": 2
+    },
+    "unsupported": {
+      "correct": 3,
+      "n": 3
+    }
+  },
+  "calibration_set_version": "judge-cal-v1",
+  "cases": [
+    {
+      "case_key": "supported-direct",
+      "human": "supported",
+      "judge": "supported"
+    },
+    {
+      "case_key": "unsupported-not-in-evidence",
+      "human": "unsupported",
+      "judge": "unsupported"
+    },
+    {
+      "case_key": "unsupported-contradicted",
+      "human": "unsupported",
+      "judge": "unsupported"
+    },
+    {
+      "case_key": "partial-overreach",
+      "human": "partial",
+      "judge": "partial"
+    },
+    {
+      "case_key": "supported-paraphrase",
+      "human": "supported",
+      "judge": "supported"
+    },
+    {
+      "case_key": "unsupported-fabricated-number",
+      "human": "unsupported",
+      "judge": "unsupported"
+    }
+  ],
+  "cohen_kappa": 1.0,
+  "confusion": {
+    "partial->partial": 1,
+    "supported->supported": 2,
+    "unsupported->unsupported": 3
+  },
+  "judge_model": "gpt-5.4-mini",
+  "n": 6
+}
