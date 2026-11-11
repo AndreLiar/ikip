@@ -16,14 +16,6 @@ from typing import Protocol, runtime_checkable
 from ikip_common.llm.base import ChatClient, ChatMessage
 from ikip_common.llm.schemas import Claim, GroundingResult
 
-_JUDGE_SYSTEM = (
-    "You are a strict grounding judge. For each claim, decide whether the cited "
-    "evidence text ENTAILS it: 'supported' (fully entailed), 'partial' (only partly), "
-    "or 'unsupported' (not entailed or evidence missing). Judge only against the "
-    "evidence provided; never use outside knowledge. Return one verdict per claim, "
-    "in order, by claim_index."
-)
-
 
 @runtime_checkable
 class GroundingValidator(Protocol):
@@ -33,14 +25,19 @@ class GroundingValidator(Protocol):
 
 
 class LLMGroundingValidator:
-    """Batched LLM-judge grounding validator (one call for all claims)."""
+    """Batched LLM-judge grounding validator (one call for all claims). The judge system
+    prompt comes from the active versioned config (Story 5.5) unless overridden."""
 
-    def __init__(self, chat_client: ChatClient) -> None:
+    def __init__(self, chat_client: ChatClient, *, system: str | None = None) -> None:
         self._chat = chat_client
+        self._system = system
 
     def validate(self, claims: Sequence[Claim], evidence: dict[str, str]) -> GroundingResult:
         if not claims:
             return GroundingResult(verdicts=[])
+        from ikip_common.llm.prompts import active_prompt_config
+
+        system = self._system or active_prompt_config().judge_system
         lines: list[str] = []
         for i, claim in enumerate(claims):
             cited = {m: evidence.get(m, "<<missing>>") for m in claim.evidence_markers}
@@ -49,7 +46,7 @@ class LLMGroundingValidator:
             )
             lines.append(f"[claim {i}] {claim.text}\nevidence:\n{cited_text}")
         messages = [
-            ChatMessage(role="system", content=_JUDGE_SYSTEM),
+            ChatMessage(role="system", content=system),
             ChatMessage(role="user", content="\n\n".join(lines)),
         ]
         return self._chat.complete_structured(messages, GroundingResult)

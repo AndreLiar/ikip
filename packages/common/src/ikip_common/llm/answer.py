@@ -34,23 +34,14 @@ from ikip_common.db.retrieval import DEFAULT_LIMIT, RetrievalFilters
 from ikip_common.llm.base import ChatClient, ChatMessage
 from ikip_common.llm.grounding import GroundingValidator, LLMGroundingValidator
 from ikip_common.llm.hybrid import RetrievalOutcome
+from ikip_common.llm.prompts import BUILTIN_V1, PromptConfig, active_prompt_config
 from ikip_common.llm.schemas import GroundedAnswer
 
-NOT_CERTIFIED_NOTICE = (
-    "This is an AI-generated summary of referenced documentation, not a certified "
-    "manufacturer instruction. Verify against the cited source before acting."
-)
-
-_GENERATE_SYSTEM = (
-    "You answer industrial maintenance questions using ONLY the evidence provided. "
-    "Each evidence block has a handle like [E1]. Rules:\n"
-    "- Ground every claim in the evidence; cite the supporting handles in evidence_markers.\n"
-    "- Use ONLY handles shown; never invent a handle or use outside knowledge.\n"
-    "- Mark safety_critical=true for hazards, lockout/tagout, injury or equipment-damage claims.\n"
-    "- Put safety warnings / uncertainties from the evidence into warnings.\n"
-    "- If the evidence does not answer the question, set status='abstained' with a reason.\n"
-    "- Never present output as a certified manufacturer procedure."
-)
+# Backward-compatible module constants = the shipped v1 artifact (Story 5.5). The RUNNING
+# prompt/notice come from the active versioned config; these remain the stable fallback
+# and the default for AnswerResult.not_certified_notice.
+NOT_CERTIFIED_NOTICE = BUILTIN_V1.not_certified_notice
+_GENERATE_SYSTEM = BUILTIN_V1.generate_system
 
 
 @dataclass
@@ -170,8 +161,13 @@ def build_answer_graph(
     retrieve: Callable[[str], RetrievalOutcome],
     chat_client: ChatClient,
     validator: GroundingValidator,
+    *,
+    prompts: PromptConfig | None = None,
 ):
-    """Compile the LangGraph StateGraph with its dependencies bound into the nodes."""
+    """Compile the LangGraph StateGraph with its dependencies bound into the nodes. The
+    system prompt + not-certified notice come from the active versioned config (Story
+    5.5) unless an explicit `prompts` is passed."""
+    cfg = prompts or active_prompt_config()
 
     def analyze(state: AnswerState) -> AnswerState:
         # Lightweight (no LLM call — keeps to a 2-call budget): normalize the query.
@@ -194,7 +190,7 @@ def build_answer_graph(
     def generate(state: AnswerState) -> AnswerState:
         user = f"Question: {state['question']}\n\nEvidence:\n{_evidence_block(state['evidence'])}"
         messages = [
-            ChatMessage(role="system", content=_GENERATE_SYSTEM),
+            ChatMessage(role="system", content=cfg.generate_system),
             ChatMessage(role="user", content=user),
         ]
         return {"draft": chat_client.complete_structured(messages, GroundedAnswer)}
@@ -226,7 +222,11 @@ def build_answer_graph(
             }
         return {
             "result": AnswerResult(
-                status="answered", answer=_render(kept), claims=kept, warnings=warnings
+                status="answered",
+                answer=_render(kept),
+                claims=kept,
+                warnings=warnings,
+                not_certified_notice=cfg.not_certified_notice,
             )
         }
 
@@ -270,10 +270,13 @@ def grounded_answer(
     retrieve: Callable[[str], RetrievalOutcome],
     chat_client: ChatClient,
     validator: GroundingValidator | None = None,
+    prompts: PromptConfig | None = None,
 ) -> AnswerResult:
-    """Run the grounded-answer graph once and return the final AnswerResult."""
-    validator = validator or LLMGroundingValidator(chat_client)
-    graph = build_answer_graph(retrieve, chat_client, validator)
+    """Run the grounded-answer graph once and return the final AnswerResult. Uses the
+    active versioned prompt config (Story 5.5) unless `prompts` is supplied."""
+    cfg = prompts or active_prompt_config()
+    validator = validator or LLMGroundingValidator(chat_client, system=cfg.judge_system)
+    graph = build_answer_graph(retrieve, chat_client, validator, prompts=cfg)
     final = graph.invoke({"question": question})
     return final["result"]
 

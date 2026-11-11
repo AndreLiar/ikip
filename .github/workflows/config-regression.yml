@@ -1,0 +1,46 @@
+name: Config regression (prompts/model)
+
+# Story 5.5 AC2 — changing a versioned prompt/model config triggers the evaluation
+# regression suite. Path-filtered so it runs exactly when a config (or the code that
+# consumes it) changes. Deterministic + network-free (scripted fakes), so no secrets:
+# it runs the registry integrity + groundedness/retrieval harness + the safety gate.
+# Full LLM-judged metric regression (live Azure+DB) is the `eval run`/`check` CLI,
+# run manually/nightly — not on PR.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/common/src/ikip_common/llm/prompt_config/**"
+      - "packages/common/src/ikip_common/llm/prompts.py"
+      - "packages/common/src/ikip_common/llm/answer.py"
+      - "packages/common/src/ikip_common/llm/grounding.py"
+
+permissions:
+  contents: read
+
+jobs:
+  config-regression:
+    name: config-regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install workspace (+ graph runtime)
+        run: uv sync --group embeddings
+
+      - name: Registry integrity + promotion gates
+        run: uv run --group embeddings pytest packages/common/tests/test_prompt_registry.py -q
+
+      - name: Groundedness + retrieval regression (deterministic harness)
+        run: >
+          uv run --group embeddings pytest
+          packages/common/tests/test_prompt_config_wiring.py
+          packages/common/tests/test_answer_graph.py
+          packages/common/tests/test_eval_harness.py -q
+
+      - name: Safety-abstention gate (must be 100%)
+        run: uv run --group embeddings python -m ikip_common.eval safety
