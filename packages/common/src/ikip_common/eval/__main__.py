@@ -268,6 +268,40 @@ def _compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _multiturn(args: argparse.Namespace) -> int:
+    """Multi-turn eval: run short conversations (contextualized) and score the final turn
+    (Story 5.2 multi-turn gap). [live] — Azure + DB (`--group embeddings`)."""
+    from sqlalchemy.orm import Session
+
+    from ikip_common.db.session import make_engine
+    from ikip_common.eval.multiturn import evaluate_multiturn, load_multiturn
+    from ikip_common.llm import build_chat_client, build_embedding_client
+    from ikip_common.llm.answer import make_hybrid_retrieve
+
+    version, cases = load_multiturn(args.gold)
+    tenant_id = uuid.UUID(args.tenant)
+    with Session(make_engine()) as session:
+        retrieve = make_hybrid_retrieve(session, tenant_id, build_embedding_client(), limit=args.k)
+        report = evaluate_multiturn(
+            cases,
+            retrieve=retrieve,
+            chat_client=build_chat_client(),
+            gold_set_version=version,
+        )
+    print(
+        f"multi-turn {version}: behavior_conformity={report.behavior_conformity:.2f} "
+        f"(n={report.n_cases})"
+    )
+    for c in report.cases:
+        mark = "ok" if c["behavior_match"] else "MISS"
+        print(f"  [{mark}] [{c['language']}] {c['case_key']}: final={c['final_behavior']}")
+    if args.out:
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "multiturn.json").write_text(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+    return 0
+
+
 def _calibrate(args: argparse.Namespace) -> int:
     """Measure our real grounding judge against human labels (judge-quality gap). [live] —
     needs Azure (`--group embeddings`). Exit 1 if accuracy below --min-accuracy."""
@@ -422,6 +456,13 @@ def main(argv: list[str] | None = None) -> int:
     p_safety.add_argument("--gold", default="packages/common/tests/fixtures/safety/v1.json")
     p_safety.add_argument("--out", default="", help="optional dir to write safety.json")
     p_safety.set_defaults(func=_safety)
+
+    p_mt = sub.add_parser("multiturn", help="multi-turn conversation eval (final-turn scoring)")
+    p_mt.add_argument("--gold", default="packages/common/tests/fixtures/gold/multi_turn.json")
+    p_mt.add_argument("--tenant", required=True)
+    p_mt.add_argument("--k", type=int, default=5)
+    p_mt.add_argument("--out", default="eval-results")
+    p_mt.set_defaults(func=_multiturn)
 
     p_cal = sub.add_parser("calibrate", help="measure the grounding judge vs human labels (5.2)")
     p_cal.add_argument(

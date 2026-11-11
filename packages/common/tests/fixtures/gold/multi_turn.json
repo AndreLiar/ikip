@@ -1,0 +1,46 @@
+{
+  "gold_set_version": "multi-turn-v1",
+  "description": "Multi-turn gold (Story 5.2, multi-turn gap). Each case is a short CONVERSATION; the harness runs the turns sequentially, feeding each turn the prior (question, answer) as context, and evaluates the FINAL turn. This tests whether a follow-up (pronouns, ellipsis) is handled given the conversation — via query contextualization over the existing single-turn pipeline. Native conversational retrieval is a follow-up. reviewed=false (not SME-validated).",
+  "reviewed": false,
+  "cases": [
+    {
+      "case_key": "mt-e42-followup-answered",
+      "category": "equipment_identifier",
+      "language": "en",
+      "reviewed": false,
+      "turns": [
+        { "question": "On pump P-12, is there a fault code E42?" },
+        { "question": "What does that fault indicate?" }
+      ],
+      "expected_behavior": "answered",
+      "relevant_chunk_ids": ["c-e42"],
+      "ground_truth": "Fault E42 on pump P-12 indicates a pump overheat; the controller trips the motor."
+    },
+    {
+      "case_key": "mt-coolant-followup-unanswerable",
+      "category": "unanswerable",
+      "language": "en",
+      "reviewed": false,
+      "turns": [
+        { "question": "What is the current recommended coolant for the CX-7 chiller?" },
+        { "question": "And what is its exact chemical formula?" }
+      ],
+      "expected_behavior": "abstained",
+      "relevant_chunk_ids": [],
+      "ground_truth": "The documentation gives the coolant grade (G-48) but not a chemical formula; the follow-up must abstain."
+    },
+    {
+      "case_key": "mt-e42-followup-fr",
+      "category": "equipment_identifier",
+      "language": "fr",
+      "reviewed": false,
+      "turns": [
+        { "question": "Sur la pompe P-12, existe-t-il un code défaut E42 ?" },
+        { "question": "Que signifie ce défaut ?" }
+      ],
+      "expected_behavior": "answered",
+      "relevant_chunk_ids": ["c-e42-fr"],
+      "ground_truth": "Le code E42 sur la pompe P-12 indique une surchauffe ; le contrôleur déclenche l'arrêt du moteur."
+    }
+  ]
+}
