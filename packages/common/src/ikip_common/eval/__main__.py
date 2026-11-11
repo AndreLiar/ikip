@@ -184,6 +184,25 @@ def _samples_from(cases, report):  # noqa: ANN001, ANN202
     ]
 
 
+def _budget_ok(samples, runs: int, budget_usd: float) -> bool:  # noqa: ANN001
+    """Refuse (before spending) if the estimated judge cost exceeds the cap. A hard guard
+    against accidentally launching an expensive run. budget_usd<=0 means no cap."""
+    from ikip_common.eval.ragas_eval import (
+        RAGAS_METRICS,
+        estimate_ragas_cost_usd,
+        within_budget,
+    )
+
+    est = estimate_ragas_cost_usd(samples, len(RAGAS_METRICS)) * max(1, runs)
+    if not within_budget(est, budget_usd):
+        print(
+            f"BUDGET: estimated ${est:.4f} exceeds cap ${budget_usd:.4f} — refused. "
+            f"Lower --sample/--runs or raise --budget-usd."
+        )
+        return False
+    return True
+
+
 def _ragas(args: argparse.Namespace) -> int:
     """Live Ragas run over a gold set (Azure judge). Writes ragas.json + pushes scores to
     Langfuse (AC3). [untested live] — needs Azure creds + the `ragas` group."""
@@ -191,6 +210,8 @@ def _ragas(args: argparse.Namespace) -> int:
 
     version, cases, report = _live_report(args)
     samples = _samples_from(cases, report)
+    if not _budget_ok(samples, 1, args.budget_usd):
+        return 2
     scores = build_ragas_evaluator().evaluate(samples)
     build_score_publisher().publish(
         scores, run_name=f"ragas:{version}", trace_ids=_trace_ids(report)
@@ -210,6 +231,8 @@ def _compare(args: argparse.Namespace) -> int:
 
     version, cases, report = _live_report(args)
     samples = _samples_from(cases, report)
+    if not _budget_ok(samples, args.runs, args.budget_usd):
+        return 2
     evaluator = build_ragas_evaluator()
     runs = [evaluator.evaluate(samples) for _ in range(max(1, args.runs))]
     scores = runs[0]
@@ -385,6 +408,7 @@ def main(argv: list[str] | None = None) -> int:
     p_ragas.add_argument("--tenant", required=True)
     p_ragas.add_argument("--k", type=int, default=5)
     p_ragas.add_argument("--sample", type=int, default=0, help="bounded sample size (0=all)")
+    p_ragas.add_argument("--budget-usd", type=float, default=0.0, help="hard cost cap (0=none)")
     p_ragas.add_argument("--out", default="eval-results")
     p_ragas.set_defaults(func=_ragas)
 
@@ -394,6 +418,7 @@ def main(argv: list[str] | None = None) -> int:
     p_compare.add_argument("--k", type=int, default=5)
     p_compare.add_argument("--sample", type=int, default=0, help="bounded sample size (0=all)")
     p_compare.add_argument("--runs", type=int, default=1, help="repeat Ragas N× for variance")
+    p_compare.add_argument("--budget-usd", type=float, default=0.0, help="hard cost cap (0=none)")
     p_compare.add_argument("--out", default="eval-results")
     p_compare.set_defaults(func=_compare)
 

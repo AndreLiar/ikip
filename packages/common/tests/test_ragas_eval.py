@@ -37,6 +37,65 @@ def test_fake_evaluator_scores_every_metric_with_overrides() -> None:
     assert round(scores.means["faithfulness"], 4) == round((0.8 + 0.2 + 0.8) / 3, 4)
 
 
+def test_within_budget() -> None:
+    from ikip_common.eval.ragas_eval import within_budget
+
+    assert within_budget(0.01, 0.0) is True  # 0 cap = no cap
+    assert within_budget(0.01, 0.05) is True
+    assert within_budget(0.10, 0.05) is False  # over cap -> refused
+
+
+def test_adapter_reports_measured_cost_from_token_callback(monkeypatch) -> None:
+    # extend the contract test: a get_openai_callback that reports tokens -> cost_source
+    # 'measured' and a cost derived from real tokens, not the estimate.
+    import contextlib
+    import sys
+    import types
+
+    from ikip_common.eval.ragas_eval import RAGAS_METRICS, EvalSample, RagasAdapter
+
+    rows = [dict.fromkeys(RAGAS_METRICS, 0.9)]
+
+    class _FakeDF:
+        def __init__(self, r):  # noqa: ANN001
+            self._r = r
+            self.columns = set(r[0])
+
+        @property
+        def iloc(self):  # noqa: ANN202
+            return self._r
+
+    fake_ragas = types.ModuleType("ragas")
+    fake_ragas.evaluate = lambda *_a, **_k: types.SimpleNamespace(to_pandas=lambda: _FakeDF(rows))
+    fake_metrics = types.ModuleType("ragas.metrics")
+    for n in RAGAS_METRICS:
+        setattr(fake_metrics, n, object())
+    fake_datasets = types.ModuleType("datasets")
+    fake_datasets.Dataset = types.SimpleNamespace(from_dict=lambda rows: rows)
+    fake_cb_mod = types.ModuleType("langchain_community.callbacks")
+
+    @contextlib.contextmanager
+    def _cb():
+        yield types.SimpleNamespace(prompt_tokens=1000, completion_tokens=500)
+
+    fake_cb_mod.get_openai_callback = _cb
+    for name, mod in {
+        "ragas": fake_ragas,
+        "ragas.metrics": fake_metrics,
+        "datasets": fake_datasets,
+        "langchain_community.callbacks": fake_cb_mod,
+    }.items():
+        monkeypatch.setitem(sys.modules, name, mod)
+
+    adapter = RagasAdapter.__new__(RagasAdapter)
+    adapter._settings = types.SimpleNamespace(azure_openai_chat_deployment="judge")
+    monkeypatch.setattr(adapter, "_judge", lambda: (None, None))
+    scores = adapter.evaluate([EvalSample("c0", "q", "a", ["ctx"])])
+    assert scores.cost_source == "measured"
+    assert scores.prompt_tokens == 1000 and scores.completion_tokens == 500
+    assert scores.cost_usd > 0.0
+
+
 def test_means_exclude_nan() -> None:
     import math
 
