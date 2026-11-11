@@ -192,11 +192,20 @@ def test_ask_returns_grounded_answer() -> None:
             cache_hit=False,
         )
 
+    from ikip_api.observability import get_telemetry, get_trace_recorder
+    from ikip_common.telemetry import FakeTelemetry
+
+    telemetry = FakeTelemetry()
+    recorder = _FakeRecorder()
+
     app = _app()
     app.dependency_overrides[get_ask_service] = lambda: fake_ask
     app.dependency_overrides[get_conversation_service] = lambda: _FakeConvs()
+    app.dependency_overrides[get_telemetry] = lambda: telemetry
+    app.dependency_overrides[get_trace_recorder] = lambda: recorder
     client = TestClient(app)
-    token = _token(client, uuid.uuid4())
+    tenant = uuid.uuid4()
+    token = _token(client, tenant)
     resp = client.post(
         "/api/v1/ask", json={"query": "What is E42?"}, headers={"Authorization": f"Bearer {token}"}
     )
@@ -208,6 +217,28 @@ def test_ask_returns_grounded_answer() -> None:
     # the turn was persisted (Story 4.6 glue): assistant message id returned for feedback
     assert body["conversation_id"] == "conv-1"
     assert body["message_id"] == "assistant-msg"
+    # Story 5.4: a span was opened and a durable trace recorded, correlated by trace_id.
+    assert len(telemetry.spans) == 1
+    span = telemetry.spans[0]
+    assert span.name == "assistant.ask"
+    assert span.metadata.get("operation") == "ask"
+    assert span.cost_usd is not None
+    assert recorder.calls, "a query_trace should be recorded"
+    call = recorder.calls[0]
+    assert call["operation"] == "ask"
+    assert call["status"] == "answered"
+    assert call["query"] == "What is E42?"  # hashed in the repo, not stored raw
+    assert call["tenant_id"] == tenant
+    assert call["trace_id"] == span.trace_id
+    assert call["latency_ms"] >= 0.0
+
+
+class _FakeRecorder:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def record(self, **kwargs) -> None:
+        self.calls.append(kwargs)
 
 
 class _FakeConvs:
