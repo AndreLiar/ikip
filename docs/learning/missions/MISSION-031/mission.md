@@ -16,7 +16,11 @@
 - ruff + format ✓; `pytest apps packages services` → 223 passed / 44 skipped.
 - **Pure tests**: the corpus covers every evidence handle the gold references (no dangling handle); `resolve_gold_ids` rewrites handles and keeps abstain cases empty.
 - **DB-gated test** (CI ephemeral Neon + `FakeEmbeddingClient`): `seed_corpus` ingests all docs through the real indexing path and returns a complete, tenant-scoped symbolic→chunk mapping (one chunk per doc).
-- Live seed + `compare` (real Azure judge) is the operator step — documented command; `[untested live]` in CI.
+### Live run — actually executed (2026-11-11)
+Ran against **real Azure + dev Neon**:
+- `eval seed --tenant e5a1d000…51` → **8 chunks ingested**, resolved gold emitted with real UUIDs. **[verified live]**
+- `eval run --gold failure_modes.resolved.json` → **recall@k = 1.0** (retrieval found every seeded chunk → resolution works), citation_resolution = 1.0, grounding_coverage = 1.0, **behavior_conformity = 0.875** (7/8 — one case didn't behave as the gold expects: a real, useful eval signal), est. cost ≈ $0.0011, p50 latency ≈ 1.75 s. **[verified live]** — the custom half of the loop runs end-to-end on real data.
+- `eval compare` (Ragas judged) → **BLOCKED by a ragas↔langchain-community incompatibility**: ragas (0.2.15 and 0.4.3) hard-imports `langchain_community.chat_models.vertexai`, removed in langchain-community ≥ 0.4; pinning lc-community back conflicts with our `langchain-core>=0.3` stack. This is the exact dependency-drift class the `RagasAdapter` contract test guards our mapping against — our code is correct; the ecosystem pin isn't resolved. **[blocked — follow-up]**
 
 ## How to produce the thesis artifact (documented runbook)
 ```
@@ -33,7 +37,8 @@ uv run --group embeddings --group ragas python -m ikip_common.eval compare \
 - `tests/test_eval_seed.py` (pure + DB-gated).
 
 ## Follow-ups (noted)
-- Run the live seed + `compare` once creds/tenant are chosen; commit the resulting `comparison.json` as the dissertation evidence.
+- **Resolve the ragas↔langchain-community pin** (the live `compare` blocker): find a ragas release whose judge imports are compatible with `langchain-core>=0.3` (or add a `langchain-google-vertexai` shim / pin a compatible lc-community), then run `compare` and commit `comparison.json` as dissertation evidence. The seed + custom harness already run live; only the Ragas judge is blocked.
+- Investigate the one `behavior_conformity` miss surfaced by the live run (which failure-mode case answered when it should have abstained, or vice-versa).
 - Swap the OCR/table seed docs for genuinely ingested scanned-PDF/table artifacts (real extraction path) for a stronger signal.
 
 ## Concepts
