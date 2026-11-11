@@ -16,6 +16,11 @@ Documented, reproducible commands:
   uv run --group embeddings python -m ikip_common.eval safety \
       --gold packages/common/tests/fixtures/safety/v1.json
 
+  # Story 5.1/5.2 one-time: seed a real eval corpus, then run against the RESOLVED gold
+  # (its relevant_chunk_ids now point at ingested chunks).
+  uv run --group embeddings python -m ikip_common.eval seed \
+      --tenant <uuid> --out eval-results/failure_modes.resolved.json
+
   # Story 5.2 Ragas LLM-judged metrics + custom-vs-Ragas comparison (live Azure + DB).
   # Bounded sample in CI, full nightly/on-demand (cost + non-determinism control).
   uv run --group embeddings --group ragas python -m ikip_common.eval compare \
@@ -230,6 +235,27 @@ def _compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _seed(args: argparse.Namespace) -> int:
+    """Seed a real eval corpus (Story 5.1/5.2) and emit a runnable gold file whose
+    `relevant_chunk_ids` point at the ingested chunks. [live] — needs a DB + Azure
+    embeddings (`--group embeddings`)."""
+    from sqlalchemy.orm import Session
+
+    from ikip_common.db.session import make_engine
+    from ikip_common.eval.seed import resolve_gold_ids, seed_corpus
+    from ikip_common.llm import build_embedding_client
+
+    tenant_id = uuid.UUID(args.tenant)
+    with Session(make_engine()) as session:
+        mapping = seed_corpus(session, tenant_id, build_embedding_client())
+        session.commit()
+    resolved = resolve_gold_ids(json.loads(Path(args.gold).read_text()), mapping)
+    Path(args.out).write_text(json.dumps(resolved, indent=2, ensure_ascii=False))
+    print(f"seeded {len(mapping)} chunks for tenant {tenant_id}; wrote resolved gold -> {args.out}")
+    print(json.dumps(mapping, indent=2, sort_keys=True))
+    return 0
+
+
 def _safety_passed(gold: str) -> bool:
     from ikip_common.eval.safety import load_safety_cases, run_safety_suite
 
@@ -309,6 +335,12 @@ def main(argv: list[str] | None = None) -> int:
     p_safety.add_argument("--gold", default="packages/common/tests/fixtures/safety/v1.json")
     p_safety.add_argument("--out", default="", help="optional dir to write safety.json")
     p_safety.set_defaults(func=_safety)
+
+    p_seed = sub.add_parser("seed", help="seed a real eval corpus + emit resolved gold (5.1/5.2)")
+    p_seed.add_argument("--tenant", required=True, help="eval tenant uuid (created if absent)")
+    p_seed.add_argument("--gold", default="packages/common/tests/fixtures/gold/failure_modes.json")
+    p_seed.add_argument("--out", default="eval-results/failure_modes.resolved.json")
+    p_seed.set_defaults(func=_seed)
 
     p_ragas = sub.add_parser("ragas", help="live Ragas LLM-judged metrics (Story 5.2)")
     p_ragas.add_argument("--gold", required=True)
