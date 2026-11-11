@@ -1,0 +1,41 @@
+{
+  "behavior_conformity": 0.6666666666666666,
+  "by_language": {
+    "en": {
+      "behavior_conformity": 0.5,
+      "n": 2
+    },
+    "fr": {
+      "behavior_conformity": 1.0,
+      "n": 1
+    }
+  },
+  "cases": [
+    {
+      "behavior_match": false,
+      "case_key": "mt-e42-followup-answered",
+      "final_answer": "",
+      "final_behavior": "error",
+      "language": "en",
+      "n_turns": 2
+    },
+    {
+      "behavior_match": true,
+      "case_key": "mt-coolant-followup-unanswerable",
+      "final_answer": "",
+      "final_behavior": "abstained",
+      "language": "en",
+      "n_turns": 2
+    },
+    {
+      "behavior_match": true,
+      "case_key": "mt-e42-followup-fr",
+      "final_answer": "Le code d\u00e9faut E42 sur la pompe P-12 indique une surchauffe de la pompe, et le contr\u00f4leur d\u00e9clenche l\u2019arr\u00eat du moteur. [E1]",
+      "final_behavior": "answered",
+      "language": "fr",
+      "n_turns": 2
+    }
+  ],
+  "gold_set_version": "multi-turn-v1",
+  "n_cases": 3
+}
