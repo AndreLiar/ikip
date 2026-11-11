@@ -67,6 +67,97 @@ def test_compare_high_agreement() -> None:
     assert rep.pearson_correlation is not None and rep.pearson_correlation > 0.9
 
 
+def test_ragas_adapter_maps_scores_and_estimates_cost(monkeypatch) -> None:
+    """Contract test: with a fake `ragas` + `datasets` (the API drifts across versions),
+    RagasAdapter maps the result DataFrame columns to per-case scores and records a cost.
+    No real ragas/Azure. Catches column/mapping drift before the nightly live run."""
+    import sys
+    import types
+
+    from ikip_common.eval.ragas_eval import RAGAS_METRICS, EvalSample, RagasAdapter
+
+    class _FakeDF:
+        def __init__(self, rows: list[dict]) -> None:
+            self._rows = rows
+            self.columns = set(rows[0])
+
+        @property
+        def iloc(self):  # noqa: ANN202
+            return self._rows
+
+    class _FakeResult:
+        def __init__(self, rows: list[dict]) -> None:
+            self._rows = rows
+
+        def to_pandas(self) -> _FakeDF:
+            return _FakeDF(self._rows)
+
+    rows = [dict.fromkeys(RAGAS_METRICS, 0.5), dict.fromkeys(RAGAS_METRICS, 0.9)]
+    fake_ragas = types.ModuleType("ragas")
+    fake_ragas.evaluate = lambda dataset, metrics, llm, embeddings: _FakeResult(rows)  # noqa: ARG005
+    fake_metrics = types.ModuleType("ragas.metrics")
+    for name in (
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall",
+        "answer_correctness",
+    ):
+        setattr(fake_metrics, name, object())
+    fake_datasets = types.ModuleType("datasets")
+    fake_datasets.Dataset = types.SimpleNamespace(from_dict=lambda rows: rows)
+    monkeypatch.setitem(sys.modules, "ragas", fake_ragas)
+    monkeypatch.setitem(sys.modules, "ragas.metrics", fake_metrics)
+    monkeypatch.setitem(sys.modules, "datasets", fake_datasets)
+
+    adapter = RagasAdapter.__new__(RagasAdapter)  # skip __init__ (no Settings/Azure)
+    adapter._settings = types.SimpleNamespace(azure_openai_chat_deployment="gpt-5.4-mini")
+    monkeypatch.setattr(adapter, "_judge", lambda: (None, None))
+
+    samples = [
+        EvalSample("c0", "q0", "a0", ["ctx0"], ground_truth="g0"),
+        EvalSample("c1", "q1", "a1", ["ctx1"], ground_truth="g1"),
+    ]
+    scores = adapter.evaluate(samples)
+    assert scores.per_case["c0"]["faithfulness"] == 0.5
+    assert scores.per_case["c1"]["answer_correctness"] == 0.9
+    assert scores.judge_model == "gpt-5.4-mini"
+    assert scores.cost_usd > 0.0  # estimated, not the 0.0 placeholder
+
+
+def test_score_publisher_attaches_per_case_scores_to_traces() -> None:
+    import types
+
+    from ikip_common.eval.ragas_eval import LangfuseScorePublisher, RagasScores
+
+    calls = []
+
+    class _FakeClient:
+        def __init__(self, **_) -> None:
+            pass
+
+        def create_score(self, **kw) -> None:
+            calls.append(kw)
+
+    pub = LangfuseScorePublisher.__new__(LangfuseScorePublisher)
+    pub._Langfuse = _FakeClient
+    pub._settings = types.SimpleNamespace(
+        langfuse_public_key=types.SimpleNamespace(get_secret_value=lambda: "pk"),
+        langfuse_secret_key=types.SimpleNamespace(get_secret_value=lambda: "sk"),
+        langfuse_host="http://lf",
+    )
+    scores = RagasScores(
+        per_case={"c0": {"faithfulness": 0.8}}, means={"faithfulness": 0.8}, judge_model="j"
+    )
+    pub.publish(scores, run_name="run1", trace_ids={"c0": "trace-xyz"})
+
+    attached = [c for c in calls if c.get("trace_id")]
+    assert attached and attached[0]["trace_id"] == "trace-xyz"
+    assert attached[0]["name"] == "ragas.faithfulness"
+    # the run mean is also pushed (no trace)
+    assert any(c["name"] == "ragas.faithfulness.mean" and "trace_id" not in c for c in calls)
+
+
 def test_compare_flags_divergence() -> None:
     # custom says grounded (coverage=1.0) but Ragas faithfulness is low -> entailment gap
     pairs = [MetricPair("c0", 1.0, 0.2), MetricPair("c1", 1.0, 0.95)]

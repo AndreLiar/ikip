@@ -30,8 +30,24 @@ def build_embedding_client(settings: Settings | None = None) -> EmbeddingClient:
 
 def build_chat_client(settings: Settings | None = None) -> ChatClient:
     """Build the production chat client (Azure OpenAI). Raises AzureConfigError if the
-    AZURE_OPENAI_* chat settings are missing. Tests inject FakeChatClient."""
-    return AzureChatClient(settings or get_settings())
+    AZURE_OPENAI_* chat settings are missing. Tests inject FakeChatClient.
+
+    The active prompt config's `ModelConfig` (Story 5.5) supplies the *behavior* knobs
+    (`reasoning_effort`, `temperature`) so promoting/rolling back a config version actually
+    changes generation. The deployment NAME stays env-owned (infra, not a versioned knob) —
+    the artifact records it, Settings supplies the live value.
+    """
+    from ikip_common.llm.prompts import active_prompt_config
+
+    s = settings or get_settings()
+    model = active_prompt_config().model
+    s = s.model_copy(
+        update={
+            "chat_reasoning_effort": model.reasoning_effort,
+            "chat_temperature": model.temperature,
+        }
+    )
+    return AzureChatClient(s)
 
 
 __all__ = [

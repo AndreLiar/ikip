@@ -68,6 +68,9 @@ class CaseResult:
     # --- material for LLM-judged (Ragas) metrics (Story 5.2) ---
     answer: str = ""
     contexts: list[str] = field(default_factory=list)
+    # Langfuse correlation (Story 5.4): the trace this case produced, so Ragas scores can be
+    # attached to it. Empty under the default NullTelemetry (deterministic CI).
+    trace_id: str = ""
 
 
 @dataclass
@@ -100,14 +103,18 @@ def _evaluate_case(
     chat_client: ChatClient,
     validator: GroundingValidator | None,
     k: int,
+    telemetry,  # noqa: ANN001 — Telemetry port (Story 5.4); Null in deterministic CI
 ) -> CaseResult:
     from ikip_common.llm.answer import grounded_answer
 
     capturing = _CapturingRetrieve(retrieve)
     start = time.perf_counter()
-    result: AnswerResult = grounded_answer(
-        case.question, retrieve=capturing, chat_client=chat_client, validator=validator
-    )
+    # Trace the case so Ragas scores can later attach to this trace (Story 5.4 ↔ 5.2).
+    with telemetry.span("eval.case", case_key=case.case_key, operation="eval") as span:
+        result: AnswerResult = grounded_answer(
+            case.question, retrieve=capturing, chat_client=chat_client, validator=validator
+        )
+        trace_id = span.trace_id
     latency_ms = (time.perf_counter() - start) * 1000
 
     outcome = capturing.last
@@ -138,6 +145,7 @@ def _evaluate_case(
         ),
         answer=result.answer or "",
         contexts=[d.page_content for d in outcome.documents] if outcome else [],
+        trace_id=trace_id or "",
     )
 
 
@@ -154,10 +162,16 @@ def evaluate_dataset(
     k: int = 5,
     gold_set_version: str = "unknown",
     config: dict | None = None,
+    telemetry=None,  # noqa: ANN001 — Telemetry port; None -> NullTelemetry (no tracing)
 ) -> EvalReport:
     """Run all cases, aggregating retrieval + answer metrics. Deterministic given a fixed
-    retrieve + FakeChatClient."""
-    results = [_evaluate_case(c, retrieve, chat_client, validator, k) for c in cases]
+    retrieve + FakeChatClient. Pass a `telemetry` (Story 5.4) to trace each case so Ragas
+    scores can attach to the per-case trace."""
+    if telemetry is None:
+        from ikip_common.telemetry import NullTelemetry
+
+        telemetry = NullTelemetry()
+    results = [_evaluate_case(c, retrieve, chat_client, validator, k, telemetry) for c in cases]
     latencies = [r.latency_ms for r in results]
     aggregate = {
         "n_cases": len(results),

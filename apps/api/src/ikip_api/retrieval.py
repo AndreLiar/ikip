@@ -329,8 +329,13 @@ def ask(
     import time
 
     from ikip_common.eval.metrics import estimate_cost_usd
+    from ikip_common.llm.prompts import active_prompt_config
 
     governance.authorize(principal, "assistant.ask")
+    # Attribution (Story 5.5 ↔ 5.4): stamp the trace with the deployment + the ACTIVE prompt
+    # config version, so a quality shift is traceable to the exact prompt/model that produced it.
+    _cfg = active_prompt_config()
+    model_version = f"{_cfg.model.chat_deployment}+prompt:{_cfg.version}"
     # Trace the generation end-to-end (OTel→Langfuse, Story 5.4). The span carries only
     # IDs + metadata — never the raw prompt/content (AC4).
     start = time.perf_counter()
@@ -376,7 +381,7 @@ def ask(
         message_id=uuid.UUID(result.message_id)
         if result.message_id and _is_uuid(result.message_id)
         else None,
-        model_version=None,
+        model_version=model_version,
         retrieved_chunk_ids=chunk_ids,
         latency_ms=latency_ms,
         cost_usd=cost_usd,

@@ -231,6 +231,8 @@ def test_ask_returns_grounded_answer() -> None:
     assert call["tenant_id"] == tenant
     assert call["trace_id"] == span.trace_id
     assert call["latency_ms"] >= 0.0
+    # Story 5.5↔5.4: the trace is stamped with the active prompt config version
+    assert "prompt:" in call["model_version"]
 
 
 class _FakeRecorder:
