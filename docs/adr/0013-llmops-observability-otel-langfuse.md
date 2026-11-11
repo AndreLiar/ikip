@@ -43,6 +43,15 @@ Before building the Epic 5 instrumentation, we explicitly re-opened **Langfuse v
 
 **We would pick LangSmith instead if** developer velocity (zero-config LangGraph tracing + richest eval UX) were the top priority *and* residency/lock-in were non-issues — e.g. a pure LangChain-stack product optimizing DX. That is not this project's posture. This re-evaluation is a revisit trigger result, not a reversal; the `Telemetry` port keeps the backend swappable if that calculus changes.
 
+## Update (2026-11-11) — Prompt management: git-source-of-truth + Langfuse sync (Story 5.5)
+
+AC1 of Story 5.5 allows prompt management "via **Langfuse prompt management** and/or repo artifacts". We adopt a **hybrid, with git as the source of truth**:
+
+- **Versioned repo artifacts** (`packages/common/src/ikip_common/llm/prompt_config/<version>.json` + `active.json`) are authoritative. This is what makes the governance ACs deterministic: a prompt/model change is a **PR diff** → it triggers the regression suite (`config-regression.yml`, AC2); **promotion** flips `active` only when retrieval + groundedness + safety gates pass (`eval config promote`, AC3); **rollback** is a pointer flip to an immutable prior version (AC4). The running answer flow reads the active artifact (`active_prompt_config()`), with a built-in fallback so config IO can never break generation.
+- **Langfuse is the runtime/UI mirror**, not the source of truth: on promote, each prompt is synced to Langfuse prompt management under label `production` (behind a `PromptPublisher` port; no-op when the SDK/creds are absent, so CI stays network-free). This gives the LLM-native UI, non-engineer visibility, and prompt↔trace correlation with the Story 5.4 `trace_id`.
+
+**Why not Langfuse as source of truth:** a prompt edited in the Langfuse UI produces no PR and no CI run, so AC2/AC3 (diff-triggered regression + gated promotion) would lose their deterministic, reviewable gate and CI would need live Langfuse creds. Git-source keeps change control in code review where the eval gates live; Langfuse remains swappable behind the port.
+
 ## Consequences
 **Positive**
 - One instrumentation (OTel), two fit-for-purpose backends; no lock-in.

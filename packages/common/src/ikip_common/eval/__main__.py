@@ -120,6 +120,59 @@ def _safety(args: argparse.Namespace) -> int:
     return 0 if report.all_passed else 1
 
 
+def _safety_passed(gold: str) -> bool:
+    from ikip_common.eval.safety import load_safety_cases, run_safety_suite
+
+    version, cases = load_safety_cases(gold)
+    return run_safety_suite(cases, safety_set_version=version).all_passed
+
+
+def _config(args: argparse.Namespace) -> int:
+    """Versioned prompt/model config registry (Story 5.5): list / show / activate
+    (rollback) / promote (gated on retrieval + groundedness + safety)."""
+    from ikip_common.eval.report import load_json
+    from ikip_common.llm.prompts import (
+        PromotionBlockedError,
+        build_prompt_publisher,
+        default_registry,
+        evaluate_gates,
+    )
+
+    reg = default_registry()
+    active = reg.active_version()
+
+    if args.action == "list":
+        for v in reg.versions():
+            mark = " (active)" if v == active else ""
+            print(f"{v}{mark}  {reg.get(v).content_hash()[:12]}")
+        return 0
+
+    if args.action == "show":
+        print(json.dumps(reg.get(args.version).to_dict(), indent=2, ensure_ascii=False))
+        return 0
+
+    if args.action == "activate":  # AC4: rollback = activate a prior version
+        reg.activate(args.version)
+        print(f"active prompt config -> {args.version}")
+        return 0
+
+    if args.action == "promote":
+        out = Path(args.eval)
+        latest = out / "latest.json"
+        aggregate = load_json(latest)["aggregate"] if latest.exists() else None
+        gates = evaluate_gates(aggregate, safety_passed=_safety_passed(args.safety_gold))
+        print(f"gates: {gates.summary()}")
+        try:
+            reg.promote(args.version, gates=gates, publisher=build_prompt_publisher())
+        except PromotionBlockedError as exc:
+            print(f"BLOCKED: {exc}")
+            return 1
+        print(f"promoted + activated {args.version} (synced to prompt backend if configured)")
+        return 0
+
+    return 2
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="ikip_common.eval", description="RAG evaluation (Story 3.6)"
@@ -146,6 +199,19 @@ def main(argv: list[str] | None = None) -> int:
     p_safety.add_argument("--gold", default="packages/common/tests/fixtures/safety/v1.json")
     p_safety.add_argument("--out", default="", help="optional dir to write safety.json")
     p_safety.set_defaults(func=_safety)
+
+    p_config = sub.add_parser("config", help="versioned prompt/model config registry (Story 5.5)")
+    csub = p_config.add_subparsers(dest="action", required=True)
+    csub.add_parser("list", help="list versions (marks the active one)")
+    c_show = csub.add_parser("show", help="print a config version")
+    c_show.add_argument("--version", required=True)
+    c_act = csub.add_parser("activate", help="switch/rollback the active version (AC4)")
+    c_act.add_argument("--version", required=True)
+    c_prom = csub.add_parser("promote", help="promote a version iff gates pass (AC3)")
+    c_prom.add_argument("--version", required=True)
+    c_prom.add_argument("--eval", default="eval-results", help="dir with latest.json aggregate")
+    c_prom.add_argument("--safety-gold", default="packages/common/tests/fixtures/safety/v1.json")
+    p_config.set_defaults(func=_config)
 
     args = parser.parse_args(argv)
     return args.func(args)
