@@ -60,9 +60,22 @@ class RagasScores:
     means: dict[str, float]
     judge_model: str
     cost_usd: float = 0.0
+    # Real judge token usage (0 when estimated or unavailable). cost_source tells which.
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost_source: str = "estimated"  # "measured" | "estimated"
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+class BudgetExceededError(RuntimeError):
+    """A Ragas run was refused because its estimated cost exceeds the budget cap."""
+
+
+def within_budget(estimated_usd: float, budget_usd: float) -> bool:
+    """True if the run is allowed. budget_usd <= 0 means 'no cap'."""
+    return budget_usd <= 0 or estimated_usd <= budget_usd
 
 
 def _means(per_case: dict[str, dict[str, float]]) -> dict[str, float]:
@@ -165,7 +178,22 @@ class RagasAdapter(RagasEvaluator):
             context_recall,
             answer_correctness,
         ]
-        result = ragas_evaluate(Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb)
+        # Capture REAL judge token usage (not the chars/4 estimate). get_openai_callback
+        # hooks on_llm_end for every langchain call within the context — including ragas'.
+        prompt_tok = completion_tok = 0
+        try:
+            from langchain_community.callbacks import get_openai_callback
+
+            with get_openai_callback() as cb:
+                result = ragas_evaluate(
+                    Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb
+                )
+            prompt_tok, completion_tok = cb.prompt_tokens, cb.completion_tokens
+        except ImportError:
+            result = ragas_evaluate(
+                Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb
+            )
+
         df = result.to_pandas()
         per_case: dict[str, dict[str, float]] = {}
         for i, s in enumerate(samples):
@@ -173,11 +201,24 @@ class RagasAdapter(RagasEvaluator):
                 m: float(df.iloc[i][m]) for m in RAGAS_METRICS if m in df.columns
             }
         model = self._settings.azure_openai_chat_deployment or "azure-judge"
+        if prompt_tok or completion_tok:
+            from ikip_common.eval.metrics import DEFAULT_IN_PER_1M, DEFAULT_OUT_PER_1M
+
+            cost = (prompt_tok / 1_000_000) * DEFAULT_IN_PER_1M + (
+                completion_tok / 1_000_000
+            ) * DEFAULT_OUT_PER_1M
+            source = "measured"
+        else:
+            cost = estimate_ragas_cost_usd(samples, len(metrics))
+            source = "estimated"
         return RagasScores(
             per_case=per_case,
             means=_means(per_case),
             judge_model=model,
-            cost_usd=estimate_ragas_cost_usd(samples, len(metrics)),
+            cost_usd=cost,
+            prompt_tokens=prompt_tok,
+            completion_tokens=completion_tok,
+            cost_source=source,
         )
 
 
