@@ -12,19 +12,19 @@ from ikip_common.telemetry import (
 
 
 def _settings(**over) -> Settings:
-    base = dict(
-        DATABASE_URL="postgresql://u:p@host/db",
-        R2_ACCOUNT_ID="a",
-        R2_ENDPOINT="https://a.r2.cloudflarestorage.com",
-        R2_BUCKET="b",
-        R2_ACCESS_KEY_ID="ak",
-        R2_SECRET_ACCESS_KEY="sk",
-        REDIS_URL="redis://localhost:6379/0",
-        JWT_SECRET="x" * 36,
+    base = {
+        "DATABASE_URL": "postgresql://u:p@host/db",
+        "R2_ACCOUNT_ID": "a",
+        "R2_ENDPOINT": "https://a.r2.cloudflarestorage.com",
+        "R2_BUCKET": "b",
+        "R2_ACCESS_KEY_ID": "ak",
+        "R2_SECRET_ACCESS_KEY": "sk",
+        "REDIS_URL": "redis://localhost:6379/0",
+        "JWT_SECRET": "x" * 36,
         # Isolate from any ambient .env langfuse creds so the no-cred path is exercised.
-        LANGFUSE_PUBLIC_KEY=None,
-        LANGFUSE_SECRET_KEY=None,
-    )
+        "LANGFUSE_PUBLIC_KEY": None,
+        "LANGFUSE_SECRET_KEY": None,
+    }
     base.update(over)
     return Settings(**base)
 
