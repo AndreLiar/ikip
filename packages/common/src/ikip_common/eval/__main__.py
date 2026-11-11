@@ -54,6 +54,9 @@ def _load_gold(path: str) -> tuple[str, list]:
             relevant_chunk_ids=c.get("relevant_chunk_ids", []),
             category=c.get("category", ""),
             ground_truth=c.get("ground_truth"),
+            language=c.get("language", doc.get("language", "en")),
+            reviewed=c.get("reviewed", False),
+            reviewer=c.get("reviewer"),
         )
         for c in doc["cases"]
     ]
@@ -242,6 +245,29 @@ def _compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _gold_status(args: argparse.Namespace) -> int:
+    """Report SME-review provenance + language mix of a gold set (trustworthy-references
+    gap). Advisory by default; `--require-reviewed` makes an unreviewed case exit 1 — wire
+    that into CI once a gold set is meant to gate."""
+    version, cases = _load_gold(args.gold)
+    by_lang: dict[str, dict] = {}
+    for c in cases:
+        b = by_lang.setdefault(c.language, {"n": 0, "reviewed": 0})
+        b["n"] += 1
+        b["reviewed"] += 1 if c.reviewed else 0
+    n_reviewed = sum(1 for c in cases if c.reviewed)
+    print(f"gold {version}: {len(cases)} cases, {n_reviewed} SME-reviewed")
+    for lang in sorted(by_lang):
+        b = by_lang[lang]
+        print(f"  [{lang}] {b['reviewed']}/{b['n']} reviewed")
+    unreviewed = [c.case_key for c in cases if not c.reviewed]
+    if unreviewed:
+        print(f"UNREVIEWED ({len(unreviewed)}): {', '.join(unreviewed)}")
+    if args.require_reviewed and unreviewed:
+        return 1
+    return 0
+
+
 def _seed(args: argparse.Namespace) -> int:
     """Seed a real eval corpus (Story 5.1/5.2) and emit a runnable gold file whose
     `relevant_chunk_ids` point at the ingested chunks. [live] — needs a DB + Azure
@@ -342,6 +368,11 @@ def main(argv: list[str] | None = None) -> int:
     p_safety.add_argument("--gold", default="packages/common/tests/fixtures/safety/v1.json")
     p_safety.add_argument("--out", default="", help="optional dir to write safety.json")
     p_safety.set_defaults(func=_safety)
+
+    p_gs = sub.add_parser("gold-status", help="SME-review provenance + language mix of a gold set")
+    p_gs.add_argument("--gold", default="packages/common/tests/fixtures/gold/failure_modes.json")
+    p_gs.add_argument("--require-reviewed", action="store_true", help="exit 1 if any unreviewed")
+    p_gs.set_defaults(func=_gold_status)
 
     p_seed = sub.add_parser("seed", help="seed a real eval corpus + emit resolved gold (5.1/5.2)")
     p_seed.add_argument("--tenant", required=True, help="eval tenant uuid (created if absent)")
