@@ -1,0 +1,40 @@
+{
+  "agreement_rate": 1.0,
+  "divergent_cases": [],
+  "gold_set_version": "failure-modes-v1-resolved",
+  "mean_abs_difference": 0.0,
+  "n_cases": 4,
+  "pairs": [
+    {
+      "case_key": "equipment-identifier-exact-fault-code",
+      "custom_groundedness": 1.0,
+      "ragas_faithfulness": 1.0
+    },
+    {
+      "case_key": "outdated-manual-prefers-current-revision",
+      "custom_groundedness": 1.0,
+      "ragas_faithfulness": 1.0
+    },
+    {
+      "case_key": "table-reads-structured-value",
+      "custom_groundedness": 1.0,
+      "ragas_faithfulness": 1.0
+    },
+    {
+      "case_key": "scanned-pdf-ocr-derived-answer",
+      "custom_groundedness": 1.0,
+      "ragas_faithfulness": 1.0
+    }
+  ],
+  "pearson_correlation": null,
+  "ragas_cost_usd": 0.005176874999999999,
+  "ragas_variance": {
+    "answer_correctness": 0.0,
+    "answer_relevancy": 0.0,
+    "context_precision": 0.0009765624998046875,
+    "context_recall": 0.007971938775510208,
+    "faithfulness": 0.009999999999999995
+  },
+  "recommendation": "High agreement: the deterministic metric tracks Ragas faithfulness closely. Gate releases on the deterministic metric (free, reproducible); keep Ragas as a sampled cross-check.",
+  "threshold": 0.7
+}

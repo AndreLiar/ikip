@@ -42,11 +42,22 @@ def _seed(tmp_path) -> PromptRegistry:
 # --- shipped artifact integrity -------------------------------------------
 
 
-def test_shipped_v1_matches_builtin_and_is_active() -> None:
+def test_shipped_v1_matches_builtin() -> None:
+    # v1 is the drift guard: the repo artifact must equal the code's BUILTIN_V1.
+    assert default_registry().get("v1") == BUILTIN_V1
+
+
+def test_active_is_v2_with_conflict_handling() -> None:
+    # v2 was promoted (MISSION-033): it adds conflicting-sources handling to v1's prompt.
     reg = default_registry()
-    assert reg.active_version() == "v1"
-    assert reg.get("v1") == BUILTIN_V1  # the repo artifact cannot drift from the code
-    assert active_prompt_config() == BUILTIN_V1
+    assert reg.active_version() == "v2"
+    v2 = reg.get("v2")
+    assert active_prompt_config() == v2
+    assert "conflict" in v2.generate_system.lower()
+    # only the generate prompt changed vs v1; judge + notice + model are identical
+    assert v2.judge_system == BUILTIN_V1.judge_system
+    assert v2.not_certified_notice == BUILTIN_V1.not_certified_notice
+    assert v2.generate_system != BUILTIN_V1.generate_system
 
 
 def test_content_hash_is_version_independent_and_content_sensitive() -> None:
