@@ -26,7 +26,12 @@ from ikip_api.conversations import (
     get_conversation_service,
 )
 from ikip_api.governance import GovernanceService, get_governance_service
-from ikip_api.observability import TraceRecorder, get_telemetry, get_trace_recorder
+from ikip_api.observability import (
+    TraceRecorder,
+    get_metrics,
+    get_telemetry,
+    get_trace_recorder,
+)
 
 router = APIRouter()
 
@@ -325,6 +330,7 @@ def ask(
     conversations: Annotated[ConversationService, Depends(get_conversation_service)],
     telemetry: Annotated[object, Depends(get_telemetry)],
     trace_recorder: Annotated[TraceRecorder, Depends(get_trace_recorder)],
+    metrics: Annotated[object, Depends(get_metrics)],
 ) -> AskResponse:
     import time
 
@@ -354,6 +360,11 @@ def ask(
         span.set_metadata(status=result.status, cache_hit=result.cache_hit)
         span.set_cost(cost_usd=cost_usd)
         trace_id = span.trace_id
+
+    # Operational metrics → Grafana Cloud (Story 5.6): latency histogram + request/cost
+    # counters, labelled by status. No-op unless an OTLP endpoint is configured.
+    metrics.record_request(operation="ask", latency_ms=latency_ms, status=result.status)  # type: ignore[attr-defined]
+    metrics.record_cost(cost_usd=cost_usd)  # type: ignore[attr-defined]
 
     governance.record(
         principal,

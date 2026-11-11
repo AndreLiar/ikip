@@ -38,6 +38,9 @@ telemetry = ["langfuse>=3.0"]
 # (ChatVertexAI), REMOVED in langchain-community >=0.4; 0.3.x still ships it and resolves
 # cleanly with our langchain-core (1.x). Without this pin `eval ragas/compare` ImportError.
 ragas = ["ragas>=0.2", "datasets>=2.0", "langchain-openai>=0.2", "langchain-community>=0.3,<0.4"]
+# OTel metrics -> Grafana Cloud via OTLP (Story 5.6, ADR 0013; lazy-imported). Null/Fake
+# metrics need none of this; only a live OTLP export does.
+otel = ["opentelemetry-sdk>=1.27", "opentelemetry-exporter-otlp-proto-http>=1.27"]
 
 [tool.uv.sources]
 ikip-common = { workspace = true }

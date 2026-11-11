@@ -1,0 +1,55 @@
+# IKIP alerting rules (Story 5.6, AC3). Prometheus/Mimir rule format — import into Grafana
+# Cloud (Alerts & IRM → Alert rules → import, or Mimir ruler). Thresholds are starting
+# points; tune per environment. Each rule routes to your contact point (Slack/email).
+groups:
+  - name: ikip-ops
+    rules:
+      - alert: IkipHighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(ikip_request_duration_ms_bucket{operation="ask"}[5m])) by (le)) > 3000
+        for: 10m
+        labels: { severity: warning, service: ikip-api }
+        annotations:
+          summary: "/ask p95 latency > 3s"
+          description: "p95 answer latency has exceeded 3000ms for 10m."
+
+      - alert: IkipHighErrorRate
+        expr: sum(rate(ikip_requests_total{status="error"}[5m])) / clamp_min(sum(rate(ikip_requests_total[5m])), 1) > 0.05
+        for: 5m
+        labels: { severity: critical, service: ikip-api }
+        annotations:
+          summary: "Error rate > 5%"
+          description: "More than 5% of /ask requests errored over 5m."
+
+      - alert: IkipTokenCostSpike
+        expr: increase(ikip_request_cost_usd_total[1h]) > 5
+        for: 0m
+        labels: { severity: warning, service: ikip-api }
+        annotations:
+          summary: "Token cost > $5/hour"
+          description: "Estimated LLM token cost exceeded $5 in the last hour."
+
+  - name: ikip-quality
+    rules:
+      - alert: IkipRecallRegression
+        expr: ikip_eval_quality{metric="recall_at_k_mean"} < 0.6
+        for: 0m
+        labels: { severity: warning, service: ikip-eval }
+        annotations:
+          summary: "Retrieval recall@k below 0.6"
+          description: "The latest evaluation run's recall@k regressed below the 0.6 floor."
+
+      - alert: IkipGroundednessRegression
+        expr: ikip_eval_quality{metric="citation_grounding_coverage_mean"} < 0.9
+        for: 0m
+        labels: { severity: critical, service: ikip-eval }
+        annotations:
+          summary: "Groundedness coverage below 0.9"
+          description: "The latest evaluation run's citation-grounding coverage regressed below 0.9."
+
+      - alert: IkipBehaviorConformityRegression
+        expr: ikip_eval_quality{metric="behavior_conformity"} < 1
+        for: 0m
+        labels: { severity: critical, service: ikip-eval }
+        annotations:
+          summary: "Behavior conformity below 100%"
+          description: "A case answered when it should have abstained (or vice-versa) in the latest eval run."

@@ -37,6 +37,18 @@ def get_telemetry():  # noqa: ANN201 — Telemetry, avoid importing the port at 
     return build_telemetry()
 
 
+_METRICS = None
+
+
+def get_metrics():  # noqa: ANN201 — Metrics port (Story 5.6). Built once (one exporter).
+    global _METRICS
+    if _METRICS is None:
+        from ikip_common.telemetry.metrics import build_metrics
+
+        _METRICS = build_metrics()
+    return _METRICS
+
+
 class _DbTraceRecorder:
     def record(
         self,
