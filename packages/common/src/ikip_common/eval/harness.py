@@ -14,6 +14,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
+from typing import TYPE_CHECKING
 
 from ikip_common.eval.metrics import (
     citation_grounding_coverage,
@@ -22,10 +23,15 @@ from ikip_common.eval.metrics import (
     percentile,
     recall_at_k,
 )
-from ikip_common.llm.answer import AnswerResult, grounded_answer
-from ikip_common.llm.base import ChatClient
-from ikip_common.llm.grounding import GroundingValidator
-from ikip_common.llm.hybrid import RetrievalOutcome
+
+# The grounded-answer graph pulls langchain/langgraph; keep it out of module import so the
+# lightweight pieces (GoldCase, CaseResult, report loading, compare_to_baseline) stay usable
+# in the fast CI gate. `grounded_answer` is imported lazily where it actually runs.
+if TYPE_CHECKING:
+    from ikip_common.llm.answer import AnswerResult
+    from ikip_common.llm.base import ChatClient
+    from ikip_common.llm.grounding import GroundingValidator
+    from ikip_common.llm.hybrid import RetrievalOutcome
 
 
 @dataclass
@@ -95,6 +101,8 @@ def _evaluate_case(
     validator: GroundingValidator | None,
     k: int,
 ) -> CaseResult:
+    from ikip_common.llm.answer import grounded_answer
+
     capturing = _CapturingRetrieve(retrieve)
     start = time.perf_counter()
     result: AnswerResult = grounded_answer(
