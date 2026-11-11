@@ -268,6 +268,37 @@ def _compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _calibrate(args: argparse.Namespace) -> int:
+    """Measure our real grounding judge against human labels (judge-quality gap). [live] —
+    needs Azure (`--group embeddings`). Exit 1 if accuracy below --min-accuracy."""
+    from ikip_common.eval.calibration import load_calibration, run_calibration
+    from ikip_common.llm import build_chat_client
+    from ikip_common.llm.grounding import LLMGroundingValidator
+
+    chat = build_chat_client()
+    version, cases = load_calibration(args.gold)
+    report = run_calibration(
+        cases,
+        LLMGroundingValidator(chat),
+        calibration_set_version=version,
+        judge_model=getattr(chat, "model_version", "judge"),
+    )
+    print(
+        f"judge calibration {version}: accuracy={report.accuracy:.2f} "
+        f"binary={report.binary_accuracy:.2f} kappa={report.cohen_kappa:.2f} (n={report.n})"
+    )
+    for row in report.cases:
+        mark = "ok" if row["human"] == row["judge"] else "MISS"
+        print(f"  [{mark}] {row['case_key']}: human={row['human']} judge={row['judge']}")
+    if args.out:
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "calibration.json").write_text(
+            json.dumps(report.to_dict(), indent=2, sort_keys=True)
+        )
+    return 0 if report.accuracy >= args.min_accuracy else 1
+
+
 def _gold_status(args: argparse.Namespace) -> int:
     """Report SME-review provenance + language mix of a gold set (trustworthy-references
     gap). Advisory by default; `--require-reviewed` makes an unreviewed case exit 1 — wire
@@ -391,6 +422,14 @@ def main(argv: list[str] | None = None) -> int:
     p_safety.add_argument("--gold", default="packages/common/tests/fixtures/safety/v1.json")
     p_safety.add_argument("--out", default="", help="optional dir to write safety.json")
     p_safety.set_defaults(func=_safety)
+
+    p_cal = sub.add_parser("calibrate", help="measure the grounding judge vs human labels (5.2)")
+    p_cal.add_argument(
+        "--gold", default="packages/common/tests/fixtures/eval/judge_calibration.json"
+    )
+    p_cal.add_argument("--min-accuracy", type=float, default=0.0, help="exit 1 below this")
+    p_cal.add_argument("--out", default="eval-results")
+    p_cal.set_defaults(func=_calibrate)
 
     p_gs = sub.add_parser("gold-status", help="SME-review provenance + language mix of a gold set")
     p_gs.add_argument("--gold", default="packages/common/tests/fixtures/gold/failure_modes.json")
