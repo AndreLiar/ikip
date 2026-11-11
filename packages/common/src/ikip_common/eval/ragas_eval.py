@@ -17,7 +17,28 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 
-RAGAS_METRICS = ("faithfulness", "answer_relevancy", "context_precision", "context_recall")
+RAGAS_METRICS = (
+    "faithfulness",
+    "answer_relevancy",
+    "context_precision",
+    "context_recall",
+    "answer_correctness",  # uses ground_truth from the gold set (Story 5.1)
+)
+
+
+def estimate_ragas_cost_usd(samples: Sequence[EvalSample], n_metrics: int) -> float:
+    """Coarse judge-cost estimate (not exact usage accounting): each metric issues ~one
+    judge call per sample over (question+answer+contexts); output is short. Uses the same
+    indicative Azure rates as metrics.estimate_cost_usd. A real usage-based figure (judge
+    token counters) is a follow-up — this beats the previous 0.0 placeholder."""
+    from ikip_common.eval.metrics import estimate_cost_usd
+
+    total = 0.0
+    for s in samples:
+        judge_input = s.question + "\n" + s.answer + "\n" + "\n".join(s.contexts)
+        # ~short verdict output per metric; scale the per-sample cost by the metric count.
+        total += n_metrics * estimate_cost_usd(judge_input, s.answer[:200])
+    return total
 
 
 @dataclass
@@ -117,6 +138,7 @@ class RagasAdapter(RagasEvaluator):
     def evaluate(self, samples: Sequence[EvalSample]) -> RagasScores:
         from ragas import evaluate as ragas_evaluate
         from ragas.metrics import (
+            answer_correctness,
             answer_relevancy,
             context_precision,
             context_recall,
@@ -132,12 +154,14 @@ class RagasAdapter(RagasEvaluator):
             "contexts": [s.contexts for s in samples],
             "ground_truth": [s.ground_truth or "" for s in samples],
         }
-        result = ragas_evaluate(
-            Dataset.from_dict(rows),
-            metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
-            llm=llm,
-            embeddings=emb,
-        )
+        metrics = [
+            faithfulness,
+            answer_relevancy,
+            context_precision,
+            context_recall,
+            answer_correctness,
+        ]
+        result = ragas_evaluate(Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb)
         df = result.to_pandas()
         per_case: dict[str, dict[str, float]] = {}
         for i, s in enumerate(samples):
@@ -145,7 +169,12 @@ class RagasAdapter(RagasEvaluator):
                 m: float(df.iloc[i][m]) for m in RAGAS_METRICS if m in df.columns
             }
         model = self._settings.azure_openai_chat_deployment or "azure-judge"
-        return RagasScores(per_case=per_case, means=_means(per_case), judge_model=model)
+        return RagasScores(
+            per_case=per_case,
+            means=_means(per_case),
+            judge_model=model,
+            cost_usd=estimate_ragas_cost_usd(samples, len(metrics)),
+        )
 
 
 def build_ragas_evaluator(settings=None) -> RagasEvaluator:  # noqa: ANN001
@@ -160,17 +189,27 @@ def build_ragas_evaluator(settings=None) -> RagasEvaluator:  # noqa: ANN001
 class ScorePublisher:
     """Port: push evaluation scores to the observability backend (Langfuse)."""
 
-    def publish(self, scores: RagasScores, *, run_name: str) -> None:  # pragma: no cover
+    def publish(
+        self,
+        scores: RagasScores,
+        *,
+        run_name: str,
+        trace_ids: dict[str, str] | None = None,
+    ) -> None:  # pragma: no cover
         raise NotImplementedError
 
 
 class NullScorePublisher(ScorePublisher):
-    def publish(self, scores: RagasScores, *, run_name: str) -> None:
+    def publish(
+        self, scores: RagasScores, *, run_name: str, trace_ids: dict[str, str] | None = None
+    ) -> None:
         return None
 
 
 class LangfuseScorePublisher(ScorePublisher):
-    """Push mean Ragas scores to Langfuse as named scores (lazy SDK import)."""
+    """Push Ragas scores to Langfuse (lazy SDK import). Per-case scores are attached to the
+    case's trace (Story 5.4 `trace_id`) when provided, so you can navigate trace→score→prompt;
+    the run means are also pushed as run-level scores."""
 
     def __init__(self, settings=None) -> None:  # noqa: ANN001
         from langfuse import Langfuse
@@ -180,15 +219,28 @@ class LangfuseScorePublisher(ScorePublisher):
         self._Langfuse = Langfuse
         self._settings = settings or get_settings()
 
-    def publish(self, scores: RagasScores, *, run_name: str) -> None:
+    def publish(
+        self, scores: RagasScores, *, run_name: str, trace_ids: dict[str, str] | None = None
+    ) -> None:
         s = self._settings
         client = self._Langfuse(
             public_key=s.langfuse_public_key.get_secret_value(),
             secret_key=s.langfuse_secret_key.get_secret_value(),
             host=s.langfuse_host,
         )
+        ids = trace_ids or {}
+        # per-case scores attached to their trace (closes the trace↔score↔prompt loop)
+        for case_key, metrics in scores.per_case.items():
+            trace_id = ids.get(case_key)
+            if not trace_id:
+                continue
+            for metric, value in metrics.items():
+                client.create_score(
+                    name=f"ragas.{metric}", value=value, trace_id=trace_id, comment=run_name
+                )
+        # run-level means (no trace)
         for metric, value in scores.means.items():
-            client.create_score(name=f"ragas.{metric}", value=value, comment=run_name)
+            client.create_score(name=f"ragas.{metric}.mean", value=value, comment=run_name)
 
 
 def build_score_publisher(settings=None) -> ScorePublisher:  # noqa: ANN001

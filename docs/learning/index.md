@@ -34,6 +34,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-027](./missions/MISSION-027/mission.md) | Safety-abstention eval: versioned critical set + required 100% CI release gate | Epic 5 / Story 5.3 |
 | [MISSION-028](./missions/MISSION-028/mission.md) | Prompt/model config versioning + regression gates (git source + Langfuse sync) | Epic 5 / Story 5.5 |
 | [MISSION-029](./missions/MISSION-029/mission.md) | Gold failure-mode datasets + Ragas eval & custom-vs-Ragas comparison | Epic 5 / Stories 5.1+5.2 |
+| [MISSION-030](./missions/MISSION-030/mission.md) | Eval loop closure: trace↔score↔config, model-config wiring, Ragas cost, enforce_admins | Epic 5 / follow-ups |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |

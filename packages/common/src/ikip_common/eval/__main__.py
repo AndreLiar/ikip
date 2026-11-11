@@ -137,6 +137,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
     from ikip_common.eval.harness import evaluate_dataset
     from ikip_common.llm import build_chat_client, build_embedding_client
     from ikip_common.llm.answer import make_hybrid_retrieve
+    from ikip_common.telemetry import build_telemetry
 
     version, cases = _load_gold(args.gold)
     if getattr(args, "sample", 0):
@@ -150,8 +151,13 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
+            telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
         )
     return version, cases, report
+
+
+def _trace_ids(report) -> dict:  # noqa: ANN001
+    return {c["case_key"]: c["trace_id"] for c in report.cases if c.get("trace_id")}
 
 
 def _samples_from(cases, report):  # noqa: ANN001, ANN202
@@ -178,7 +184,9 @@ def _ragas(args: argparse.Namespace) -> int:
     version, cases, report = _live_report(args)
     samples = _samples_from(cases, report)
     scores = build_ragas_evaluator().evaluate(samples)
-    build_score_publisher().publish(scores, run_name=f"ragas:{version}")
+    build_score_publisher().publish(
+        scores, run_name=f"ragas:{version}", trace_ids=_trace_ids(report)
+    )
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "ragas.json").write_text(json.dumps(scores.to_dict(), indent=2, sort_keys=True))
@@ -197,7 +205,9 @@ def _compare(args: argparse.Namespace) -> int:
     evaluator = build_ragas_evaluator()
     runs = [evaluator.evaluate(samples) for _ in range(max(1, args.runs))]
     scores = runs[0]
-    build_score_publisher().publish(scores, run_name=f"compare:{version}")
+    build_score_publisher().publish(
+        scores, run_name=f"compare:{version}", trace_ids=_trace_ids(report)
+    )
     by_case = {c["case_key"]: c for c in report.cases}
     pairs = [
         MetricPair(
