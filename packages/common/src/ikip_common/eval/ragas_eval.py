@@ -66,9 +66,13 @@ class RagasScores:
 
 
 def _means(per_case: dict[str, dict[str, float]]) -> dict[str, float]:
+    import math
+
     means: dict[str, float] = {}
     for metric in RAGAS_METRICS:
-        vals = [c[metric] for c in per_case.values() if metric in c]
+        # Ragas returns NaN for a metric it can't judge (e.g. faithfulness on an abstained,
+        # empty answer); exclude those so one abstention doesn't NaN the whole mean.
+        vals = [c[metric] for c in per_case.values() if metric in c and not math.isnan(c[metric])]
         means[metric] = sum(vals) / len(vals) if vals else 0.0
     return means
 

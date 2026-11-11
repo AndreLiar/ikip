@@ -36,6 +36,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-029](./missions/MISSION-029/mission.md) | Gold failure-mode datasets + Ragas eval & custom-vs-Ragas comparison | Epic 5 / Stories 5.1+5.2 |
 | [MISSION-030](./missions/MISSION-030/mission.md) | Eval loop closure: trace↔score↔config, model-config wiring, Ragas cost, enforce_admins | Epic 5 / follow-ups |
 | [MISSION-031](./missions/MISSION-031/mission.md) | Seed a real eval corpus (`eval seed`) so the live run/ragas/compare loop executes | Epic 5 / Stories 5.1+5.2 |
+| [MISSION-032](./missions/MISSION-032/mission.md) | Unblock Ragas (langchain-community pin) + first real custom-vs-Ragas comparison | Epic 5 / Story 5.2 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
