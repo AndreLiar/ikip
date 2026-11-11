@@ -12,8 +12,14 @@ Documented, reproducible commands:
   # approve the current latest.json as the new reference
   uv run python -m ikip_common.eval promote --out eval-results
 
-The per-push CI gate does NOT call this (no network): it runs the harness with a
-FakeChatClient over versioned fixtures (see tests). This CLI is for live/manual runs.
+  # Story 5.3 critical safety gate — deterministic, no network; exit 1 blocks release
+  uv run --group embeddings python -m ikip_common.eval safety \
+      --gold packages/common/tests/fixtures/safety/v1.json
+
+The per-push CI gate does NOT call `run`/`check` (no network): they run the harness with a
+FakeChatClient over versioned fixtures (see tests). `safety` is the exception — it is a
+required, network-free release gate (scripted fakes) wired into CI. This CLI is otherwise
+for live/manual runs.
 """
 
 from __future__ import annotations
@@ -99,6 +105,21 @@ def _promote(args: argparse.Namespace) -> int:
     return 0
 
 
+def _safety(args: argparse.Namespace) -> int:
+    """Run the critical safety-abstention gate (Story 5.3). Exit 1 on any failure so it
+    blocks release in CI. Deterministic + network-free (scripted fakes)."""
+    from ikip_common.eval.safety import format_report, load_safety_cases, run_safety_suite
+
+    version, cases = load_safety_cases(args.gold)
+    report = run_safety_suite(cases, safety_set_version=version)
+    print(format_report(report))
+    if args.out:
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "safety.json").write_text(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+    return 0 if report.all_passed else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="ikip_common.eval", description="RAG evaluation (Story 3.6)"
@@ -120,6 +141,11 @@ def main(argv: list[str] | None = None) -> int:
     p_promote = sub.add_parser("promote", help="approve latest.json as baseline.json")
     p_promote.add_argument("--out", default="eval-results")
     p_promote.set_defaults(func=_promote)
+
+    p_safety = sub.add_parser("safety", help="run the critical safety-abstention gate (Story 5.3)")
+    p_safety.add_argument("--gold", default="packages/common/tests/fixtures/safety/v1.json")
+    p_safety.add_argument("--out", default="", help="optional dir to write safety.json")
+    p_safety.set_defaults(func=_safety)
 
     args = parser.parse_args(argv)
     return args.func(args)

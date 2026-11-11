@@ -31,6 +31,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-024](./missions/MISSION-024/mission.md) | Technician Assistant UI (Next.js BFF) + keyword/semantic/hybrid search modes | Epic 4 / Story 4.4 |
 | [MISSION-025](./missions/MISSION-025/mission.md) | Conversation history & feedback (Story 4.6) — Epic 4 8/8 | Epic 4 / Story 4.6 |
 | [MISSION-026](./missions/MISSION-026/mission.md) | End-to-end tracing: Telemetry port (OTel→Langfuse) + durable `query_trace` | Epic 5 / Story 5.4 |
+| [MISSION-027](./missions/MISSION-027/mission.md) | Safety-abstention eval: versioned critical set + required 100% CI release gate | Epic 5 / Story 5.3 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
