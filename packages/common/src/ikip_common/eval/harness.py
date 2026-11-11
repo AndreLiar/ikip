@@ -45,6 +45,12 @@ class GoldCase:
     # optional reference answer used by Ragas (answer_correctness / context_recall).
     category: str = ""
     ground_truth: str | None = None
+    # Language of the case (BCP-47-ish: "en", "fr", ...). Ragas is English-biased, so we tag
+    # it to report per-language and keep the English bias visible. Reviewed = an SME has
+    # validated the question + reference (provenance for trustworthy references).
+    language: str = "en"
+    reviewed: bool = False
+    reviewer: str | None = None
 
 
 @dataclass
@@ -71,6 +77,7 @@ class CaseResult:
     # Langfuse correlation (Story 5.4): the trace this case produced, so Ragas scores can be
     # attached to it. Empty under the default NullTelemetry (deterministic CI).
     trace_id: str = ""
+    language: str = "en"
 
 
 @dataclass
@@ -146,6 +153,7 @@ def _evaluate_case(
         answer=result.answer or "",
         contexts=[d.page_content for d in outcome.documents] if outcome else [],
         trace_id=trace_id or "",
+        language=case.language,
     )
 
 
@@ -186,6 +194,17 @@ def evaluate_dataset(
         "latency_ms_p50": percentile(latencies, 50),
         "latency_ms_p95": percentile(latencies, 95),
         "estimated_cost_usd_total": sum(r.estimated_cost_usd for r in results),
+        # Per-language behaviour conformity — keeps the English/non-English split visible
+        # (Ragas is English-biased; our deterministic metrics are language-agnostic).
+        "by_language": {
+            lang: {
+                "n": sum(1 for r in results if r.language == lang),
+                "behavior_conformity": _mean(
+                    [1.0 if r.behavior_match else 0.0 for r in results if r.language == lang]
+                ),
+            }
+            for lang in sorted({r.language for r in results})
+        },
     }
     return EvalReport(
         gold_set_version=gold_set_version,
