@@ -1,9 +1,9 @@
-# 0013. LLMOps observability: OpenTelemetry + Langfuse (self-hosted)
+# 0013. LLMOps observability: OpenTelemetry + Langfuse (Cloud EU for dev; self-host exit path)
 
 - **Status:** Accepted
 - **Date:** 2026-11-06
 - **Deciders:** Architect, PM
-- **Related:** FR26, FR30, FR31, FR32 · NFR2 · Epic 5 (Stories 5.4, 5.5), Story 4.6 · builds on [ADR 0003](./0003-local-first-ports-and-adapters.md), [ADR 0012](./0012-local-first-dev-cloud-models-only.md); relates to [ADR 0002](./0002-dual-orchestration-dagster-langgraph.md), [ADR 0007](./0007-pluggable-llm-client-azure-openai.md)
+- **Related:** FR26, FR30, FR31, FR32 · NFR2, NFR16 · Epic 5 (Stories 5.4, 5.5), Story 4.6 · builds on [ADR 0003](./0003-local-first-ports-and-adapters.md), [ADR 0012](./0012-local-first-dev-cloud-models-only.md); relates to [ADR 0002](./0002-dual-orchestration-dagster-langgraph.md), [ADR 0007](./0007-pluggable-llm-client-azure-openai.md), [ADR 0021](./0021-framework-boundary-langchain-langgraph-vs-data-plane.md)
 
 ## Context
 The LLMOps layer needs end-to-end tracing (query → chunks → model → answer), token/cost tracking, prompt/model-config versioning, and evaluation dataset/score tracking (FR30–FR32, Epic 5). The tech stack originally said "OpenTelemetry + (optional) LangSmith" and never evaluated **Langfuse**, an open-source LLM engineering platform that covers most of these concerns. Raw OpenTelemetry + Grafana is vendor-neutral and great for infra, but is **not LLM-aware** (no prompt, completion, token-cost, or eval-dataset concepts). The project is local-first ([ADR 0012](./0012-local-first-dev-cloud-models-only.md)) and cost-conscious.
@@ -34,6 +34,15 @@ The **infra** observability layer (metrics, logs, traces, dashboards, alerts) us
 
 **Timing:** this is a decision capture. The OTel→Grafana OTLP wiring and k6 setup are implemented in **Epic 5** (observability), not now. Everything stays behind the `Telemetry` port, so Grafana↔Azure Monitor is a config swap.
 
+## Update (2026-11-11): re-evaluated LangSmith before wiring; keep Langfuse
+Before building the Epic 5 instrumentation, we explicitly re-opened **Langfuse vs LangSmith** (nothing is wired yet — only config keys + a doctor health check exist, so switching would be cheap). LangSmith's real edge is **zero-config, best-in-class LangGraph tracing** (we use LangGraph for the request-time graph, Story 3.5) plus a very polished eval/annotation UX. We still keep **Langfuse**, for reasons specific to this project — not merely "self-hosting under infra constraints":
+
+1. **Framework boundary ([ADR 0021](./0021-framework-boundary-langchain-langgraph-vs-data-plane.md)).** We deliberately keep LangChain/LangGraph *behind our ports* and the domain framework-agnostic. LangSmith is the **native observability of the LangChain ecosystem** — adopting it leans back into the framework we chose to hold at arm's length. Langfuse is **OTel-based / framework-agnostic**, consistent with that stance. (We don't lose graph traces: Langfuse ships a LangChain/LangGraph callback handler.)
+2. **EU data residency + governance (NFR16, recurring).** Traces carry user **queries + retrieved document content** (potentially sensitive industrial data / PII). Langfuse offers an **EU cloud region and a self-host exit path** → data stays in our control. LangSmith is US-default (EU region is newer) and proprietary.
+3. **Open-source = thesis-inspectable + no lock-in.** Langfuse can be read, forked and run locally — a stronger learning artifact and a cleaner "sovereign observability" narrative for the dissertation.
+
+**We would pick LangSmith instead if** developer velocity (zero-config LangGraph tracing + richest eval UX) were the top priority *and* residency/lock-in were non-issues — e.g. a pure LangChain-stack product optimizing DX. That is not this project's posture. This re-evaluation is a revisit trigger result, not a reversal; the `Telemetry` port keeps the backend swappable if that calculus changes.
+
 ## Consequences
 **Positive**
 - One instrumentation (OTel), two fit-for-purpose backends; no lock-in.
@@ -51,7 +60,7 @@ The **infra** observability layer (metrics, logs, traces, dashboards, alerts) us
 
 ## Alternatives Considered
 - **OTel + Grafana only (no LLM-native layer):** no extra service, but no prompt management, no per-trace token cost, no eval-dataset UI — all hand-rolled. Rejected; weak LLMOps ergonomics.
-- **LangSmith (SaaS):** excellent LangGraph integration, zero-ops, but paid beyond a free tier and hosted (lock-in). Rejected on cost/lock-in vs self-hosted Langfuse; remains a fallback if self-hosting is unwanted.
+- **LangSmith (SaaS):** best-in-class, **zero-config LangGraph tracing** (we use LangGraph) and a polished eval/annotation UX — the strongest DX option. Rejected for IKIP because (a) it re-couples observability to the LangChain ecosystem we deliberately hold behind ports ([ADR 0021](./0021-framework-boundary-langchain-langgraph-vs-data-plane.md)), (b) US-default hosting / proprietary vs our EU-residency + data-governance posture (NFR16) for traces that carry query + document content, and (c) closed-source vs Langfuse's inspectable/forkable/self-hostable model (thesis value, no lock-in). It remains the right call for a pure-LangChain product optimizing dev velocity without residency/lock-in concerns. Re-evaluated 2026-11-11 (see Update above); the `Telemetry` port keeps it swappable.
 - **Langfuse only (drop OTel):** loses the vendor-neutral instrumentation standard and unified infra tracing. Rejected — keep OTel as the contract.
 
 ## Revisit When

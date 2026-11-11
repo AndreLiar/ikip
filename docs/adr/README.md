@@ -52,7 +52,7 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0010](./0010-foundry-model-platform-no-dedicated-ai-gateway.md) | Microsoft Foundry as model platform; no dedicated AI gateway at MVP                   | Accepted           |
 | [0011](./0011-cloud-first-hybrid-dev-workflow.md)                | Cloud-first (hybrid) development workflow + cost strategy                             | Superseded by 0012 |
 | [0012](./0012-local-first-dev-cloud-models-only.md)              | Local-first development, cloud for models only                                        | Accepted           |
-| [0013](./0013-llmops-observability-otel-langfuse.md)             | LLMOps observability: OpenTelemetry + Langfuse (self-hosted)                          | Accepted           |
+| [0013](./0013-llmops-observability-otel-langfuse.md)             | LLMOps observability: OpenTelemetry + Langfuse (Cloud EU; self-host exit path; LangSmith re-evaluated) | Accepted           |
 | [0014](./0014-cloudflare-r2-object-storage.md)                   | Cloudflare R2 for object storage (S3-compatible), replacing MinIO + Azure Blob        | Accepted           |
 | [0015](./0015-neon-serverless-postgres.md)                       | Neon serverless Postgres (+ pgvector) as the database for all environments            | Accepted           |
 | [0016](./0016-rag-evaluation-custom-plus-ragas.md)               | RAG evaluation: custom deterministic harness + Ragas, compared                        | Accepted           |
