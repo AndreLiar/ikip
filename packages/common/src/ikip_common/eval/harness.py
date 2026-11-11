@@ -14,6 +14,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
+from typing import TYPE_CHECKING
 
 from ikip_common.eval.metrics import (
     citation_grounding_coverage,
@@ -22,10 +23,15 @@ from ikip_common.eval.metrics import (
     percentile,
     recall_at_k,
 )
-from ikip_common.llm.answer import AnswerResult, grounded_answer
-from ikip_common.llm.base import ChatClient
-from ikip_common.llm.grounding import GroundingValidator
-from ikip_common.llm.hybrid import RetrievalOutcome
+
+# The grounded-answer graph pulls langchain/langgraph; keep it out of module import so the
+# lightweight pieces (GoldCase, CaseResult, report loading, compare_to_baseline) stay usable
+# in the fast CI gate. `grounded_answer` is imported lazily where it actually runs.
+if TYPE_CHECKING:
+    from ikip_common.llm.answer import AnswerResult
+    from ikip_common.llm.base import ChatClient
+    from ikip_common.llm.grounding import GroundingValidator
+    from ikip_common.llm.hybrid import RetrievalOutcome
 
 
 @dataclass
@@ -34,6 +40,11 @@ class GoldCase:
     question: str
     expected_behavior: str  # "answered" | "abstained"
     relevant_chunk_ids: list[str] = field(default_factory=list)
+    # Story 5.1: failure-mode label (equipment_identifier | outdated_manual |
+    # conflicting_sources | unanswerable | table | scanned_pdf | malicious_document) and an
+    # optional reference answer used by Ragas (answer_correctness / context_recall).
+    category: str = ""
+    ground_truth: str | None = None
 
 
 @dataclass
@@ -54,6 +65,9 @@ class CaseResult:
     # --- cost / latency ---
     latency_ms: float
     estimated_cost_usd: float
+    # --- material for LLM-judged (Ragas) metrics (Story 5.2) ---
+    answer: str = ""
+    contexts: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -87,6 +101,8 @@ def _evaluate_case(
     validator: GroundingValidator | None,
     k: int,
 ) -> CaseResult:
+    from ikip_common.llm.answer import grounded_answer
+
     capturing = _CapturingRetrieve(retrieve)
     start = time.perf_counter()
     result: AnswerResult = grounded_answer(
@@ -120,6 +136,8 @@ def _evaluate_case(
         estimated_cost_usd=estimate_cost_usd(
             case.question + "\n" + evidence_text, result.answer or ""
         ),
+        answer=result.answer or "",
+        contexts=[d.page_content for d in outcome.documents] if outcome else [],
     )
 
 

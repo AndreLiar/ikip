@@ -1,0 +1,73 @@
+name: Ragas eval (nightly + on-demand)
+
+# Story 5.2 AC5 — Ragas LLM-judged metrics are costly + non-deterministic, so they run on
+# a bounded sample nightly / on demand, NOT on every push. The deterministic metrics +
+# custom-vs-Ragas comparison math gate every push (test_ragas_eval.py in `validate`).
+# Guarded on secrets: a no-op when the Azure judge / DB / tenant aren't configured
+# (e.g. forks), mirroring db-tests.yml.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC nightly
+  workflow_dispatch:
+    inputs:
+      sample:
+        description: "bounded sample size"
+        default: "5"
+      runs:
+        description: "repeat Ragas N× for variance"
+        default: "3"
+
+permissions:
+  contents: read
+
+jobs:
+  ragas:
+    name: ragas-eval
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — only run when the judge + DB are configured
+        id: guard
+        run: |
+          if [ -n "${{ secrets.AZURE_OPENAI_API_KEY }}" ] && [ -n "${{ secrets.EVAL_DATABASE_URL }}" ] && [ -n "${{ vars.EVAL_TENANT_ID }}" ]; then
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on=false" >> "$GITHUB_OUTPUT"
+            echo "Azure judge / EVAL_DATABASE_URL / EVAL_TENANT_ID not set — skipping Ragas eval."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.on == 'true'
+
+      - uses: astral-sh/setup-uv@v3
+        if: steps.guard.outputs.on == 'true'
+
+      - name: Install workspace (+ graph + ragas)
+        if: steps.guard.outputs.on == 'true'
+        run: uv sync --group embeddings --group ragas
+
+      - name: Custom-vs-Ragas comparison on a bounded sample
+        if: steps.guard.outputs.on == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.EVAL_DATABASE_URL }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION }}
+          AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ vars.AZURE_OPENAI_CHAT_DEPLOYMENT }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ vars.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+        run: >
+          uv run --group embeddings --group ragas python -m ikip_common.eval compare
+          --gold packages/common/tests/fixtures/gold/failure_modes.json
+          --tenant "${{ vars.EVAL_TENANT_ID }}"
+          --sample "${{ github.event.inputs.sample || '5' }}"
+          --runs "${{ github.event.inputs.runs || '3' }}"
+          --out eval-results
+
+      - name: Upload comparison report
+        if: steps.guard.outputs.on == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragas-comparison
+          path: eval-results/comparison.json

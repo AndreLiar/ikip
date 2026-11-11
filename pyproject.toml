@@ -32,6 +32,9 @@ embeddings = ["langchain-openai>=0.2", "langchain-core>=0.3", "langchain>=0.3"]
 cache = ["redis>=5.0"]
 # Langfuse telemetry adapter (Story 5.4, ADR 0013; lazy-imported). Fake/Null need none.
 telemetry = ["langfuse>=3.0"]
+# Ragas LLM-judged eval metrics (Story 5.2, ADR 0016; lazy-imported, Azure judge). The
+# deterministic metrics + FakeRagasEvaluator + comparison math need none of this.
+ragas = ["ragas>=0.2", "datasets>=2.0", "langchain-openai>=0.2"]
 
 [tool.uv.sources]
 ikip-common = { workspace = true }
