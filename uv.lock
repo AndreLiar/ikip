@@ -1496,6 +1496,10 @@ extraction = [
     { name = "pymupdf" },
     { name = "pytesseract" },
 ]
+otel = [
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
+]
 ragas = [
     { name = "datasets" },
     { name = "langchain-community" },
@@ -1537,6 +1541,10 @@ extraction = [
     { name = "pillow", specifier = ">=10.4" },
     { name = "pymupdf", specifier = ">=1.24" },
     { name = "pytesseract", specifier = ">=0.3.13" },
+]
+otel = [
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.27" },
+    { name = "opentelemetry-sdk", specifier = ">=1.27" },
 ]
 ragas = [
     { name = "datasets", specifier = ">=2.0" },

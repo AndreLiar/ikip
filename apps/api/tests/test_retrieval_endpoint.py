@@ -192,17 +192,20 @@ def test_ask_returns_grounded_answer() -> None:
             cache_hit=False,
         )
 
-    from ikip_api.observability import get_telemetry, get_trace_recorder
+    from ikip_api.observability import get_metrics, get_telemetry, get_trace_recorder
     from ikip_common.telemetry import FakeTelemetry
+    from ikip_common.telemetry.metrics import FakeMetrics
 
     telemetry = FakeTelemetry()
     recorder = _FakeRecorder()
+    metrics = FakeMetrics()
 
     app = _app()
     app.dependency_overrides[get_ask_service] = lambda: fake_ask
     app.dependency_overrides[get_conversation_service] = lambda: _FakeConvs()
     app.dependency_overrides[get_telemetry] = lambda: telemetry
     app.dependency_overrides[get_trace_recorder] = lambda: recorder
+    app.dependency_overrides[get_metrics] = lambda: metrics
     client = TestClient(app)
     tenant = uuid.uuid4()
     token = _token(client, tenant)
@@ -233,6 +236,10 @@ def test_ask_returns_grounded_answer() -> None:
     assert call["latency_ms"] >= 0.0
     # Story 5.5↔5.4: the trace is stamped with the active prompt config version
     assert "prompt:" in call["model_version"]
+    # Story 5.6: the request + cost were recorded as metrics (→ Grafana ops dashboard)
+    assert metrics.requests[0]["operation"] == "ask"
+    assert metrics.requests[0]["status"] == "answered"
+    assert metrics.costs and metrics.costs[0]["cost_usd"] >= 0.0
 
 
 class _FakeRecorder:

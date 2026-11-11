@@ -39,6 +39,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-032](./missions/MISSION-032/mission.md) | Unblock Ragas (langchain-community pin) + first real custom-vs-Ragas comparison | Epic 5 / Story 5.2 |
 | [MISSION-033](./missions/MISSION-033/mission.md) | Fix conflicting-sources defect via gated prompt-config v2 (found by the eval) | Epic 5 / follow-up |
 | [MISSION-034](./missions/MISSION-034/mission.md) | Cover Ragas limitations: judge calibration, cost cap, FR gold, SME provenance, multi-turn | Epic 5 / Story 5.2 |
+| [MISSION-035](./missions/MISSION-035/mission.md) | Ops + eval dashboards & alerts (OTel→Grafana Cloud) + k6; Epic 5 complete | Epic 5 / Story 5.6 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |

@@ -84,6 +84,19 @@ def _run(args: argparse.Namespace) -> int:
             gold_set_version=version,
         )
     run_path, latest = write_run(report, args.out)
+    # Push the quality aggregate to Grafana Cloud (Story 5.6 AC2) — no-op without OTLP.
+    from ikip_common.telemetry.metrics import build_metrics
+
+    metrics = build_metrics()
+    for metric in (
+        "recall_at_k_mean",
+        "citation_resolution_mean",
+        "citation_grounding_coverage_mean",
+        "behavior_conformity",
+    ):
+        if metric in report.aggregate:
+            metrics.set_eval_gauge(metric, report.aggregate[metric])
+    metrics.flush()
     print(f"wrote {run_path} and {latest}")
     print(json.dumps(report.aggregate, indent=2, sort_keys=True))
     return 0

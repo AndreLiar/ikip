@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     # Data governance (Story 5.4 AC4, NFR16): when False (default), traces carry only IDs
     # + metadata — never raw prompts or retrieved document content. Enable deliberately.
     telemetry_capture_content: bool = Field(default=False, alias="TELEMETRY_CAPTURE_CONTENT")
+    # Infra metrics via OTel → Grafana Cloud (Story 5.6, ADR 0013). When the OTLP endpoint
+    # is set, the API exports request latency / error / cost metrics via OTLP; else no-op.
+    # The OTel SDK also reads OTEL_EXPORTER_OTLP_HEADERS (auth) from the environment.
+    otel_exporter_otlp_endpoint: str | None = Field(
+        default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
+    otel_service_name: str = Field(default="ikip-api", alias="OTEL_SERVICE_NAME")
 
     # --- LLM + embeddings: Azure OpenAI / Foundry (ADR 0007/0010) -------
     # Optional until Epic 3 wires the LLMClient.
