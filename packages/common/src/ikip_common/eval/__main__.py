@@ -213,7 +213,12 @@ def _compare(args: argparse.Namespace) -> int:
     build_score_publisher().publish(
         scores, run_name=f"compare:{version}", trace_ids=_trace_ids(report)
     )
+    import math
+
     by_case = {c["case_key"]: c for c in report.cases}
+    # Only ANSWERED cases are comparable: Ragas faithfulness is undefined for an abstention
+    # (empty answer -> NaN). Abstention correctness is covered by behavior_conformity + the
+    # safety gate, not by this groundedness-vs-faithfulness comparison.
     pairs = [
         MetricPair(
             case_key=s.case_key,
@@ -221,6 +226,8 @@ def _compare(args: argparse.Namespace) -> int:
             ragas_faithfulness=scores.per_case[s.case_key]["faithfulness"],
         )
         for s in samples
+        if by_case[s.case_key]["actual_behavior"] == "answered"
+        and not math.isnan(scores.per_case[s.case_key]["faithfulness"])
     ]
     comparison = compare(
         pairs,

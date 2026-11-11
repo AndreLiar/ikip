@@ -37,6 +37,17 @@ def test_fake_evaluator_scores_every_metric_with_overrides() -> None:
     assert round(scores.means["faithfulness"], 4) == round((0.8 + 0.2 + 0.8) / 3, 4)
 
 
+def test_means_exclude_nan() -> None:
+    import math
+
+    # Ragas returns NaN for a metric it can't judge (e.g. faithfulness on an abstained,
+    # empty answer); one NaN must not NaN the whole mean.
+    ev = FakeRagasEvaluator(default=0.8, overrides={"c1": {"faithfulness": float("nan")}})
+    scores = ev.evaluate(_samples(2))
+    assert math.isnan(scores.per_case["c1"]["faithfulness"])
+    assert scores.means["faithfulness"] == 0.8  # NaN excluded, only c0 counts
+
+
 def test_pearson_edge_cases() -> None:
     assert pearson([1.0], [1.0]) is None  # n < 2
     assert pearson([0.5, 0.5, 0.5], [0.1, 0.9, 0.5]) is None  # zero variance in xs

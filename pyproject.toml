@@ -34,7 +34,10 @@ cache = ["redis>=5.0"]
 telemetry = ["langfuse>=3.0"]
 # Ragas LLM-judged eval metrics (Story 5.2, ADR 0016; lazy-imported, Azure judge). The
 # deterministic metrics + FakeRagasEvaluator + comparison math need none of this.
-ragas = ["ragas>=0.2", "datasets>=2.0", "langchain-openai>=0.2"]
+# `langchain-community<0.4` pin: ragas hard-imports `langchain_community.chat_models.vertexai`
+# (ChatVertexAI), REMOVED in langchain-community >=0.4; 0.3.x still ships it and resolves
+# cleanly with our langchain-core (1.x). Without this pin `eval ragas/compare` ImportError.
+ragas = ["ragas>=0.2", "datasets>=2.0", "langchain-openai>=0.2", "langchain-community>=0.3,<0.4"]
 
 [tool.uv.sources]
 ikip-common = { workspace = true }
