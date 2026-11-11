@@ -26,6 +26,7 @@ from ikip_api.conversations import (
     get_conversation_service,
 )
 from ikip_api.governance import GovernanceService, get_governance_service
+from ikip_api.observability import TraceRecorder, get_telemetry, get_trace_recorder
 
 router = APIRouter()
 
@@ -322,15 +323,33 @@ def ask(
     service: Annotated[AskService, Depends(get_ask_service)],
     governance: Annotated[GovernanceService, Depends(get_governance_service)],
     conversations: Annotated[ConversationService, Depends(get_conversation_service)],
+    telemetry: Annotated[object, Depends(get_telemetry)],
+    trace_recorder: Annotated[TraceRecorder, Depends(get_trace_recorder)],
 ) -> AskResponse:
+    import time
+
+    from ikip_common.eval.metrics import estimate_cost_usd
+
     governance.authorize(principal, "assistant.ask")
-    result = service(
-        tenant_id=principal.tenant_id,
-        query=req.query,
-        equipment_model=req.equipment_model,
-        revision=req.revision,
-        user_id=principal.user_id,
-    )
+    # Trace the generation end-to-end (OTel→Langfuse, Story 5.4). The span carries only
+    # IDs + metadata — never the raw prompt/content (AC4).
+    start = time.perf_counter()
+    with telemetry.span(  # type: ignore[attr-defined]
+        "assistant.ask", tenant_id=str(principal.tenant_id), operation="ask"
+    ) as span:
+        result = service(
+            tenant_id=principal.tenant_id,
+            query=req.query,
+            equipment_model=req.equipment_model,
+            revision=req.revision,
+            user_id=principal.user_id,
+        )
+        latency_ms = (time.perf_counter() - start) * 1000
+        cost_usd = estimate_cost_usd(req.query, result.answer or "")
+        span.set_metadata(status=result.status, cache_hit=result.cache_hit)
+        span.set_cost(cost_usd=cost_usd)
+        trace_id = span.trace_id
+
     governance.record(
         principal,
         "assistant.ask",
@@ -340,7 +359,38 @@ def ask(
     # Persist the turn (Story 4.6): record the user question + the assistant answer so
     # history is reproducible and the UI can attach feedback to this message.
     _persist_turn(conversations, principal, req, result)
+
+    # Durable, queryable trace (Story 5.4 AC1/AC3): IDs + metrics, correlatable via trace_id.
+    chunk_ids = [
+        c.chunk_id for claim in result.claims for c in claim.citations if c.chunk_id is not None
+    ]
+    trace_recorder.record(
+        tenant_id=principal.tenant_id,
+        operation="ask",
+        query=req.query,
+        status=result.status,
+        actor_user_id=principal.user_id,
+        conversation_id=uuid.UUID(result.conversation_id)
+        if result.conversation_id and _is_uuid(result.conversation_id)
+        else None,
+        message_id=uuid.UUID(result.message_id)
+        if result.message_id and _is_uuid(result.message_id)
+        else None,
+        model_version=None,
+        retrieved_chunk_ids=chunk_ids,
+        latency_ms=latency_ms,
+        cost_usd=cost_usd,
+        trace_id=trace_id or None,
+    )
     return result
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value)
+        return True
+    except ValueError:
+        return False
 
 
 def _persist_turn(

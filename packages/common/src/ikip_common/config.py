@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     langfuse_host: str = Field(default="https://cloud.langfuse.com", alias="LANGFUSE_HOST")
     langfuse_public_key: SecretStr | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key: SecretStr | None = Field(default=None, alias="LANGFUSE_SECRET_KEY")
+    # Data governance (Story 5.4 AC4, NFR16): when False (default), traces carry only IDs
+    # + metadata — never raw prompts or retrieved document content. Enable deliberately.
+    telemetry_capture_content: bool = Field(default=False, alias="TELEMETRY_CAPTURE_CONTENT")
 
     # --- LLM + embeddings: Azure OpenAI / Foundry (ADR 0007/0010) -------
     # Optional until Epic 3 wires the LLMClient.

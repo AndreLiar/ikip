@@ -30,6 +30,8 @@ extraction = ["pymupdf>=1.24", "pytesseract>=0.3.13", "pillow>=10.4"]
 embeddings = ["langchain-openai>=0.2", "langchain-core>=0.3", "langchain>=0.3"]
 # Redis-backed Cache adapter (Story 3.7, ADR 0009; lazy-imported). FakeCache needs none.
 cache = ["redis>=5.0"]
+# Langfuse telemetry adapter (Story 5.4, ADR 0013; lazy-imported). Fake/Null need none.
+telemetry = ["langfuse>=3.0"]
 
 [tool.uv.sources]
 ikip-common = { workspace = true }

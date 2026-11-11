@@ -393,3 +393,30 @@ class AnswerFeedback(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     rating: Mapped[int] = mapped_column(default=0)  # -1 | 0 | 1
     flagged: Mapped[bool] = mapped_column(Boolean, default=False)
     reason: Mapped[str | None] = mapped_column(String(2048), default=None)
+
+
+class QueryTrace(UUIDPrimaryKey, TenantScoped, Base):
+    """Durable end-to-end record of one query→answer (Story 5.4, ADR 0013).
+
+    The queryable audit trail (AC1/AC3): who asked, what retrieval surfaced (chunk IDs),
+    which model, latency and estimated cost — correlatable to the Langfuse trace via
+    `trace_id`. Deliberately stores a **query hash** + **IDs**, not raw text (AC4/NFR16);
+    raw content lives only in Langfuse when content capture is explicitly enabled."""
+
+    __tablename__ = "query_trace"
+    __table_args__ = (Index("ix_query_trace_tenant_time", "tenant_id", "created_at"),)
+
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(default=None, index=True)
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(default=None, index=True)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(default=None, index=True)
+    operation: Mapped[str] = mapped_column(String(64), index=True)  # 'ask' | 'retrieve'
+    query_hash: Mapped[str] = mapped_column(String(64), index=True)  # sha256 of normalized query
+    model_version: Mapped[str | None] = mapped_column(String(128), default=None)
+    retrieved_chunk_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    status: Mapped[str] = mapped_column(String(32))  # answered | abstained | error
+    latency_ms: Mapped[float] = mapped_column(default=0.0)
+    cost_usd: Mapped[float] = mapped_column(default=0.0)
+    trace_id: Mapped[str | None] = mapped_column(String(128), default=None, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
