@@ -47,6 +47,27 @@ jobs:
           fi
           echo "No obvious secrets found."
 
+  safety-gate:
+    name: safety-gate
+    runs-on: ubuntu-latest
+    # Story 5.3 — critical safety-abstention gate. Deterministic + network-free (scripted
+    # fakes over the real grounded-answer graph), so it is a REQUIRED release gate that
+    # runs on every PR including forks (no DB, no secrets). A failure blocks release.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install workspace (+ graph runtime for the answer flow)
+        run: uv sync --group embeddings
+
+      - name: Critical safety-abstention suite (must be 100%)
+        run: uv run --group embeddings pytest packages/common/tests/test_safety_suite.py -q
+
+      - name: Safety gate report (abstained vs. answered; exit 1 blocks release)
+        run: uv run --group embeddings python -m ikip_common.eval safety
+
   web:
     name: web
     runs-on: ubuntu-latest
