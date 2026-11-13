@@ -32,6 +32,17 @@ Adopt a **layered cache**, accessed through a `Cache` **port** (local Redis ↔ 
 4. A cache hit must **not** change the abstention decision vs. a cold run (verified for the deferred semantic layer by an eval check).
 5. Cached answers retain their citations; citations must still resolve to currently-valid versions.
 
+## Update (2026-11-13) — prompt caching evaluated + embedding cache wired + hit-rate metrics
+
+A review asked "should we add prompt caching too?". Decision, recording three distinct caches:
+
+1. **Answer cache (exact-match)** — *kept* (already here): tenant + query + equipment/revision + current-version epoch; caches abstentions too (safety-first); version-aware invalidation. Highest-value cache (a hit skips retrieval + embedding + generation).
+2. **Query-embedding cache** — *now wired* (it existed as `cached_query_embedding` but wasn't on the live path). `CachingEmbeddingClient` decorates the `EmbeddingClient` in `/retrieve` + `/ask`: a repeated single query reuses its vector (skips the Azure embed); **bulk** (build-time chunk indexing) passes through; **best-effort** (a cache outage degrades to a direct embed — never breaks retrieval). No safety surface (a query's embedding is identical for everyone).
+3. **Provider prompt caching (Azure OpenAI prefix cache)** — *deferred*. It discounts a shared prompt **prefix ≥ 1024 tokens**. Our `/ask` prompt is `[system ~200 tok] + [retrieved evidence — varies every query] + [question]`: the only stable prefix (system prompt) is **below the 1024-token threshold**, and the token-heavy evidence is different each call → caching wouldn't trigger, and padding the prefix to reach the threshold would *raise* per-call tokens (only ~50% discounted on a hit) — net-negative on misses. Revisit only if a measured, large fixed prefix emerges (few-shot, big fixed policy) and the cost dashboard shows LLM input tokens are the bottleneck.
+4. **Semantic ("similar question") caching** — *rejected* (safety). A near-match could return the wrong procedure or an outdated-revision answer, breaking the grounding/abstention guarantees (Stories 3.5/5.3).
+
+**Measure before optimizing:** a `ikip_cache_requests_total{cache,result}` metric (Story 5.6) now feeds a cache-hit-rate panel, so answer/embedding cache effectiveness is observable before any further caching work.
+
 ## Consequences
 **Positive**
 - Layers 1–2 are deterministic, zero-safety-surface cost/latency wins; layer 1 is essentially free (already in Postgres).

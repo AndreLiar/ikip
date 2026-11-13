@@ -82,6 +82,12 @@ def test_eval_dashboard_queries_quality_gauges() -> None:
         assert metric in exprs
 
 
+def test_ops_dashboard_has_cache_hit_rate_panel() -> None:
+    doc = json.loads((_ROOT / "grafana/dashboards/ops.json").read_text())
+    exprs = " ".join(t["expr"] for p in doc["panels"] for t in p.get("targets", []))
+    assert "ikip_cache_requests_total" in exprs  # cache hit-rate panel
+
+
 def test_alert_rules_cover_ops_and_quality() -> None:
     text = (_ROOT / "grafana/alerts/rules.yaml").read_text()
     for alert in (

@@ -8,7 +8,7 @@ Fuzzy/semantic "similar question" caching is explicitly out of scope (deferred).
 """
 
 from ikip_common.cache.base import Cache
-from ikip_common.cache.embedding import cached_query_embedding
+from ikip_common.cache.embedding import CachingEmbeddingClient, cached_query_embedding
 from ikip_common.cache.fake import FakeCache
 from ikip_common.cache.keys import (
     answer_key,
@@ -32,6 +32,7 @@ __all__ = [
     "FakeCache",
     "build_cache",
     "cached_query_embedding",
+    "CachingEmbeddingClient",
     "answer_key",
     "query_embedding_key",
     "version_fingerprint",

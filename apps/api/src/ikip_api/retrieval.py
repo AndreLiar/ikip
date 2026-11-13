@@ -180,6 +180,7 @@ def get_retrieve_service() -> RetrieveService:
     def service(  # noqa: ANN001
         *, tenant_id, query, k, mode, current_only, document_type, equipment_id, user_id
     ) -> RetrieveResponse:
+        from ikip_common.cache import CachingEmbeddingClient, build_cache
         from ikip_common.db import make_session_factory
         from ikip_common.db.retrieval import (
             RetrievalFilters,
@@ -203,7 +204,11 @@ def get_retrieve_service() -> RetrieveService:
                 ]
                 return RetrieveResponse(abstained=not results, results=results)
 
-            client = build_embedding_client()
+            # Query-embedding cache (Story 3.7/5.6): a repeated query skips the Azure embed;
+            # best-effort (a cache outage degrades to a direct embed). Hits feed the dashboard.
+            client = CachingEmbeddingClient(
+                build_embedding_client(), build_cache(), metrics=get_metrics()
+            )
             if mode == "vector":
                 [qvec] = client.embed([query])
                 hits = vector_search(
@@ -235,13 +240,18 @@ def get_ask_service() -> AskService:
     def service(  # noqa: ANN001
         *, tenant_id, query, equipment_model, revision, user_id
     ) -> AskResponse:
-        from ikip_common.cache import build_cache
+        from ikip_common.cache import CachingEmbeddingClient, build_cache
         from ikip_common.db import make_session_factory
         from ikip_common.db.models import Document, DocumentVersion
         from ikip_common.llm import build_chat_client, build_embedding_client
         from ikip_common.llm.answer import make_hybrid_retrieve
         from ikip_common.llm.answer_cache import cached_grounded_answer
         from sqlalchemy import select
+
+        from ikip_api.observability import get_metrics
+
+        metrics = get_metrics()
+        cache = build_cache()
 
         with make_session_factory()() as session:
             current_ids = [
@@ -257,12 +267,12 @@ def get_ask_service() -> AskService:
             retrieve = make_hybrid_retrieve(
                 session,
                 tenant_id,
-                build_embedding_client(),
+                CachingEmbeddingClient(build_embedding_client(), cache, metrics=metrics),
                 filters=RetrievalFilters(user_id=user_id),
             )
             result, hit = cached_grounded_answer(
                 query,
-                cache=build_cache(),
+                cache=cache,
                 tenant_id=tenant_id,
                 current_version_ids=current_ids,
                 retrieve=retrieve,
@@ -270,6 +280,9 @@ def get_ask_service() -> AskService:
                 equipment_model=equipment_model,
                 revision=revision,
             )
+        # Answer-cache hit rate → dashboard (Story 5.6). An answer-cache hit also skips
+        # retrieval + embedding entirely (the biggest win).
+        metrics.record_cache(cache="answer", hit=hit)
         return _ask_response(result, hit)
 
     return service
