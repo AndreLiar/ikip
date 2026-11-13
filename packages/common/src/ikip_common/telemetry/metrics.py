@@ -109,6 +109,27 @@ class OTelMetrics:
         self._provider.force_flush()
 
 
+def _bridge_otel_env(s) -> None:  # noqa: ANN001
+    """Copy the OTLP settings (loaded from `.env`) into the process env so the OpenTelemetry
+    SDK — which reads OTEL_EXPORTER_OTLP_* from os.environ directly — picks them up. An
+    already-exported shell var wins (we never overwrite one that's set)."""
+    import os
+
+    mapping = {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": s.otel_exporter_otlp_endpoint,
+        "OTEL_EXPORTER_OTLP_PROTOCOL": s.otel_exporter_otlp_protocol,
+        "OTEL_SERVICE_NAME": s.otel_service_name,
+        "OTEL_EXPORTER_OTLP_HEADERS": (
+            s.otel_exporter_otlp_headers.get_secret_value()
+            if s.otel_exporter_otlp_headers is not None
+            else None
+        ),
+    }
+    for key, value in mapping.items():
+        if value and not os.environ.get(key):
+            os.environ[key] = value
+
+
 def build_metrics(settings=None) -> Metrics:  # noqa: ANN001
     """OTel metrics when an OTLP endpoint is configured + the SDK is installed, else no-op."""
     from ikip_common.config import get_settings
@@ -116,6 +137,7 @@ def build_metrics(settings=None) -> Metrics:  # noqa: ANN001
     s = settings or get_settings()
     if not s.otel_exporter_otlp_endpoint:
         return NullMetrics()
+    _bridge_otel_env(s)
     try:
         return OTelMetrics(s)
     except ImportError:
