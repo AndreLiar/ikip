@@ -1,4 +1,17 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Your Grafana Cloud Prometheus datasource",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
   "title": "IKIP — Evaluation quality",
   "uid": "ikip-eval",
   "tags": ["ikip", "eval"],
@@ -6,17 +19,7 @@
   "editable": true,
   "time": { "from": "now-14d", "to": "now" },
   "refresh": "",
-  "templating": {
-    "list": [
-      {
-        "name": "DS_PROMETHEUS",
-        "type": "datasource",
-        "query": "prometheus",
-        "label": "Prometheus",
-        "current": {}
-      }
-    ]
-  },
+  "templating": { "list": [] },
   "panels": [
     {
       "id": 1,
@@ -25,7 +28,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 0.6 }, { "color": "green", "value": 0.8 } ] } } },
-      "targets": [ { "refId": "A", "expr": "ikip_eval_quality{metric=\"recall_at_k_mean\"}" } ]
+      "targets": [ { "refId": "A", "instant": true, "expr": "last_over_time(ikip_eval_quality{metric=\"recall_at_k_mean\"}[14d])" } ]
     },
     {
       "id": 2,
@@ -34,7 +37,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 0.8 }, { "color": "green", "value": 0.9 } ] } } },
-      "targets": [ { "refId": "A", "expr": "ikip_eval_quality{metric=\"citation_grounding_coverage_mean\"}" } ]
+      "targets": [ { "refId": "A", "instant": true, "expr": "last_over_time(ikip_eval_quality{metric=\"citation_grounding_coverage_mean\"}[14d])" } ]
     },
     {
       "id": 3,
@@ -43,7 +46,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
-      "targets": [ { "refId": "A", "expr": "ikip_eval_quality{metric=\"citation_resolution_mean\"}" } ]
+      "targets": [ { "refId": "A", "instant": true, "expr": "last_over_time(ikip_eval_quality{metric=\"citation_resolution_mean\"}[14d])" } ]
     },
     {
       "id": 4,
@@ -52,7 +55,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
-      "targets": [ { "refId": "A", "expr": "ikip_eval_quality{metric=\"behavior_conformity\"}" } ]
+      "targets": [ { "refId": "A", "instant": true, "expr": "last_over_time(ikip_eval_quality{metric=\"behavior_conformity\"}[14d])" } ]
     },
     {
       "id": 5,
@@ -62,7 +65,11 @@
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 6 },
       "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
       "targets": [
-        { "refId": "A", "expr": "ikip_eval_quality", "legendFormat": "{{metric}}" }
+        {
+          "refId": "A",
+          "expr": "last_over_time(ikip_eval_quality[1d])",
+          "legendFormat": "{{metric}}"
+        }
       ]
     }
   ]

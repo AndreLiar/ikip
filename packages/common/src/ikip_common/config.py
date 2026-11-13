@@ -65,9 +65,17 @@ class Settings(BaseSettings):
     telemetry_capture_content: bool = Field(default=False, alias="TELEMETRY_CAPTURE_CONTENT")
     # Infra metrics via OTel → Grafana Cloud (Story 5.6, ADR 0013). When the OTLP endpoint
     # is set, the API exports request latency / error / cost metrics via OTLP; else no-op.
-    # The OTel SDK also reads OTEL_EXPORTER_OTLP_HEADERS (auth) from the environment.
+    # headers = the OTLP auth (Grafana Cloud's "Authorization=Basic <base64>"). These are
+    # bridged into the process env (build_metrics) so the OTel SDK picks them up — so they
+    # work from `.env`, not just from exported shell vars.
     otel_exporter_otlp_endpoint: str | None = Field(
         default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
+    otel_exporter_otlp_headers: SecretStr | None = Field(
+        default=None, alias="OTEL_EXPORTER_OTLP_HEADERS"
+    )
+    otel_exporter_otlp_protocol: str = Field(
+        default="http/protobuf", alias="OTEL_EXPORTER_OTLP_PROTOCOL"
     )
     otel_service_name: str = Field(default="ikip-api", alias="OTEL_SERVICE_NAME")
 

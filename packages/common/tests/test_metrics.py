@@ -31,6 +31,27 @@ def test_build_metrics_is_null_without_otlp_endpoint() -> None:
     assert isinstance(build_metrics(_settings()), NullMetrics)
 
 
+def test_otel_env_bridged_from_settings(monkeypatch) -> None:
+    # headers from .env (Settings) are copied into os.environ so the OTel SDK reads them —
+    # so OTLP works from .env, not just exported shell vars. An existing env var wins.
+    import os
+
+    from ikip_common.telemetry.metrics import _bridge_otel_env
+
+    for k in ("OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_HEADERS"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("OTEL_SERVICE_NAME", "already-set")  # must not be overwritten
+    s = _settings(
+        OTEL_EXPORTER_OTLP_ENDPOINT="https://otlp.example/otlp",
+        OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic abc123",
+        OTEL_SERVICE_NAME="from-settings",
+    )
+    _bridge_otel_env(s)
+    assert os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] == "https://otlp.example/otlp"
+    assert os.environ["OTEL_EXPORTER_OTLP_HEADERS"] == "Authorization=Basic abc123"
+    assert os.environ["OTEL_SERVICE_NAME"] == "already-set"  # not overwritten
+
+
 def test_fake_metrics_records_requests_cost_and_gauges() -> None:
     m = FakeMetrics()
     m.record_request(operation="ask", latency_ms=12.5, status="answered")
