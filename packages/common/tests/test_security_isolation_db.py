@@ -90,7 +90,7 @@ def test_lexical_and_vector_retrieval_never_cross_tenant(session: Session) -> No
     # identical content in BOTH tenants
     _, a_chunk = _doc_with_chunk(session, a, "Fault E42 pump overheat")
     _, b_chunk = _doc_with_chunk(session, b, "Fault E42 pump overheat")
-    emb = FakeEmbeddingClient(dimensions=8)
+    emb = FakeEmbeddingClient()  # 512-dim, matching the embedding column (EMBEDDING_DIMENSIONS)
     for t in (a, b):  # embed both tenants' chunks
         chunks = list(session.execute(_tenant_chunks(t.id)).scalars())
         embed_and_store(session, t.id, emb, chunks)
