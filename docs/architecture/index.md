@@ -17,6 +17,7 @@ _Sharded from `../architecture.md` (BMAD PO step). Each file holds one architect
 | 11 | Coding Standards | [`coding-standards.md`](./coding-standards.md) |
 | 12 | Test Strategy | [`test-strategy.md`](./test-strategy.md) |
 | 13 | Security | [`security.md`](./security.md) |
+| 13a | Threat Model | [`threat-model.md`](./threat-model.md) |
 
 ## Diagrams (diagram-as-code)
 
