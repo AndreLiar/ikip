@@ -42,6 +42,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-035](./missions/MISSION-035/mission.md) | Ops + eval dashboards & alerts (OTel→Grafana Cloud) + k6; Epic 5 complete | Epic 5 / Story 5.6 |
 | [MISSION-036](./missions/MISSION-036/mission.md) | Tenant isolation & authz security tests (adversarial, required CI gate) | Epic 6 / Story 6.2 |
 | [MISSION-037](./missions/MISSION-037/mission.md) | Threat model (threat→control→test, 11 threats) | Epic 6 / Story 6.1 |
+| [MISSION-038](./missions/MISSION-038/mission.md) | Prompt-injection & malicious-doc defenses (detect+log+surface, required gate) | Epic 6 / Story 6.3 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
