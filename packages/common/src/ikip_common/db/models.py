@@ -127,6 +127,12 @@ class IngestionJob(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     # MIME type of the raw artifact, captured at fetch time so curation doesn't have to
     # sniff it later (Story 2.2; the sniff remains a fallback).
     content_type: Mapped[str | None] = mapped_column(String(128), default=None)
+    # Curated artifact produced by the `curated_documents` asset (extract+clean+validate),
+    # consumed by `document_versions` (versioning only) — Story 2.6 faithful lineage split.
+    # A PENDING job with curated_object_key set = "curated, awaiting versioning"; this lets
+    # versioning be re-materialized WITHOUT re-running OCR.
+    curated_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+    layout_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
     attempts: Mapped[int] = mapped_column(default=0)
     error_info: Mapped[dict | None] = mapped_column(JSONB, default=None)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
