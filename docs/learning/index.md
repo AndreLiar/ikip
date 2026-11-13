@@ -44,6 +44,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-037](./missions/MISSION-037/mission.md) | Threat model (threat→control→test, 11 threats) | Epic 6 / Story 6.1 |
 | [MISSION-038](./missions/MISSION-038/mission.md) | Prompt-injection & malicious-doc defenses (detect+log+surface, required gate) | Epic 6 / Story 6.3 |
 | [MISSION-039](./missions/MISSION-039/mission.md) | Secrets (SecretsProvider) + PII (Presidio PiiScrubber) + CI dependency scanning | Epic 6 / Story 6.4 |
+| [MISSION-040](./missions/MISSION-040/mission.md) | Data retention, deletion & provenance (consistent multi-store delete, audit-logged) | Epic 6 / Story 6.5 |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
