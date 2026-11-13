@@ -7,6 +7,7 @@ fingerprint, invalidation epoch, normalization.
 import uuid
 
 from ikip_common.cache import (
+    CachingEmbeddingClient,
     FakeCache,
     answer_key,
     cached_query_embedding,
@@ -17,6 +18,43 @@ from ikip_common.cache import (
     version_fingerprint,
 )
 from ikip_common.llm import FakeEmbeddingClient
+
+
+class _CountingClient:
+    """Wraps FakeEmbeddingClient, counting embed() calls to prove caching skips them."""
+
+    def __init__(self) -> None:
+        self._inner = FakeEmbeddingClient(dimensions=8)
+        self.calls = 0
+
+    @property
+    def model_version(self) -> str:
+        return self._inner.model_version
+
+    @property
+    def dimensions(self) -> int:
+        return self._inner.dimensions
+
+    def embed(self, texts):  # noqa: ANN001, ANN201
+        self.calls += 1
+        return self._inner.embed(texts)
+
+
+class _BoomCache:
+    """A cache whose every op raises — proves CachingEmbeddingClient degrades gracefully."""
+
+    def get(self, key):  # noqa: ANN001, ANN201
+        raise RuntimeError("cache down")
+
+    def set(self, key, value, *, ttl_s=None):  # noqa: ANN001, ANN201
+        raise RuntimeError("cache down")
+
+    def delete(self, key):  # noqa: ANN001, ANN201
+        raise RuntimeError("cache down")
+
+    def incr(self, key):  # noqa: ANN001, ANN201
+        raise RuntimeError("cache down")
+
 
 A = uuid.uuid4()
 B = uuid.uuid4()
@@ -103,3 +141,46 @@ def test_cached_query_embedding_hit_skips_recompute() -> None:
     v2 = cached_query_embedding(c, client, "pump overheat")
     assert v1 == v2
     assert c.get(query_embedding_key("pump overheat", client.model_version)) is not None
+
+
+# --- CachingEmbeddingClient (wired into retrieve/ask) ----------------------
+
+
+class _RecordingMetrics:
+    def __init__(self) -> None:
+        self.caches: list[dict] = []
+
+    def record_cache(self, *, cache: str, hit: bool) -> None:
+        self.caches.append({"cache": cache, "hit": hit})
+
+
+def test_caching_embedding_client_caches_single_query_and_records_metric() -> None:
+    inner = _CountingClient()
+    metrics = _RecordingMetrics()
+    client = CachingEmbeddingClient(inner, FakeCache(), metrics=metrics)
+
+    v1 = client.embed(["pump overheat"])
+    v2 = client.embed(["pump overheat"])  # served from cache
+    assert v1 == v2
+    assert inner.calls == 1  # the Azure embed ran only once
+    assert metrics.caches == [
+        {"cache": "embedding", "hit": False},
+        {"cache": "embedding", "hit": True},
+    ]
+
+
+def test_caching_embedding_client_passes_through_bulk() -> None:
+    inner = _CountingClient()
+    client = CachingEmbeddingClient(inner, FakeCache())
+    client.embed(["chunk a", "chunk b", "chunk c"])  # build-time indexing: not cached
+    client.embed(["chunk a", "chunk b", "chunk c"])
+    assert inner.calls == 2  # each bulk call hits the client (no caching)
+
+
+def test_caching_embedding_client_degrades_on_cache_outage() -> None:
+    inner = _CountingClient()
+    client = CachingEmbeddingClient(inner, _BoomCache())  # every cache op raises
+    out = client.embed(["still works"])  # must not raise — direct embed
+    assert out and inner.calls == 1
+    assert client.model_version == inner.model_version
+    assert client.dimensions == inner.dimensions

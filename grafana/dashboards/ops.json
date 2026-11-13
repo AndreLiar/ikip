@@ -70,6 +70,21 @@
       "targets": [
         { "refId": "A", "expr": "increase(ikip_request_cost_usd_total[1h])" }
       ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Cache hit rate by cache",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(ikip_cache_requests_total{result=\"hit\"}[5m])) by (cache) / clamp_min(sum(rate(ikip_cache_requests_total[5m])) by (cache), 1)",
+          "legendFormat": "{{cache}}"
+        }
+      ]
     }
   ]
 }

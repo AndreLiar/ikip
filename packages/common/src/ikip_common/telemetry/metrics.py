@@ -10,6 +10,7 @@ Metric names (Prometheus-exposed by Grafana Cloud; used by grafana/dashboards/*.
   ikip_request_duration_ms   Histogram  attrs: operation, status
   ikip_requests_total        Counter    attrs: operation, status
   ikip_request_cost_usd      Counter    (sum of estimated $ per answered request)
+  ikip_cache_requests_total  Counter    attrs: cache (answer|embedding), result (hit|miss)
   ikip_eval_quality          Gauge      attrs: metric (recall_at_k_mean, groundedness, …)
 """
 
@@ -22,6 +23,7 @@ from typing import Protocol, runtime_checkable
 class Metrics(Protocol):
     def record_request(self, *, operation: str, latency_ms: float, status: str) -> None: ...
     def record_cost(self, *, cost_usd: float, tokens: int = 0) -> None: ...
+    def record_cache(self, *, cache: str, hit: bool) -> None: ...
     def set_eval_gauge(self, metric: str, value: float) -> None: ...
     def flush(self) -> None: ...
 
@@ -31,6 +33,7 @@ class NullMetrics:
 
     def record_request(self, *, operation: str, latency_ms: float, status: str) -> None: ...
     def record_cost(self, *, cost_usd: float, tokens: int = 0) -> None: ...
+    def record_cache(self, *, cache: str, hit: bool) -> None: ...
     def set_eval_gauge(self, metric: str, value: float) -> None: ...
     def flush(self) -> None: ...
 
@@ -41,6 +44,7 @@ class FakeMetrics:
     def __init__(self) -> None:
         self.requests: list[dict] = []
         self.costs: list[dict] = []
+        self.caches: list[dict] = []
         self.gauges: dict[str, float] = {}
 
     def record_request(self, *, operation: str, latency_ms: float, status: str) -> None:
@@ -48,6 +52,9 @@ class FakeMetrics:
 
     def record_cost(self, *, cost_usd: float, tokens: int = 0) -> None:
         self.costs.append({"cost_usd": cost_usd, "tokens": tokens})
+
+    def record_cache(self, *, cache: str, hit: bool) -> None:
+        self.caches.append({"cache": cache, "hit": hit})
 
     def set_eval_gauge(self, metric: str, value: float) -> None:
         self.gauges[metric] = value
@@ -84,6 +91,7 @@ class OTelMetrics:
         self._latency = meter.create_histogram("ikip_request_duration_ms")
         self._requests = meter.create_counter("ikip_requests_total")
         self._cost = meter.create_counter("ikip_request_cost_usd")
+        self._cache = meter.create_counter("ikip_cache_requests_total")
         self._eval: dict[str, float] = {}
         self._eval_gauge = meter.create_observable_gauge(
             "ikip_eval_quality",
@@ -102,6 +110,9 @@ class OTelMetrics:
 
     def record_cost(self, *, cost_usd: float, tokens: int = 0) -> None:
         self._cost.add(cost_usd)
+
+    def record_cache(self, *, cache: str, hit: bool) -> None:
+        self._cache.add(1, {"cache": cache, "result": "hit" if hit else "miss"})
 
     def set_eval_gauge(self, metric: str, value: float) -> None:
         self._eval[metric] = value

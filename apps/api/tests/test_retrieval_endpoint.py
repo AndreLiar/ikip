@@ -240,6 +240,8 @@ def test_ask_returns_grounded_answer() -> None:
     assert metrics.requests[0]["operation"] == "ask"
     assert metrics.requests[0]["status"] == "answered"
     assert metrics.costs and metrics.costs[0]["cost_usd"] >= 0.0
+    # the ask service is overridden by a fake here, so no answer-cache metric is recorded
+    # by the endpoint itself; the cache metric is asserted in the service/cache unit tests.
 
 
 class _FakeRecorder:
