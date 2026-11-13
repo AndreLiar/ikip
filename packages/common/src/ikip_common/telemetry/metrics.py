@@ -78,7 +78,10 @@ class OTelMetrics:
             metric_readers=[reader],
         )
         meter = self._provider.get_meter("ikip")
-        self._latency = meter.create_histogram("ikip_request_duration_ms", unit="ms")
+        # No `unit=` on purpose: a unit would make the OTLP→Prometheus exporter append a
+        # suffix (ms→milliseconds), producing `ikip_request_duration_milliseconds_bucket`
+        # and breaking the dashboard query. Keeping the unit in the name is deterministic.
+        self._latency = meter.create_histogram("ikip_request_duration_ms")
         self._requests = meter.create_counter("ikip_requests_total")
         self._cost = meter.create_counter("ikip_request_cost_usd")
         self._eval: dict[str, float] = {}
