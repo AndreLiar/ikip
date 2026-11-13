@@ -71,6 +71,36 @@ jobs:
       - name: Safety gate report (abstained vs. answered; exit 1 blocks release)
         run: uv run --group embeddings python -m ikip_common.eval safety
 
+  security-scan:
+    name: security-scan
+    runs-on: ubuntu-latest
+    # Story 6.4 AC4 — dependency/security scanning. Runs on every PR and reports CVEs for
+    # Python (pip-audit) + web (pnpm audit). Non-blocking (continue-on-error): transitive
+    # advisories shouldn't block unrelated work, but they are surfaced in the logs/summary.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install workspace
+        run: uv sync
+
+      - name: pip-audit (Python dependencies)
+        continue-on-error: true
+        run: uv run --with pip-audit pip-audit --progress-spinner off
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install web deps
+        run: pnpm install --frozen-lockfile
+      - name: pnpm audit (web dependencies)
+        continue-on-error: true
+        run: pnpm --filter @ikip/web audit --audit-level high
+
   web:
     name: web
     runs-on: ubuntu-latest

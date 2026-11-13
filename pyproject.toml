@@ -41,6 +41,12 @@ ragas = ["ragas>=0.2", "datasets>=2.0", "langchain-openai>=0.2", "langchain-comm
 # OTel metrics -> Grafana Cloud via OTLP (Story 5.6, ADR 0013; lazy-imported). Null/Fake
 # metrics need none of this; only a live OTLP export does.
 otel = ["opentelemetry-sdk>=1.27", "opentelemetry-exporter-otlp-proto-http>=1.27"]
+# PII detection/anonymization (Story 6.4, NFR16; lazy-imported). RegexPiiScrubber (CI
+# fallback) + NullPiiScrubber need none of this; only PresidioPiiScrubber does.
+pii = ["presidio-analyzer>=2.2", "presidio-anonymizer>=2.2"]
+# Azure Key Vault secrets via managed identity (Story 6.4/6.6; lazy-imported). Env secrets
+# need none of this; only KeyVaultSecretsProvider does.
+keyvault = ["azure-identity>=1.17", "azure-keyvault-secrets>=4.8"]
 
 [tool.uv.sources]
 ikip-common = { workspace = true }

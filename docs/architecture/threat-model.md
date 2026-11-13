@@ -45,15 +45,15 @@ Everything right of the API is trusted infra reached with scoped credentials; **
 
 ### T7 — Secret leakage (committed secrets / secrets in logs) · NFR13
 - **Control:** secrets typed as `SecretStr` (never in repr/logs); `.env` gitignored; CI secret-guard greps for committed key assignments / PEM blocks; traces store hashes + IDs, not raw content (NFR16).
-- **Test:** `.github/workflows/ci.yml` "Guard against committed secrets" step (fails the build on a match). **[implemented]** · `SecretsProvider` port (`.env` ↔ Key Vault) **[planned: Story 6.4]**.
+- **Test:** `.github/workflows/ci.yml` "Guard against committed secrets" step (fails the build on a match); `test_secrets_pii.py` (env provider; Key Vault fallback). `SecretsProvider` port (`.env` locally ↔ Azure Key Vault + managed identity in prod, `ikip_common.secrets`). **[implemented: Story 6.4]** (Key Vault adapter [untested live] until deploy 6.6).
 
 ### T8 — PII exposure in documents/traces · NFR16
 - **Control:** traces carry IDs + hashes, not raw prompts/content unless `TELEMETRY_CAPTURE_CONTENT` is explicitly on. A `PiiScrubber` port (Presidio, self-hosted) will detect/anonymize PII.
-- **Test:** `test_query_trace.py` (query stored as sha256, not raw). PII scrubber tests **[planned: Story 6.4]**.
+- **Test:** `test_query_trace.py` (query stored as sha256, not raw); `test_secrets_pii.py` (`RegexPiiScrubber` redacts email/phone/IP/IBAN/card; never leaks the raw value). `PiiScrubber` port — Presidio in prod, deterministic regex fallback in CI (`ikip_common.pii`); policy = hash/ID-only by default, scrub before any content capture. **[implemented: Story 6.4]** (Presidio adapter [untested live]).
 
 ### T9 — Supply-chain / dependency vulnerabilities
 - **Control:** pinned dependencies (uv.lock / pnpm-lock); dependency + security scanning in CI.
-- **Test:** scanning job **[planned: Story 6.4]**.
+- **Test:** `security-scan` CI job — `pip-audit` (Python) + `pnpm audit --audit-level high` (web), runs every PR (non-blocking, surfaced in logs). **[implemented: Story 6.4]**.
 
 ### T10 — Data-rights / retention violations (licensing, deletion) · FR33
 - **Control:** per-source licensing/provenance tracking; per-tenant retention; consistent deletion across raw/curated/index/embedding; audit-logged.
