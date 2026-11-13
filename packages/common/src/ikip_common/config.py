@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     # This capability is deliberately independent from tenant roles.
     platform_operator_user_ids: str = Field(default="", alias="PLATFORM_OPERATOR_USER_IDS")
 
+    # --- Secrets & PII (Story 6.4) --------------------------------------
+    # When set, secrets are fetched from Azure Key Vault via managed identity (prod);
+    # otherwise from the process env / `.env` (local). See ikip_common.secrets.
+    azure_key_vault_url: str | None = Field(default=None, alias="AZURE_KEY_VAULT_URL")
+    # PII scrubbing (ikip_common.pii): true = Presidio if installed else regex fallback;
+    # false = no-op. Content is hashed/ID-only by default (NFR16); scrub before any capture.
+    pii_scrub: bool = Field(default=True, alias="PII_SCRUB")
+
     # --- LLM observability: Langfuse Cloud (ADR 0013) -------------------
     langfuse_host: str = Field(default="https://cloud.langfuse.com", alias="LANGFUSE_HOST")
     langfuse_public_key: SecretStr | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
