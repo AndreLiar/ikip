@@ -22,6 +22,7 @@ tenant scoping stay in our SQL behind the injected `retrieve` callable.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -36,6 +37,8 @@ from ikip_common.llm.grounding import GroundingValidator, LLMGroundingValidator
 from ikip_common.llm.hybrid import RetrievalOutcome
 from ikip_common.llm.prompts import BUILTIN_V1, PromptConfig, active_prompt_config
 from ikip_common.llm.schemas import GroundedAnswer
+
+_logger = logging.getLogger("ikip_common.llm.answer")
 
 # Backward-compatible module constants = the shipped v1 artifact (Story 5.5). The RUNNING
 # prompt/notice come from the active versioned config; these remain the stable fallback
@@ -151,6 +154,7 @@ class AnswerState(TypedDict, total=False):
     sufficient: bool
     draft: GroundedAnswer
     result: AnswerResult
+    injection: bool  # suspected prompt-injection patterns found in retrieved evidence (6.3)
 
 
 def _evidence_block(evidence: dict[str, str]) -> str:
@@ -180,11 +184,25 @@ def build_answer_graph(
             return {"sufficient": False, "documents": []}
         doc_by_marker = {f"E{i + 1}": doc for i, doc in enumerate(outcome.documents)}
         evidence = {marker: doc.page_content for marker, doc in doc_by_marker.items()}
+        # Retrieved content is UNTRUSTED (Story 6.3): scan for prompt-injection patterns and
+        # LOG the attempt (patterns only, never the raw text). The grounding policy + the
+        # no-tools ChatClient already neutralize the outcome; this adds detection + surfacing.
+        from ikip_common.llm.injection import scan_evidence
+
+        findings = scan_evidence(evidence)
+        injected = bool(findings)
+        if injected:
+            _logger.warning(
+                "suspected prompt injection in retrieved evidence: handles=%s patterns=%s",
+                list(findings.keys()),
+                sorted({p for ps in findings.values() for p in ps}),
+            )
         return {
             "sufficient": True,
             "documents": outcome.documents,
             "doc_by_marker": doc_by_marker,
             "evidence": evidence,
+            "injection": injected,
         }
 
     def generate(state: AnswerState) -> AnswerState:
@@ -278,7 +296,15 @@ def grounded_answer(
     validator = validator or LLMGroundingValidator(chat_client, system=cfg.judge_system)
     graph = build_answer_graph(retrieve, chat_client, validator, prompts=cfg)
     final = graph.invoke({"question": question})
-    return final["result"]
+    result: AnswerResult = final["result"]
+    # Surface the injection attempt to the caller/UI (Story 6.3 AC3). The outcome is already
+    # safe (grounding policy); this makes the untrusted-content handling visible.
+    if final.get("injection"):
+        from ikip_common.llm.injection import INJECTION_WARNING
+
+        if INJECTION_WARNING not in result.warnings:
+            result.warnings.append(INJECTION_WARNING)
+    return result
 
 
 def make_hybrid_retrieve(

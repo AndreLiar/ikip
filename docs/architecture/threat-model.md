@@ -37,7 +37,7 @@ Everything right of the API is trusted infra reached with scoped credentials; **
 
 ### T5 — Malicious / poisoned documents (hostile instructions in retrieved content) · ties NFR16
 - **Control:** retrieved content treated as untrusted; grounding-entailment validation drops/abstains on injected instructions not supported by trusted evidence; a critical **safety-abstention gate** runs adversarial cases. Defense-in-depth: Azure Prompt Shields blocks jailbreak/indirect-injection at the model (observed live — a poisoned seed doc was blocked, recorded as `error`, never a silent answer).
-- **Test:** `packages/common/tests/test_safety_suite.py` + `fixtures/safety/v1.json` (`malicious_document` cases) — **required `safety-gate` CI job, 100% must pass**. **[implemented: Story 5.3]** · formalized further in **[planned: Story 6.3]** (untrusted-content handling + logging as a required gate).
+- **Test:** `packages/common/tests/test_safety_suite.py` + `fixtures/safety/v1.json` (`malicious_document` cases) and `packages/common/tests/test_injection.py` (retrieved content scanned for injection → detected, **logged**, surfaced as a warning, instructions not followed) — both run in the **required `safety-gate` CI job**. The `ChatClient` port exposes **no tools/function-calling**, so the model cannot act on an injected instruction. **[implemented: Stories 5.3 + 6.3]**
 
 ### T6 — Answer fabrication / hallucination (Integrity of output) · NFR8
 - **Control:** grounded-answer graph validates entailment and keeps only supported claims; abstains rather than inventing; every answer carries a not-certified notice.

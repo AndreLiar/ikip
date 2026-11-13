@@ -65,6 +65,9 @@ jobs:
       - name: Critical safety-abstention suite (must be 100%)
         run: uv run --group embeddings pytest packages/common/tests/test_safety_suite.py -q
 
+      - name: Prompt-injection & malicious-document defenses (Story 6.3)
+        run: uv run --group embeddings pytest packages/common/tests/test_injection.py -q
+
       - name: Safety gate report (abstained vs. answered; exit 1 blocks release)
         run: uv run --group embeddings python -m ikip_common.eval safety
 
