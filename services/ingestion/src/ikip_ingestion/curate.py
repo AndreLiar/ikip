@@ -43,27 +43,23 @@ def _safe(source: str) -> str:
     return hashlib.sha256(source.encode()).hexdigest()[:16]
 
 
-def curate_and_version(
+def curate_to_storage(
     *,
     tenant_id: uuid.UUID,
     raw_bytes: bytes,
     source: str,
-    repo: DocumentRepository,
-    cache: Cache,
     storage: ObjectStorage,
     content_type: str | None = None,
-    source_object_key: str | None = None,
     extractor: TextExtractor | None = None,
-) -> CurationOutcome:
-    """Curate a raw artifact and publish it as a document version. Exact duplicates
-    (same curated checksum) are skipped; near-duplicates become a new version of the
-    existing document (handled inside `publish_document_version`)."""
+) -> tuple[str, str | None]:
+    """Stage 1 (asset `curated_documents`): extract + clean + validate a raw artifact and
+    write the curated text (+ optional layout sidecar) to the `curated` tier. Returns
+    (curated_object_key, layout_object_key). The heavy PDF/OCR work happens HERE; it writes
+    NO DB rows, so versioning can be re-run later WITHOUT re-extracting (Story 2.6 lineage)."""
     curated = curate_document(
         raw_bytes, source=source, content_type=content_type, extractor=extractor
     )
     checksum = hashlib.sha256(curated.text.encode("utf-8")).hexdigest()
-    fingerprint = simhash(curated.text)
-
     key = tier_key(ArtifactTier.curated, str(tenant_id), _safe(source), f"{checksum}.txt")
     storage.put(key, curated.text.encode("utf-8"), content_type="text/plain")
     layout_key = None
@@ -80,31 +76,86 @@ def curate_and_version(
             json.dumps(layout, separators=(",", ":")).encode("utf-8"),
             content_type="application/json",
         )
+    return key, layout_key
 
-    revision = curated.metadata.revision or f"r-{checksum[:8]}"
+
+def version_from_curated(
+    *,
+    tenant_id: uuid.UUID,
+    repo: DocumentRepository,
+    cache: Cache,
+    storage: ObjectStorage,
+    curated_object_key: str,
+    layout_object_key: str | None,
+    source: str,
+    source_object_key: str | None = None,
+) -> CurationOutcome:
+    """Stage 2 (asset `document_versions`): publish a deduplicated version FROM an already
+    curated artifact — no extraction / no OCR. Title/revision are re-derived from the clean
+    curated text (cheap, deterministic). Exact duplicates are skipped."""
+    curated_text = storage.get(curated_object_key).decode("utf-8")
+    meta = curate_document(curated_text.encode("utf-8"), source=source, content_type="text/plain")
+    checksum = hashlib.sha256(curated_text.encode("utf-8")).hexdigest()
+    fingerprint = simhash(curated_text)
+    revision = meta.metadata.revision or f"r-{checksum[:8]}"
     try:
         outcome = publish_document_version(
             repo,
             cache,
-            title=curated.metadata.title or source,
+            title=meta.metadata.title or source,
             checksum=checksum,
             fingerprint=fingerprint,
             revision=revision,
-            curated_object_key=key,
-            layout_object_key=layout_key,
+            curated_object_key=curated_object_key,
+            layout_object_key=layout_object_key,
             source_object_key=source_object_key,
             source=source,
         )
     except DuplicateDocumentError:
         return CurationOutcome(
-            curated_object_key=key,
-            layout_object_key=layout_key,
+            curated_object_key=curated_object_key,
+            layout_object_key=layout_object_key,
             skipped_duplicate=True,
             outcome=None,
         )
     return CurationOutcome(
-        curated_object_key=key,
-        layout_object_key=layout_key,
+        curated_object_key=curated_object_key,
+        layout_object_key=layout_object_key,
         skipped_duplicate=False,
         outcome=outcome,
+    )
+
+
+def curate_and_version(
+    *,
+    tenant_id: uuid.UUID,
+    raw_bytes: bytes,
+    source: str,
+    repo: DocumentRepository,
+    cache: Cache,
+    storage: ObjectStorage,
+    content_type: str | None = None,
+    source_object_key: str | None = None,
+    extractor: TextExtractor | None = None,
+) -> CurationOutcome:
+    """Compose stage 1 + stage 2 (curate → version) in one call. Kept for callers/tests that
+    want the whole seam; the Dagster assets use the two stages separately (extract in
+    `curated_documents`, version in `document_versions`) for a faithful lineage."""
+    key, layout_key = curate_to_storage(
+        tenant_id=tenant_id,
+        raw_bytes=raw_bytes,
+        source=source,
+        storage=storage,
+        content_type=content_type,
+        extractor=extractor,
+    )
+    return version_from_curated(
+        tenant_id=tenant_id,
+        repo=repo,
+        cache=cache,
+        storage=storage,
+        curated_object_key=key,
+        layout_object_key=layout_key,
+        source=source,
+        source_object_key=source_object_key,
     )
