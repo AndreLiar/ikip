@@ -56,8 +56,8 @@ Everything right of the API is trusted infra reached with scoped credentials; **
 - **Test:** `security-scan` CI job — `pip-audit` (Python) + `pnpm audit --audit-level high` (web), runs every PR (non-blocking, surfaced in logs). **[implemented: Story 6.4]**.
 
 ### T10 — Data-rights / retention violations (licensing, deletion) · FR33
-- **Control:** per-source licensing/provenance tracking; per-tenant retention; consistent deletion across raw/curated/index/embedding; audit-logged.
-- **Test:** retention/deletion/provenance tests **[planned: Story 6.5]**.
+- **Control:** per-source + per-version licensing/provenance (`document.rights` + a licensing gate); per-tenant retention (`tenant.policies["retention_days"]`); consistent deletion across raw/curated/index/embedding (DB cascade + explicit R2 key deletion); audit-logged (`data.delete` / `data.retention_sweep`). `ikip_common.db.retention`.
+- **Test:** `test_retention.py` — license gate, provenance, delete-removes-all-stores + audits, tenant-scoped delete, retention sweep deletes only stale (DB-gated). **[implemented: Story 6.5]**.
 
 ### T11 — Object-storage exposure (public bucket / leaked URL) · NFR15
 - **Control:** private R2 buckets; scoped API tokens via the secrets provider; the viewer uses **short-lived presigned URLs** only; raw/curated/source separated.
