@@ -8,7 +8,7 @@ _Sharded from `../architecture.md`. Part of the [architecture index](./index.md)
 - **Encryption:** TLS in transit; encryption at rest; secrets via Key Vault + managed identities; secrets/PII never logged.
 - **Prompt injection / malicious docs:** retrieved content untrusted; restricted tool access; adversarial CI tests.
 - **Governance:** licensing/provenance tracking; per-tenant retention; consistent deletion across raw/curated/index/embedding stores; audit logging of sensitive actions.
-- **Threat model** maintained in `docs/` with each threat mapped to a control and a test (Story 6.1).
+- **Threat model** maintained in [`threat-model.md`](./threat-model.md) with each threat mapped to a control and a test (Story 6.1).
 
 ## Tenant isolation & authorization — threat → control → test (Story 6.2)
 
