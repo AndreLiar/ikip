@@ -43,7 +43,23 @@ class PdfExtractor:
 
 
 class PyMuPDFExtractor:
-    """Stage-1 native extractor using PyMuPDF (fitz)."""
+    """Stage-1 native extractor using PyMuPDF (fitz).
+
+    `detect_tables`: PyMuPDF's `find_tables()` is ~60× slower than text extraction (≈9 s vs
+    0.14 s on a 52-page doc), so bulk ingestion can turn it off (`IKIP_PDF_DETECT_TABLES=0`)
+    when per-page table bboxes aren't needed — native text is unaffected. The hybrid router
+    needs table flags to route pages to Docling, so it passes `detect_tables=True` explicitly.
+    Default follows the env (on)."""
+
+    def __init__(self, *, detect_tables: bool | None = None) -> None:
+        import os
+
+        self._detect_tables = (
+            detect_tables
+            if detect_tables is not None
+            else os.environ.get("IKIP_PDF_DETECT_TABLES", "1").strip().lower()
+            not in ("0", "false", "no")
+        )
 
     def extract(self, pdf_bytes: bytes) -> DocumentExtraction:
         import pymupdf  # lazy: only when actually extracting
@@ -53,7 +69,7 @@ class PyMuPDFExtractor:
             for i, page in enumerate(doc, start=1):
                 regions = self._text_regions(page, i)
                 text = "\n".join(region.text for region in regions)
-                tables = self._find_tables(page, i)
+                tables = self._find_tables(page, i) if self._detect_tables else []
                 pages.append(
                     PageExtraction(
                         page=i,
