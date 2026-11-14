@@ -36,6 +36,47 @@ class DoclingConversionError(RuntimeError):
     """docling-serve reached but did not return a usable conversion."""
 
 
+# OOXML office files are ZIP containers (PK\x03\x04) told apart by an internal folder.
+_OFFICE_BY_MEMBER = (
+    (
+        "word/",
+        "document.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ),
+    (
+        "ppt/",
+        "document.pptx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ),
+    ("xl/", "document.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+)
+
+
+def _upload_for(data: bytes) -> tuple[str, str]:
+    """Pick the upload (filename, content-type) from the artifact's magic bytes so
+    docling-serve selects the right parser (a .docx sent as application/pdf is misparsed).
+    PDFs → pdf; ZIP-based Office → docx/pptx/xlsx by member; HTML → html; else best-effort pdf."""
+    if data[:5].startswith(b"%PDF"):
+        return "document.pdf", "application/pdf"
+    if data[:4] == b"PK\x03\x04":
+        import io
+        import zipfile
+
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                names = zf.namelist()
+        except zipfile.BadZipFile:
+            names = []
+        for prefix, filename, ctype in _OFFICE_BY_MEMBER:
+            if any(n.startswith(prefix) for n in names):
+                return filename, ctype
+        return "document.zip", "application/zip"
+    head = data[:64].lstrip().lower()
+    if head.startswith((b"<!doctype html", b"<html")):
+        return "document.html", "text/html"
+    return "document.pdf", "application/pdf"
+
+
 def _bbox(prov: list[dict[str, Any]]) -> tuple[float, float, float, float] | None:
     """First provenance box as (l, t, r, b). Docling emits BOTTOMLEFT-origin PDF
     coordinates; we keep them verbatim — downstream only uses the box to locate a
@@ -63,18 +104,20 @@ def docling_document_to_extraction(doc: dict[str, Any]) -> DocumentExtraction:
     Pure (no HTTP) so it is unit-testable against a captured fixture. Text items are
     grouped by page in reading order; each becomes a `TextRegion`; `tables` become
     `TableRef`s located by page + box."""
+    # Text is captured per page regardless of provenance; a TextRegion is only added when the
+    # item has a bbox. Paginated PDFs carry prov+bbox (→ regions); non-paginated Office docs
+    # (docx/pptx/xlsx) carry text with prov=[] (→ text only, page 1), which must NOT be dropped.
+    texts_by_page: dict[int, list[str]] = {}
     regions_by_page: dict[int, list[TextRegion]] = {}
     for item in doc.get("texts") or []:
         prov = item.get("prov") or []
-        if not prov:
-            continue
         page = _page_no(prov)
+        text = item.get("text", "")
+        if text:
+            texts_by_page.setdefault(page, []).append(text)
         box = _bbox(prov)
-        if box is None:
-            continue
-        regions_by_page.setdefault(page, []).append(
-            TextRegion(page=page, text=item.get("text", ""), bbox=box)
-        )
+        if box is not None:
+            regions_by_page.setdefault(page, []).append(TextRegion(page=page, text=text, bbox=box))
 
     tables_by_page: dict[int, list[TableRef]] = {}
     for table in doc.get("tables") or []:
@@ -86,13 +129,16 @@ def docling_document_to_extraction(doc: dict[str, Any]) -> DocumentExtraction:
 
     page_meta = doc.get("pages") or {}
     page_numbers = sorted(
-        {int(p) for p in page_meta} | set(regions_by_page) | set(tables_by_page)
+        {int(p) for p in page_meta}
+        | set(texts_by_page)
+        | set(regions_by_page)
+        | set(tables_by_page)
     ) or [1]
 
     pages = [
         PageExtraction(
             page=page,
-            text="\n".join(r.text for r in regions_by_page.get(page, [])),
+            text="\n".join(texts_by_page.get(page, [])),
             method=ExtractionMethod.docling,
             regions=regions_by_page.get(page, []),
             tables=tables_by_page.get(page, []),
@@ -121,9 +167,10 @@ class DoclingRemoteExtractor:
     def extract(self, data: bytes) -> DocumentExtraction:
         import httpx  # lazy: only when Docling is actually selected (`--group docling-serve`)
 
+        filename, content_type = _upload_for(data)
         resp = httpx.post(
             f"{self._base_url}/v1/convert/file",
-            files={"files": ("document.pdf", data, "application/pdf")},
+            files={"files": (filename, data, content_type)},
             data={
                 "to_formats": ["json"],  # httpx repeats the key for a list value
                 "do_ocr": "true" if self._do_ocr else "false",
