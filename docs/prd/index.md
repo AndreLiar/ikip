@@ -18,6 +18,7 @@ _Sharded from `../prd.md` (BMAD PO step). Each file holds one epic's goal and it
 | 7 | Enterprise Knowledge Connectors | [`epic-7-enterprise-knowledge-connectors.md`](./epic-7-enterprise-knowledge-connectors.md) |
 | 8 | Structured-Data & Financial Retrieval | [`epic-8-structured-data-financial-retrieval.md`](./epic-8-structured-data-financial-retrieval.md) |
 | 9 | Advanced Multimodal Retrieval | [`epic-9-advanced-multimodal-retrieval.md`](./epic-9-advanced-multimodal-retrieval.md) |
+| 10 | Agentic RAG | [`epic-10-agentic-rag.md`](./epic-10-agentic-rag.md) |
 
 ## Reference
 - Parent PRD: [`../prd.md`](../prd.md) — requirements, UI goals, technical assumptions, next steps

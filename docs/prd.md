@@ -162,6 +162,7 @@ Web Responsive — desktop-first for admin/operations; tablet-friendly for field
 7. **Epic 7 — Enterprise Knowledge Connectors:** Dedicated SaaS connectors (SharePoint, Confluence, ticketing, email/transcripts), per-source permission mapping, incremental synchronization and contradictory-knowledge handling.
 8. **Epic 8 — Structured-Data & Financial Retrieval:** Ingest structured statements/XBRL, hybrid structured+unstructured retrieval, numerical-accuracy and table-to-value querying, and comparative analysis (finance vertical).
 9. **Epic 9 — Advanced Multimodal Retrieval:** Engineering-drawing/schematic and visual-table extraction, multimodal embeddings/retrieval, and visual citations.
+10. **Epic 10 — Agentic RAG:** Evolve the fixed LangGraph flow into an agentic controller (tool registry, cyclic plan–act–observe, iterative retrieval, multi-corpus routing, decomposition, self-critique) for the hard tail of multi-hop/cross-domain/computational questions — behind budgets, trajectory evals and tenant-scoped guardrails. See [ADR 0026](./adr/0026-agentic-rag-evolution.md).
 
 ---
 
