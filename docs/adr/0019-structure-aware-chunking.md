@@ -23,6 +23,11 @@ Use **structure-aware chunking with bounded sub-splitting**:
 
 Tunable params (chunk size, overlap) live in config; sizes are in **tokens** (approximate, since embeddings are token-based). Semantic chunking is **not** used at MVP (cost/circularity); **hierarchical (parent/child)** is a **planned post-MVP extension** if retrieval quality needs it.
 
+### Amendment (2026-11-14) — drop degenerate chunks at the boundary
+Structure-aware chunking on **noisy OCR'd PDFs** over-fragments: a heading-like line becomes its own tiny section, and raw numeric tables (`0.000000E+00 -0.763068E-02 …`) survive as chunks. These aren't usable retrieval units — they pollute the vector space and waste storage/embedding spend, and they can't answer anything. We now drop a piece before it becomes a `ChunkSpec` when `is_low_signal(text)` holds: **< 40 chars**, **< 5 real words**, or **< 50% alphabetic** (digit/symbol-dominated). Applied in both `chunk_document` and `chunk_regions`; dropped pieces leave no ordinal gap.
+
+**Measured on the live corpora (215k real NTRS chunks + the FR corpora), the filter is targeted, not blunt:** NTRS (noisy OCR'd NASA PDFs) → **~60% dropped**; assurance → **0%** (2/2316); droit → **0%** (5/1844). The 60% is the over-fragmentation this ADR's §"Negative/risks" already flagged ("scanned docs fall back to paragraph sub-splitting"); the filter turns that from silent junk into a measured drop. Existing NTRS rows benefit only on **re-chunk/re-embed** (a follow-up op that also reclaims ~half the NTRS embedding storage). The deeper fix — not emitting heading-only chunks in the first place — stays with the planned **hierarchical parent/child** extension.
+
 ## Consequences
 **Positive**
 - Keeps sections/procedures/tables coherent → better retrieval of complete answers.

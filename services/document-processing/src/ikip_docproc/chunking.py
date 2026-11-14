@@ -25,9 +25,31 @@ DEFAULT_OVERLAP_TOKENS = 40
 _CHARS_PER_TOKEN = 4
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
 
+# Degenerate-chunk filter (ADR 0019 / MISSION-043). Over-fragmented title scraps, OCR noise
+# and raw numeric tables pollute the vector space + waste storage and can't answer anything, so
+# we drop them at the chunking boundary -- they never become Chunk/Embedding rows. Targeted:
+# measured on the live corpora it drops ~0% of clean text (assurance/droit) and ~60% of a
+# noisy OCR'd PDF corpus (NTRS). Thresholds tuned against 215k real NTRS chunks.
+_MIN_CHARS = 40
+_MIN_WORDS = 5
+_MIN_ALPHA_RATIO = 0.5
+_ALPHA_WORD = re.compile(r"[^\W\d_]{2,}", re.UNICODE)  # letters only (keeps FR accents)
+
 
 def estimate_tokens(text: str) -> int:
     return max(1, len(text) // _CHARS_PER_TOKEN) if text.strip() else 0
+
+
+def is_low_signal(text: str) -> bool:
+    """True for a chunk that isn't a usable retrieval unit: too short, too few real words, or
+    dominated by digits/symbols (numeric tables). Keeps real prose/procedures intact."""
+    t = text.strip()
+    if len(t) < _MIN_CHARS:
+        return True
+    nonspace = sum(1 for c in t if not c.isspace())
+    if nonspace == 0 or sum(1 for c in t if c.isalpha()) / nonspace < _MIN_ALPHA_RATIO:
+        return True
+    return len(_ALPHA_WORD.findall(t)) < _MIN_WORDS
 
 
 @dataclass
@@ -120,6 +142,8 @@ def chunk_document(
         else:
             pieces = _pack(_sentences(body), max_tokens=max_tokens, overlap_tokens=overlap_tokens)
         for piece in pieces:
+            if is_low_signal(piece):
+                continue
             specs.append(
                 ChunkSpec(
                     content=piece,
@@ -152,6 +176,8 @@ def chunk_regions(
         page = int(region["page"])
         location = {"page": page, "bbox": region["bbox"]}
         for piece in pieces:
+            if is_low_signal(piece):
+                continue
             specs.append(
                 ChunkSpec(
                     content=piece,
