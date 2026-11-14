@@ -1813,6 +1813,9 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+docling-serve = [
+    { name = "httpx" },
+]
 doctor = [
     { name = "boto3" },
     { name = "httpx" },
@@ -1867,6 +1870,7 @@ dev = [
     { name = "pytest", specifier = ">=8.3" },
     { name = "ruff", specifier = ">=0.7" },
 ]
+docling-serve = [{ name = "httpx", specifier = ">=0.27" }]
 doctor = [
     { name = "boto3", specifier = ">=1.35" },
     { name = "httpx", specifier = ">=0.27" },
@@ -1968,6 +1972,9 @@ dependencies = [
 docling = [
     { name = "docling" },
 ]
+docling-serve = [
+    { name = "httpx" },
+]
 extraction = [
     { name = "pillow" },
     { name = "pymupdf" },
@@ -1977,13 +1984,14 @@ extraction = [
 [package.metadata]
 requires-dist = [
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.0" },
+    { name = "httpx", marker = "extra == 'docling-serve'", specifier = ">=0.27" },
     { name = "ikip-common", editable = "packages/common" },
     { name = "pandera", extras = ["pandas"], specifier = ">=0.20" },
     { name = "pillow", marker = "extra == 'extraction'", specifier = ">=10.4" },
     { name = "pymupdf", marker = "extra == 'extraction'", specifier = ">=1.24" },
     { name = "pytesseract", marker = "extra == 'extraction'", specifier = ">=0.3.13" },
 ]
-provides-extras = ["extraction", "docling"]
+provides-extras = ["extraction", "docling", "docling-serve"]
 
 [[package]]
 name = "ikip-ingestion"

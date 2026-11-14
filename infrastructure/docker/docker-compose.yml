@@ -1,0 +1,34 @@
+# Local dev services for IKIP. These are NOT the production deployment (that is
+# Terraform + managed services); they are the heavy, swap-in engines you run on your
+# own machine during development so the app can talk to them over the network.
+#
+#   docker compose -f infrastructure/docker/docker-compose.yml up -d docling
+#
+# docling: IBM Docling served as an HTTP API (docling-serve). It is an OPTIONAL,
+# richer PDF extractor wired behind the `TextExtractor` port (ADR 0021): the default
+# stays PyMuPDF→Tesseract (local-first, $0). Point the app at it with
+#   IKIP_PDF_EXTRACTOR=docling  IKIP_DOCLING_URL=http://localhost:5001
+# Running Docling in a container keeps its ~1 GB of ML models OUT of the app process.
+name: ikip-dev
+
+services:
+  docling:
+    image: quay.io/docling-project/docling-serve-cpu:latest
+    container_name: ikip-docling
+    ports:
+      - "5001:5001"
+    environment:
+      # Serve the little web UI at / so you can drop a PDF in by hand and see what
+      # Docling makes of it (the same conversion the app calls over HTTP).
+      DOCLING_SERVE_ENABLE_UI: "1"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5001/health').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s

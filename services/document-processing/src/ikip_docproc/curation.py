@@ -81,6 +81,18 @@ def _looks_like_pdf(raw_bytes: bytes, content_type: str | None) -> bool:
 
 def _default_pdf_extractor() -> TextExtractor:
     # Lazy: only imports the heavy engines (PyMuPDF/Tesseract) when a PDF is actually seen.
+    # Opt-in to Docling (richer structure/tables) by running the docling-serve container
+    # (infrastructure/docker) and setting IKIP_PDF_EXTRACTOR=docling; default stays the
+    # local-first PyMuPDF→OCR path ($0, no container). Same TextExtractor seam (ADR 0021).
+    import os
+
+    if os.environ.get("IKIP_PDF_EXTRACTOR", "pymupdf").strip().lower() == "docling":
+        from ikip_docproc.docling_client import DoclingRemoteExtractor
+
+        return DoclingRemoteExtractor(
+            base_url=os.environ.get("IKIP_DOCLING_URL", "http://localhost:5001")
+        )
+
     from ikip_docproc.engines import PdfExtractor
 
     return PdfExtractor()

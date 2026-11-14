@@ -1,0 +1,75 @@
+{
+  "schema_name": "DoclingDocument",
+  "version": "1.10.0",
+  "pages": {
+    "1": {
+      "size": {
+        "width": 595.0,
+        "height": 842.0
+      }
+    }
+  },
+  "texts": [
+    {
+      "label": "section_header",
+      "text": "IKIP Pump Maintenance Manual",
+      "prov": [
+        {
+          "page_no": 1,
+          "bbox": {
+            "l": 72.0,
+            "t": 781.488,
+            "r": 301.44000000000017,
+            "b": 766.688,
+            "coord_origin": "BOTTOMLEFT"
+          },
+          "charspan": [
+            0,
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "label": "text",
+      "text": "Revision B. Torque the flange bolts to 45 Nm.",
+      "prov": [
+        {
+          "page_no": 1,
+          "bbox": {
+            "l": 72.0,
+            "t": 739.898,
+            "r": 293.93600000000015,
+            "b": 729.723,
+            "coord_origin": "BOTTOMLEFT"
+          },
+          "charspan": [
+            0,
+            45
+          ]
+        }
+      ]
+    },
+    {
+      "label": "text",
+      "text": "Part | Torque Flange | 45 Nm",
+      "prov": [
+        {
+          "page_no": 1,
+          "bbox": {
+            "l": 72.0,
+            "t": 699.898,
+            "r": 146.99800000000005,
+            "b": 674.723,
+            "coord_origin": "BOTTOMLEFT"
+          },
+          "charspan": [
+            0,
+            28
+          ]
+        }
+      ]
+    }
+  ],
+  "tables": []
+}
