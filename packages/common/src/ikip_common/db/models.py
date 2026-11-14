@@ -11,7 +11,7 @@ import enum
 import uuid
 from datetime import UTC, date, datetime
 
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import HALFVEC
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -276,7 +276,7 @@ class Embedding(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
             "ix_embedding_vector_hnsw",
             "vector",
             postgresql_using="hnsw",
-            postgresql_ops={"vector": "vector_cosine_ops"},
+            postgresql_ops={"vector": "halfvec_cosine_ops"},
         ),
     )
 
@@ -284,7 +284,9 @@ class Embedding(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
         ForeignKey("chunk.id", ondelete="CASCADE"), index=True
     )
     model_version: Mapped[str] = mapped_column(String(128), index=True)
-    vector: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+    # halfvec = 16-bit floats → HALF the storage of vector(512) float32 (655 MB → ~330 MB on
+    # Neon) with negligible recall loss for cosine ANN (ADR 0015/0027). Same ops/queries.
+    vector: Mapped[list[float]] = mapped_column(HALFVEC(EMBEDDING_DIM))
 
 
 class ExpectedBehavior(enum.StrEnum):
