@@ -23,7 +23,11 @@ extraction = [
   "pytesseract>=0.3.13",
   "pillow>=10.4",
 ]
+# In-process Docling (pulls ~1GB ML models into the app process). Prefer `docling-serve`.
 docling = ["docling>=2.0"]
+# Remote Docling: talk to the docling-serve container (infrastructure/docker) over HTTP.
+# Only needs an HTTP client here — the models live in the container.
+docling-serve = ["httpx>=0.27"]
 
 [build-system]
 requires = ["hatchling"]
