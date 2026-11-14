@@ -20,7 +20,9 @@ import json
 import uuid
 from pathlib import Path
 
-# Stable dedicated tenant for the NTRS public-domain corpus.
+# Stable dedicated tenant for the NTRS public-domain corpus (tenant #1). A second corpus
+# (different sector) goes to its OWN tenant — pass --tenant/--tenant-name/--manifest. This is
+# exactly how multi-tenancy is exercised: each corpus is isolated by tenant_id (NFR10).
 CORPUS_TENANT = uuid.UUID("c0f90000-0000-4000-8000-0000000000a1")
 
 
@@ -29,6 +31,7 @@ def main() -> int:
     ap.add_argument("--manifest", default="eval-results/corpus_manifest.json")
     ap.add_argument("--limit", type=int, default=0, help="0 = all entries")
     ap.add_argument("--tenant", default=str(CORPUS_TENANT))
+    ap.add_argument("--tenant-name", default="corpus-ntrs", help="name for a NEW tenant row")
     args = ap.parse_args()
 
     from ikip_common.db import make_session_factory
@@ -45,7 +48,7 @@ def main() -> int:
     created = skipped_exist = skipped_license = 0
     with make_session_factory()() as session:
         if session.get(Tenant, tenant_id) is None:
-            session.add(Tenant(id=tenant_id, name="corpus-ntrs"))
+            session.add(Tenant(id=tenant_id, name=args.tenant_name))
             session.flush()
         existing = set(
             session.execute(
@@ -60,8 +63,12 @@ def main() -> int:
             if e["r2_key"] in existing:
                 skipped_exist += 1
                 continue
+            # content_type drives extraction routing (PDF→PyMuPDF/hybrid, Office→Docling); a
+            # mixed-format manifest carries it per entry, defaulting to PDF.
             jobs.create(
-                source=e["source"], raw_object_key=e["r2_key"], content_type="application/pdf"
+                source=e["source"],
+                raw_object_key=e["r2_key"],
+                content_type=e.get("content_type", "application/pdf"),
             )
             created += 1
         session.commit()
