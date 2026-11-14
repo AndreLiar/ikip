@@ -389,8 +389,66 @@ daily_ingest_schedule = dg.ScheduleDefinition(
     cron_schedule="0 2 * * *",  # 02:00 daily
 )
 
+# Processing pipeline (curate -> version -> embed) as a job the sensor can request. Excludes
+# `ingested_sources` (HTTP-connector acquisition) — the sensor reacts to jobs already queued.
+ingest_processing_job = dg.define_asset_job(
+    "ingest_processing",
+    selection=dg.AssetSelection.assets(curated_documents, document_versions, embedded_chunks),
+    description="Curate → version → embed the pending ingestion jobs.",
+)
+
+
+def _watermark_decision(latest, cursor: str | None):  # noqa: ANN001, ANN201
+    """Pure trigger decision (DB-free, unit-testable): given the latest pending-job timestamp
+    and the sensor's cursor, return (RunRequest | SkipReason, new_cursor). Fires once per new
+    batch — a newer `created_at` than the cursor = new work; the same = a run already requested."""
+    if latest is None:
+        return dg.SkipReason("no pending, not-yet-curated jobs"), cursor
+    watermark = latest.isoformat()
+    if cursor == watermark:
+        return dg.SkipReason("run already requested for this backlog"), cursor
+    return dg.RunRequest(run_key=watermark), watermark
+
+
+@dg.sensor(
+    job=ingest_processing_job,
+    minimum_interval_seconds=30,
+    default_status=dg.DefaultSensorStatus.STOPPED,  # opt-in; enable in the UI (ADR 0025)
+    description="Near-real-time ingestion: request a pipeline run when new PENDING, not-yet-"
+    "curated jobs appear — event-shaped trigger without a message queue (ADR 0025).",
+)
+def pending_jobs_sensor(context):  # noqa: ANN001, ANN201 — Dagster introspects the context
+    # Watch the ingestion_job table (the real async queue); the latest pending job's created_at
+    # is the watermark. The decision itself is pure (`_watermark_decision`) → testable DB-free.
+    import uuid
+
+    from ikip_common.db import make_session_factory
+    from ikip_common.db.models import IngestionJob, IngestionState
+    from sqlalchemy import func, select
+
+    if not _DEFAULT_TENANT:
+        return dg.SkipReason("IKIP_INGEST_TENANT_ID not set")
+
+    tenant_id = uuid.UUID(_DEFAULT_TENANT)
+    with make_session_factory()() as session:
+        latest = session.execute(
+            select(func.max(IngestionJob.created_at)).where(
+                IngestionJob.tenant_id == tenant_id,
+                IngestionJob.state == IngestionState.pending,
+                IngestionJob.curated_object_key.is_(None),
+            )
+        ).scalar()
+
+    decision, new_cursor = _watermark_decision(latest, context.cursor)
+    if isinstance(decision, dg.RunRequest):
+        context.update_cursor(new_cursor)
+    return decision
+
+
 defs = dg.Definitions(
     assets=_ALL_ASSETS,
     asset_checks=[embedding_dimension_matches_schema, chunks_non_empty],
     schedules=[daily_ingest_schedule],
+    jobs=[ingest_processing_job],
+    sensors=[pending_jobs_sensor],
 )
