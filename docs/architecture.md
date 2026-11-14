@@ -114,6 +114,7 @@ flowchart TB
 | Object storage      | MinIO (local) → Azure Blob                                  | `ObjectStorage` interface                         |
 | PDF processing      | Per-page router: PyMuPDF · OCR · Docling (`docling-serve`) | `TextExtractor` port (ADR 0021/0024); `IKIP_PDF_EXTRACTOR=hybrid` |
 | OCR                 | Indra (default, ONNX CPU) · Tesseract (fallback)           | `OcrEngine` seam (ADR 0024); Indra weights OpenRAIL-M — see Story 6.5 |
+| Office / HTML       | DOCX·PPTX·XLSX → Docling · HTML/text → text-first          | Format routed by magic bytes/content-type in `curate_document` |
 | Data validation     | Pydantic + Pandera                                           | Content/quality validation (FR... Story 2.4)        |
 | LLM + embeddings    | Azure OpenAI via `LLMClient` adapter                       | Pluggable provider                                  |
 | Tracing / eval      | OpenTelemetry + (optional) LangSmith; pytest                 | `query_trace`, groundedness/citation eval         |

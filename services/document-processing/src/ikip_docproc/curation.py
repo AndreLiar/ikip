@@ -79,6 +79,41 @@ def _looks_like_pdf(raw_bytes: bytes, content_type: str | None) -> bool:
     return (content_type is not None and "pdf" in content_type.lower()) or raw_bytes[:5] == b"%PDF-"
 
 
+# OOXML MIME substrings (docx/pptx/xlsx + the legacy ms* types) and the office folders
+# inside the ZIP container — either is enough to route the artifact to Docling.
+_OFFICE_CTYPE_HINTS = ("officedocument", "msword", "ms-powerpoint", "ms-excel")
+_OFFICE_ZIP_MEMBERS = ("word/", "ppt/", "xl/")
+
+
+def _looks_like_office(raw_bytes: bytes, content_type: str | None) -> bool:
+    """True for Word/PowerPoint/Excel (OOXML). PyMuPDF can't read these; Docling can.
+    Trusts the content-type hint (jobs carry it) and falls back to sniffing the ZIP."""
+    if content_type and any(h in content_type.lower() for h in _OFFICE_CTYPE_HINTS):
+        return True
+    if raw_bytes[:4] == b"PK\x03\x04":
+        import io
+        import zipfile
+
+        try:
+            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
+                return any(n.startswith(_OFFICE_ZIP_MEMBERS) for n in zf.namelist())
+        except zipfile.BadZipFile:
+            return False
+    return False
+
+
+def _default_office_extractor() -> TextExtractor:
+    # Office formats have no native PyMuPDF path — Docling (docling-serve container) parses
+    # docx/pptx/xlsx whole-document. Requires the container; same TextExtractor seam (ADR 0021).
+    import os
+
+    from ikip_docproc.docling_client import DoclingRemoteExtractor
+
+    return DoclingRemoteExtractor(
+        base_url=os.environ.get("IKIP_DOCLING_URL", "http://localhost:5001")
+    )
+
+
 def _default_ocr_engine():  # noqa: ANN202
     """The OCR engine for stage 2, chosen by IKIP_OCR_ENGINE. Default is **Indra** (faster,
     reading-order/table-aware); falls back to Tesseract if the `indra` group isn't installed,
@@ -141,10 +176,14 @@ def curate_document(
 ) -> CuratedDocument:
     """Produce curated text + metadata from a raw artifact. With `extractor` given, read
     the PDF text layer; otherwise decode text-first."""
-    # Pick the real PDF extractor (PyMuPDF → OCR) when the artifact is a PDF and no
-    # extractor was injected; otherwise decode text-first. Injected extractor always wins.
-    if extractor is None and _looks_like_pdf(raw_bytes, content_type):
-        extractor = _default_pdf_extractor()
+    # Route by format when no extractor was injected (injected always wins): PDF → the real
+    # PDF extractor (PyMuPDF/OCR/hybrid); Office (docx/pptx/xlsx) → Docling; else decode
+    # text-first (HTML/plain text).
+    if extractor is None:
+        if _looks_like_pdf(raw_bytes, content_type):
+            extractor = _default_pdf_extractor()
+        elif _looks_like_office(raw_bytes, content_type):
+            extractor = _default_office_extractor()
 
     if extractor is not None:
         extraction = extractor.extract(raw_bytes)
