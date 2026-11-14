@@ -82,8 +82,10 @@ def curated_documents(context) -> dg.MaterializeResult:  # noqa: ANN001
     # The real extract/clean/validate stage (Story 2.6 faithful lineage): for each PENDING
     # job not yet curated, pull its raw artifact from R2, run curate_to_storage (PyMuPDF →
     # OCR → clean → layout), write the curated+layout artifacts, and record their keys on the
-    # job. NO versioning here — so versioning can re-run WITHOUT re-OCR. Commits PER DOCUMENT
-    # so a long run survives serverless connection recycling + is resumable.
+    # job. NO versioning here — so versioning can re-run WITHOUT re-OCR. The heavy extraction
+    # runs OUTSIDE any DB transaction (it can take minutes under hybrid/OCR); the DB is touched
+    # only in two short per-doc transactions (read inputs, write keys) → resumable and immune to
+    # Neon's idle-in-transaction timeout.
     import uuid
 
     from ikip_common.db import make_session_factory
@@ -114,26 +116,36 @@ def curated_documents(context) -> dg.MaterializeResult:  # noqa: ANN001
             ).scalars()
         )
 
-    for job_id in job_ids:  # one short transaction per doc (survives Neon idle recycling)
+    for job_id in job_ids:
+        # 1) SHORT read tx, then release the connection. The extraction below can take MINUTES
+        #    (hybrid/OCR/Docling); running it inside an open transaction lets Neon kill the
+        #    connection (idle-in-transaction timeout) before the UPDATE commits.
         with session_factory() as session:
             job = session.get(IngestionJob, job_id)
-            try:
-                raw = storage.get(job.raw_object_key)
-                key, layout_key = curate_to_storage(
-                    tenant_id=tenant_id,
-                    raw_bytes=raw,
-                    source=job.source,
-                    storage=storage,
-                    content_type=job.content_type,
-                )
-                job.curated_object_key = key
-                job.layout_object_key = layout_key
-                session.commit()
-                curated += 1
-            except Exception as exc:  # noqa: BLE001 — record + keep going
-                session.rollback()
-                failed += 1
-                context.log.error("curation failed for job %s: %s", job_id, exc)
+            raw_key, source, content_type = job.raw_object_key, job.source, job.content_type
+
+        # 2) Heavy extract OUTSIDE any transaction. On failure the job stays pending → retried.
+        try:
+            raw = storage.get(raw_key)
+            key, layout_key = curate_to_storage(
+                tenant_id=tenant_id,
+                raw_bytes=raw,
+                source=source,
+                storage=storage,
+                content_type=content_type,
+            )
+        except Exception as exc:  # noqa: BLE001 — record + keep going
+            failed += 1
+            context.log.error("curation failed for job %s: %s", job_id, exc)
+            continue
+
+        # 3) SHORT write tx: persist the curated keys (milliseconds).
+        with session_factory() as session:
+            job = session.get(IngestionJob, job_id)
+            job.curated_object_key = key
+            job.layout_object_key = layout_key
+            session.commit()
+        curated += 1
 
     context.log.info("curated %d documents (%d failed)", curated, failed)
     return dg.MaterializeResult(metadata={"stage": "curated", "curated": curated, "failed": failed})
