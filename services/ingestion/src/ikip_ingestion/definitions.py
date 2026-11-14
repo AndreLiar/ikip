@@ -410,6 +410,28 @@ def _watermark_decision(latest, cursor: str | None):  # noqa: ANN001, ANN201
     return dg.RunRequest(run_key=watermark), watermark
 
 
+# Run states that mean "already working" — used to avoid launching a second concurrent run
+# that would race on the same pending jobs (ADR 0025 concurrency guard).
+_IN_PROGRESS_STATUSES = (
+    dg.DagsterRunStatus.QUEUED,
+    dg.DagsterRunStatus.NOT_STARTED,
+    dg.DagsterRunStatus.STARTING,
+    dg.DagsterRunStatus.STARTED,
+    dg.DagsterRunStatus.CANCELING,
+)
+
+
+def _run_in_progress(instance, job_name: str) -> bool:  # noqa: ANN001
+    """True if a run of `job_name` is already queued/running (so the sensor shouldn't start
+    another one that would drain the same backlog concurrently)."""
+    return bool(
+        instance.get_runs(
+            filters=dg.RunsFilter(job_name=job_name, statuses=list(_IN_PROGRESS_STATUSES)),
+            limit=1,
+        )
+    )
+
+
 @dg.sensor(
     job=ingest_processing_job,
     minimum_interval_seconds=30,
@@ -428,6 +450,10 @@ def pending_jobs_sensor(context):  # noqa: ANN001, ANN201 — Dagster introspect
 
     if not _DEFAULT_TENANT:
         return dg.SkipReason("IKIP_INGEST_TENANT_ID not set")
+
+    # Concurrency guard FIRST (cheap, no DB): never start a second run while one is draining.
+    if _run_in_progress(context.instance, ingest_processing_job.name):
+        return dg.SkipReason("an ingest_processing run is already draining the backlog")
 
     tenant_id = uuid.UUID(_DEFAULT_TENANT)
     with make_session_factory()() as session:
