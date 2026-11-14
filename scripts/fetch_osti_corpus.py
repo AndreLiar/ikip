@@ -10,8 +10,9 @@ record provenance `rights="public-domain"`.
 
     uv run --group doctor python scripts/fetch_osti_corpus.py --limit 500
 
-Checksum-addressed R2 keys (raw/osti/<sha256>.pdf) give dedup + idempotency. Writes a
-provenance manifest for scripts/seed_ingestion_jobs.py (seed to its OWN tenant).
+Tenant-scoped, checksum-addressed R2 keys (raw/<tenant>/osti/<sha256>.pdf) give per-tenant
+isolation + dedup + idempotency. Writes a provenance manifest for
+scripts/seed_ingestion_jobs.py (seed to its OWN tenant).
 """
 
 from __future__ import annotations

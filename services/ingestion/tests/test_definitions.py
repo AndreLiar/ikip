@@ -63,6 +63,29 @@ def test_pending_jobs_sensor_skips_without_tenant(monkeypatch: pytest.MonkeyPatc
     assert isinstance(result, dg.SkipReason)
 
 
+def test_run_in_progress_false_on_empty_instance() -> None:
+    """The concurrency query runs cleanly and reports no in-flight run on a fresh instance."""
+    import dagster as dg
+    from ikip_ingestion.definitions import _run_in_progress
+
+    assert _run_in_progress(dg.DagsterInstance.ephemeral(), "ingest_processing") is False
+
+
+def test_sensor_skips_while_a_run_is_in_progress(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADR 0025 concurrency guard: don't launch a second run while one is draining the
+    backlog. The guard runs BEFORE the DB query (so this needs no database)."""
+    import dagster as dg
+    import ikip_ingestion.definitions as d
+
+    monkeypatch.setattr(d, "_DEFAULT_TENANT", "c0f90000-0000-4000-8000-0000000000a1")
+    monkeypatch.setattr(d, "_run_in_progress", lambda _instance, _job: True)
+
+    ctx = dg.build_sensor_context(instance=dg.DagsterInstance.ephemeral())
+    result = d.pending_jobs_sensor(ctx)
+    assert isinstance(result, dg.SkipReason)
+    assert "draining" in result.skip_message
+
+
 def test_watermark_decision_fires_once_per_new_batch() -> None:
     """ADR 0025: RunRequest on new work, SkipReason on nothing-new / nothing-pending."""
     import datetime as dt
