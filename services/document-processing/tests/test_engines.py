@@ -40,6 +40,26 @@ def test_pymupdf_extracts_native_text_with_page_refs() -> None:
     assert all(0 <= value <= 1 for value in doc.pages[0].regions[0].bbox)
 
 
+def test_detect_tables_flag_defaults_to_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    from ikip_docproc.engines import PyMuPDFExtractor
+
+    assert PyMuPDFExtractor(detect_tables=False)._detect_tables is False
+    assert PyMuPDFExtractor(detect_tables=True)._detect_tables is True
+    monkeypatch.setenv("IKIP_PDF_DETECT_TABLES", "0")
+    assert PyMuPDFExtractor()._detect_tables is False  # bulk fast path
+    monkeypatch.setenv("IKIP_PDF_DETECT_TABLES", "1")
+    assert PyMuPDFExtractor()._detect_tables is True
+
+
+def test_detect_tables_off_skips_table_detection_keeps_text() -> None:
+    from ikip_docproc.engines import PyMuPDFExtractor
+
+    pdf = _make_native_pdf("Boiler feedwater pump vibration limits table.")
+    doc = PyMuPDFExtractor(detect_tables=False).extract(pdf)
+    assert "vibration" in doc.pages[0].text  # native text unaffected
+    assert doc.pages[0].tables == []  # detection skipped
+
+
 def test_pymupdf_flags_empty_page_for_ocr() -> None:
     import pymupdf
     from ikip_docproc.engines import PyMuPDFExtractor

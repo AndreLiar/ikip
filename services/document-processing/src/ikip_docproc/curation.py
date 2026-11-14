@@ -157,7 +157,8 @@ def _default_pdf_extractor() -> TextExtractor:
         from ikip_docproc.routing import DoclingLayoutEngine, HybridPdfExtractor
 
         return HybridPdfExtractor(
-            native=PyMuPDFExtractor(),
+            # table flags drive per-page routing to Docling → force detection on regardless of env
+            native=PyMuPDFExtractor(detect_tables=True),
             ocr=_default_ocr_engine(),
             layout=DoclingLayoutEngine(DoclingRemoteExtractor(base_url=docling_url)),
         )
