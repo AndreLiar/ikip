@@ -28,6 +28,8 @@ docling = ["docling>=2.0"]
 # Remote Docling: talk to the docling-serve container (infrastructure/docker) over HTTP.
 # Only needs an HTTP client here — the models live in the container.
 docling-serve = ["httpx>=0.27"]
+# Indra OCR (ONNX CPU) behind the OcrEngine seam. Weights are OpenRAIL-M (restricted).
+indra = ["indra-ocr>=1.1"]
 
 [build-system]
 requires = ["hatchling"]

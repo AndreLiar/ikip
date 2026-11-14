@@ -25,6 +25,9 @@ extraction = ["pymupdf>=1.24", "pytesseract>=0.3.13", "pillow>=10.4"]
 # Remote Docling extractor: talk to the docling-serve container (infrastructure/docker)
 # over HTTP. IKIP_PDF_EXTRACTOR=docling selects it behind the TextExtractor port (ADR 0021).
 docling-serve = ["httpx>=0.27"]
+# Indra OCR (Datalab): ONNX CPU OCR engine behind the OcrEngine seam, default stage-2.
+# NOTE: code Apache-2.0 but model WEIGHTS are OpenRAIL-M (restricted) — see ADR 0022.
+indra = ["indra-ocr>=1.1"]
 # Embedding + retrieval + RAG bricks (opt-in; lazy-imported like boto3). We reuse
 # LangChain components BEHIND our ports (ADR 0021): langchain-openai -> AzureOpenAIEmbeddings;
 # langchain-core -> Document/BaseRetriever; langchain -> langgraph (request-time graph, 3.5).

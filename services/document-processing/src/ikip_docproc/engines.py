@@ -27,9 +27,14 @@ class PdfExtractor:
     OCR (Tesseract) is applied only to pages whose native text layer is empty/sparse
     (`extract_document`); pass `ocr=False` for native-only (digital-born PDFs, no tesseract)."""
 
-    def __init__(self, *, ocr: bool = True) -> None:
+    def __init__(self, *, ocr: bool = True, ocr_engine: object | None = None) -> None:
         self._native = PyMuPDFExtractor()
-        self._ocr = TesseractOcrEngine() if ocr else None
+        # Injected engine wins (the factory passes Indra by default); else Tesseract when
+        # ocr=True, or None for native-only (digital-born PDFs, no OCR binary needed).
+        if ocr_engine is not None:
+            self._ocr = ocr_engine
+        else:
+            self._ocr = TesseractOcrEngine() if ocr else None
 
     def extract(self, data: bytes) -> DocumentExtraction:
         from ikip_docproc.pipeline import extract_document
@@ -107,6 +112,49 @@ class TesseractOcrEngine:
             pix = doc[page - 1].get_pixmap(dpi=self._dpi)
             img = Image.open(io.BytesIO(pix.tobytes("png")))
             return pytesseract.image_to_string(img, lang=self._lang)
+
+
+class IndraOcrEngine:
+    """Stage-2 OCR via Indra (Datalab, 2026) — a ~1M-param ONNX model, CPU-only, that
+    reconstructs reading order + tables and emits clean text/markdown. Drop-in for the
+    `OcrEngine` seam (`ocr_page -> str`), so it replaces Tesseract without touching the
+    pipeline.
+
+    LICENSE CAVEAT: Indra's CODE is Apache-2.0 but its WEIGHTS are a modified OpenRAIL-M
+    (free for research/personal use and startups < $20M; not usable competitively with
+    their API). That is NOT in `is_license_allowed` (Story 6.5) — acceptable for this
+    thesis/portfolio, flagged for a commercial SaaS. See ADR on extraction routing.
+    """
+
+    def __init__(self, *, threads: int = 4, dpi: float = 200.0, mode: str = "auto") -> None:
+        self._threads = threads
+        self._dpi = dpi
+        self._mode = mode
+        self._converter = None  # loaded lazily (model load is expensive) and cached
+
+    def _load(self):  # noqa: ANN202
+        if self._converter is None:
+            import indra_ocr  # lazy: only when Indra is actually used (`--group indra`)
+
+            self._converter = indra_ocr.load(threads=self._threads, dpi=self._dpi, mode=self._mode)
+        return self._converter
+
+    def ocr_page(self, pdf_bytes: bytes, page: int) -> str:
+        import tempfile
+
+        import pymupdf
+
+        with pymupdf.open(stream=pdf_bytes, filetype="pdf") as src:
+            one = pymupdf.open()
+            one.insert_pdf(src, from_page=page - 1, to_page=page - 1)
+            data = one.tobytes()
+            one.close()
+        # Indra's convert() takes a path, not bytes — write the single-page slice out.
+        with tempfile.NamedTemporaryFile(suffix=".pdf") as handle:
+            handle.write(data)
+            handle.flush()
+            texts = [pg.text for _i, pg in self._load().convert(handle.name)]
+        return "\n".join(t for t in texts if t)
 
 
 class DoclingExtractor:
