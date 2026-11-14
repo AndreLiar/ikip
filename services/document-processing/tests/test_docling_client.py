@@ -39,8 +39,14 @@ def test_maps_tables_and_multiple_pages() -> None:
     doc = {
         "pages": {"1": {}, "2": {}},
         "texts": [
-            {"text": "page one heading", "prov": [{"page_no": 1, "bbox": {"l": 1, "t": 2, "r": 3, "b": 4}}]},  # noqa: E501
-            {"text": "page two body", "prov": [{"page_no": 2, "bbox": {"l": 5, "t": 6, "r": 7, "b": 8}}]},  # noqa: E501
+            {
+                "text": "page one heading",
+                "prov": [{"page_no": 1, "bbox": {"l": 1, "t": 2, "r": 3, "b": 4}}],
+            },
+            {
+                "text": "page two body",
+                "prov": [{"page_no": 2, "bbox": {"l": 5, "t": 6, "r": 7, "b": 8}}],
+            },
         ],
         "tables": [{"prov": [{"page_no": 2, "bbox": {"l": 0, "t": 0, "r": 9, "b": 9}}]}],
     }
