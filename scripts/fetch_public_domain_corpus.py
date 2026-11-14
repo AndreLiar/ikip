@@ -18,11 +18,14 @@ import argparse
 import hashlib
 import json
 import time
+import uuid
 from pathlib import Path
 
 import httpx
 
 NTRS = "https://ntrs.nasa.gov"
+# Dedicated tenant for the NTRS aerospace corpus (tenant #1).
+NTRS_TENANT = uuid.UUID("c0f90000-0000-4000-8000-0000000000a1")
 _UA = "IKIP-research/0.1 (thesis; public-domain corpus)"
 _CLIENT = httpx.Client(
     headers={"User-Agent": _UA},
@@ -94,9 +97,11 @@ def main() -> int:
     ap.add_argument("--page-size", type=int, default=50)
     ap.add_argument("--max-pages", type=int, default=12, help="cap pagination depth per query")
     ap.add_argument("--out", default="eval-results/corpus_manifest.json")
+    ap.add_argument("--tenant", default=str(NTRS_TENANT), help="tenant that owns this corpus")
     ap.add_argument("--sleep", type=float, default=0.3)
     args = ap.parse_args()
 
+    from ikip_common.storage import ArtifactTier, tier_key
     from ikip_common.storage.r2 import R2ObjectStorage
 
     storage = R2ObjectStorage()
@@ -141,7 +146,9 @@ def main() -> int:
                 if checksum in seen:
                     continue  # exact dedup
                 seen.add(checksum)
-                key = f"raw/ntrs/{checksum}.pdf"
+                # Tenant-scoped raw key (consistent with the connector + the curated tier):
+                # raw/<tenant>/ntrs/<checksum>.pdf → per-tenant isolation + deletion (Story 6.5).
+                key = tier_key(ArtifactTier.raw, args.tenant, "ntrs", f"{checksum}.pdf")
                 if not storage.exists(key):
                     storage.put(key, data, content_type="application/pdf")
                 manifest.append(
@@ -150,9 +157,11 @@ def main() -> int:
                         "title": str(res.get("title", ""))[:300],
                         "source": f"{NTRS}/citations/{ntrs_id}",
                         "rights": "public-domain",
+                        "tenant": args.tenant,
                         "r2_key": key,
                         "checksum": checksum,
                         "bytes": len(data),
+                        "content_type": "application/pdf",
                         "query": query,
                     }
                 )
@@ -165,7 +174,7 @@ def main() -> int:
     out.write_text(json.dumps(manifest, indent=2))
     total_mb = sum(m["bytes"] for m in manifest) / 1_000_000
     print(
-        f"\nDONE: {len(manifest)} PDFs uploaded to R2 (raw/ntrs/), {total_mb:.1f} MB total; "
+        f"\nDONE: {len(manifest)} PDFs → R2 raw/{args.tenant}/ntrs/, {total_mb:.1f} MB total; "
         f"skipped(copyright)={skipped_copyright}, skipped(other)={skipped_other}. "
         f"Manifest -> {out}"
     )
