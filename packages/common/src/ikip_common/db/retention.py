@@ -43,6 +43,10 @@ ALLOWED_LICENSES: frozenset[str] = frozenset(
         "mit",
         "apache-2.0",
         "manufacturer-authorized",  # explicit OEM permission recorded during onboarding
+        # Licence Ouverte 2.0 (Etalab) — France's open-government license (data.gouv.fr / DILA
+        # Légifrance/jurisprudence); permissive, CC-BY-4.0-compatible. FR public corpora are
+        # tagged rights="licence-ouverte".
+        "licence-ouverte",
     }
 )
 
