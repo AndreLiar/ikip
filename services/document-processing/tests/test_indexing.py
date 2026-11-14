@@ -30,7 +30,15 @@ def test_plan_sections_groups_by_path_in_order() -> None:
 def test_layout_regions_plan_page_sections() -> None:
     from ikip_docproc.chunking import chunk_regions
 
-    specs = chunk_regions([{"page": 9, "text": "Reset fault E42", "bbox": [0.2, 0.3, 0.7, 0.4]}])
+    specs = chunk_regions(
+        [
+            {
+                "page": 9,
+                "text": "Reset fault E42 by de-energizing the unit and clearing the lockout.",
+                "bbox": [0.2, 0.3, 0.7, 0.4],
+            }
+        ]
+    )
     sections = plan_sections(specs)
     assert sections[0].path == "page-9"
     assert specs[0].regions[0]["bbox"] == [0.2, 0.3, 0.7, 0.4]
