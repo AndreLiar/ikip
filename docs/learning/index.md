@@ -47,6 +47,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-040](./missions/MISSION-040/mission.md) | Data retention, deletion & provenance (consistent multi-store delete, audit-logged) | Epic 6 / Story 6.5 |
 | [MISSION-041](./missions/MISSION-041/mission.md) | Docling as a containerized, opt-in PDF extractor behind the `TextExtractor` port | Epic 2 / extraction |
 | [MISSION-042](./missions/MISSION-042/mission.md) | Per-page extraction routing (PyMuPDF/OCR/Docling) + Indra OCR, benchmarked on real manuals | Epic 2 / extraction |
+| [MISSION-043](./missions/MISSION-043/mission.md) | First *measured* RAG quality (Ragas per-corpus); boilerplate hypothesis disproven; law strong / NTRS weak | Epic 5 / eval |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
