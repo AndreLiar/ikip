@@ -79,23 +79,57 @@ def _looks_like_pdf(raw_bytes: bytes, content_type: str | None) -> bool:
     return (content_type is not None and "pdf" in content_type.lower()) or raw_bytes[:5] == b"%PDF-"
 
 
-def _default_pdf_extractor() -> TextExtractor:
-    # Lazy: only imports the heavy engines (PyMuPDF/Tesseract) when a PDF is actually seen.
-    # Opt-in to Docling (richer structure/tables) by running the docling-serve container
-    # (infrastructure/docker) and setting IKIP_PDF_EXTRACTOR=docling; default stays the
-    # local-first PyMuPDF→OCR path ($0, no container). Same TextExtractor seam (ADR 0021).
+def _default_ocr_engine():  # noqa: ANN202
+    """The OCR engine for stage 2, chosen by IKIP_OCR_ENGINE. Default is **Indra** (faster,
+    reading-order/table-aware); falls back to Tesseract if the `indra` group isn't installed,
+    so environments without the weights still work. Both satisfy the `OcrEngine` seam."""
     import os
 
-    if os.environ.get("IKIP_PDF_EXTRACTOR", "pymupdf").strip().lower() == "docling":
+    choice = os.environ.get("IKIP_OCR_ENGINE", "indra").strip().lower()
+    if choice != "tesseract":
+        try:
+            import indra_ocr  # noqa: F401 — probe availability before committing to it
+
+            from ikip_docproc.engines import IndraOcrEngine
+
+            return IndraOcrEngine()
+        except ImportError:
+            pass  # indra group not installed → Tesseract
+    from ikip_docproc.engines import TesseractOcrEngine
+
+    return TesseractOcrEngine()
+
+
+def _default_pdf_extractor() -> TextExtractor:
+    # The extractor is chosen by IKIP_PDF_EXTRACTOR (same TextExtractor seam, ADR 0021):
+    #   pymupdf (default) — two-stage PyMuPDF native → OCR fallback (OCR engine = Indra)
+    #   docling           — whole-doc Docling via the docling-serve container
+    #   hybrid | auto     — per-page routing: native / OCR / Docling (the "ideal" path)
+    # Heavy engines are imported lazily, only when a PDF is actually seen.
+    import os
+
+    choice = os.environ.get("IKIP_PDF_EXTRACTOR", "pymupdf").strip().lower()
+    docling_url = os.environ.get("IKIP_DOCLING_URL", "http://localhost:5001")
+
+    if choice == "docling":
         from ikip_docproc.docling_client import DoclingRemoteExtractor
 
-        return DoclingRemoteExtractor(
-            base_url=os.environ.get("IKIP_DOCLING_URL", "http://localhost:5001")
+        return DoclingRemoteExtractor(base_url=docling_url)
+
+    if choice in ("hybrid", "auto"):
+        from ikip_docproc.docling_client import DoclingRemoteExtractor
+        from ikip_docproc.engines import PyMuPDFExtractor
+        from ikip_docproc.routing import DoclingLayoutEngine, HybridPdfExtractor
+
+        return HybridPdfExtractor(
+            native=PyMuPDFExtractor(),
+            ocr=_default_ocr_engine(),
+            layout=DoclingLayoutEngine(DoclingRemoteExtractor(base_url=docling_url)),
         )
 
     from ikip_docproc.engines import PdfExtractor
 
-    return PdfExtractor()
+    return PdfExtractor(ocr_engine=_default_ocr_engine())
 
 
 def curate_document(

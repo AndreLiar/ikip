@@ -112,8 +112,8 @@ flowchart TB
 | RAG orchestration   | LangGraph + LangChain                                        | Stateful technician-facing workflow                 |
 | Async / queue       | Redis (local) → Azure Service Bus                           | `JobQueue` interface                              |
 | Object storage      | MinIO (local) → Azure Blob                                  | `ObjectStorage` interface                         |
-| PDF processing      | PyMuPDF (default) · Docling (opt-in, `docling-serve` container) | `TextExtractor` port (ADR 0021); `IKIP_PDF_EXTRACTOR=docling` |
-| OCR                 | Tesseract (local) → Azure Document Intelligence             | Two-stage (cost control)                            |
+| PDF processing      | Per-page router: PyMuPDF · OCR · Docling (`docling-serve`) | `TextExtractor` port (ADR 0021/0024); `IKIP_PDF_EXTRACTOR=hybrid` |
+| OCR                 | Indra (default, ONNX CPU) · Tesseract (fallback)           | `OcrEngine` seam (ADR 0024); Indra weights OpenRAIL-M — see Story 6.5 |
 | Data validation     | Pydantic + Pandera                                           | Content/quality validation (FR... Story 2.4)        |
 | LLM + embeddings    | Azure OpenAI via `LLMClient` adapter                       | Pluggable provider                                  |
 | Tracing / eval      | OpenTelemetry + (optional) LangSmith; pytest                 | `query_trace`, groundedness/citation eval         |

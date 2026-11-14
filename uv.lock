@@ -1832,6 +1832,9 @@ extraction = [
     { name = "pymupdf" },
     { name = "pytesseract" },
 ]
+indra = [
+    { name = "indra-ocr" },
+]
 keyvault = [
     { name = "azure-identity" },
     { name = "azure-keyvault-secrets" },
@@ -1887,6 +1890,7 @@ extraction = [
     { name = "pymupdf", specifier = ">=1.24" },
     { name = "pytesseract", specifier = ">=0.3.13" },
 ]
+indra = [{ name = "indra-ocr", specifier = ">=1.1" }]
 keyvault = [
     { name = "azure-identity", specifier = ">=1.17" },
     { name = "azure-keyvault-secrets", specifier = ">=4.8" },
@@ -1980,18 +1984,22 @@ extraction = [
     { name = "pymupdf" },
     { name = "pytesseract" },
 ]
+indra = [
+    { name = "indra-ocr" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.0" },
     { name = "httpx", marker = "extra == 'docling-serve'", specifier = ">=0.27" },
     { name = "ikip-common", editable = "packages/common" },
+    { name = "indra-ocr", marker = "extra == 'indra'", specifier = ">=1.1" },
     { name = "pandera", extras = ["pandas"], specifier = ">=0.20" },
     { name = "pillow", marker = "extra == 'extraction'", specifier = ">=10.4" },
     { name = "pymupdf", marker = "extra == 'extraction'", specifier = ">=1.24" },
     { name = "pytesseract", marker = "extra == 'extraction'", specifier = ">=0.3.13" },
 ]
-provides-extras = ["extraction", "docling", "docling-serve"]
+provides-extras = ["extraction", "docling", "docling-serve", "indra"]
 
 [[package]]
 name = "ikip-ingestion"
@@ -2018,6 +2026,22 @@ requires-dist = [
     { name = "ikip-docproc", editable = "services/document-processing" },
 ]
 provides-extras = ["dagster"]
+
+[[package]]
+name = "indra-ocr"
+version = "1.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "opencv-python-headless" },
+    { name = "pypdfium2" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/f6/0d0cc6c9e386612fc3dba27cee7a7b8b3f65ea4b91746b9f3db191b79dad/indra_ocr-1.1.2.tar.gz", hash = "sha256:405a40b8a62eb28d36cf96f236f2639286fbc791407733c16f93451dbe733914", size = 112346, upload-time = "2026-10-20T01:41:19.679Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/9a/ad0b5a2d72acc47bf321fc9c73c559b4c7743228c59f55949d2c050e4328/indra_ocr-1.1.2-py3-none-any.whl", hash = "sha256:22c82720968dd91b11ae137865fa01edaed29d7c1c11dd5d9c4a084bc3654da2", size = 96141, upload-time = "2026-10-20T01:41:17.934Z" },
+]
 
 [[package]]
 name = "iniconfig"
