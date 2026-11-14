@@ -19,6 +19,8 @@ from ikip_common.db.retention import (
 def test_license_gate_allows_known_and_rejects_unknown_or_empty() -> None:
     assert is_license_allowed("CC-BY") is True
     assert is_license_allowed("manufacturer-authorized") is True
+    assert is_license_allowed("licence-ouverte") is True  # Etalab (FR open data)
+    assert is_license_allowed("Licence-Ouverte") is True  # case-insensitive
     assert is_license_allowed("proprietary-no-reuse") is False
     assert is_license_allowed(None) is False
     assert is_license_allowed("") is False
