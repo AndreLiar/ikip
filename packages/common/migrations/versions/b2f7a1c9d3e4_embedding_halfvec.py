@@ -29,8 +29,7 @@ def upgrade() -> None:
         "ALTER TABLE embedding ALTER COLUMN vector TYPE halfvec(512) USING vector::halfvec(512)"
     )
     op.execute(
-        "CREATE INDEX ix_embedding_vector_hnsw ON embedding "
-        "USING hnsw (vector halfvec_cosine_ops)"
+        "CREATE INDEX ix_embedding_vector_hnsw ON embedding USING hnsw (vector halfvec_cosine_ops)"
     )
 
 
