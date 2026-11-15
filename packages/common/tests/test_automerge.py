@@ -6,9 +6,12 @@
 import os
 
 import pytest
-from ikip_common.llm.automerge import expand_to_parents, merge_section_window
-from ikip_common.llm.hybrid import RetrievalOutcome
-from langchain_core.documents import Document
+
+pytest.importorskip("langchain_core")  # skip in fast `validate` CI (no `embeddings` group)
+
+from ikip_common.llm.automerge import expand_to_parents, merge_section_window  # noqa: E402
+from ikip_common.llm.hybrid import RetrievalOutcome  # noqa: E402
+from langchain_core.documents import Document  # noqa: E402
 
 
 # --- pure: merge_section_window -------------------------------------------------
