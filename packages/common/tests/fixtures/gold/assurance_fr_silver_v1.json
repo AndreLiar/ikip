@@ -21,10 +21,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Ceux pouvant être couverts en libre prestation de services, ainsi que les risques des travaux de bâtiment soumis à une assurance obligatoire.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "454dc915-4d66-448f-b34f-01f4cc3d3352"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-3",
@@ -32,10 +33,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Dans le Bas-Rhin, le Haut-Rhin et la Moselle, selon les conditions de l'article 10 de la loi du 24 juillet 1921.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "9752c599-2aba-4158-a87a-6be9385308e5"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-4",
@@ -43,21 +45,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Le ministre exige un plan de redressement à soumettre dans le mois.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "4c42a81a-d678-450f-b0d2-dcbd52ff1b04"
-      ]
-    },
-    {
-      "case_key": "assurance_fr-5",
-      "question": "Quels pouvoirs la commission exerce-t-elle à l'égard des entreprises d'assurance et des sociétés de participations d'assurance pour obtenir des informations et contrôler leurs հրապարակations ?",
-      "expected_behavior": "answered",
-      "ground_truth": "Elle peut demander toutes informations et documents comptables, vérifier les publications, ordonner des publications rectificatives et rendre publiques certaines informations.",
-      "language": "fr",
-      "reviewed": false,
-      "relevant_chunk_ids": [
-        "d6a25ba5-4661-4f82-b8e9-7a03fc256f8e"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-6",
@@ -77,10 +69,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Si les statuts le prévoient, elles peuvent prélever au plus 3,50 % du montant de la souscription, sans dépasser la moitié du prélèvement statutaire total.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "8157c95e-d650-4442-8cc9-dbb70ce63c68"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-8",
@@ -88,10 +81,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Oui, sauf pour certaines entreprises françaises et européennes en réassurance.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "c7ea39c0-15c2-49f1-83de-4d95fe091338"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-9",
@@ -99,10 +93,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Elles ont un objet non commercial.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "2353e89f-d485-4e47-b5ec-76299065aaa5"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-10",
@@ -110,10 +105,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Il présente ses observations dans un délai de trois mois.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "f7c9b47f-7f15-47e3-9594-e564bdf2fd47"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-11",
@@ -121,10 +117,11 @@
       "expected_behavior": "answered",
       "ground_truth": "L’assemblée générale des sociétaires, avec possibilité de délégation au conseil d’administration pour les modalités pratiques.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "c20a0c24-2a28-4464-92db-1b11f302a4b9"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-12",
@@ -132,10 +129,11 @@
       "expected_behavior": "answered",
       "ground_truth": "La caducité de l'ensemble des agréments.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "6cb399e1-ef02-4b57-958f-017aece829b0"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     }
   ]
 }
