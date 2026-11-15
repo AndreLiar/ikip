@@ -9,10 +9,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Il prépare les décisions du comité d'orientation, anime la division opérationnelle et gère les moyens de fonctionnement de la cellule TRACFIN ; il est assuré par la direction générale des douanes et droits indirects.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "12252cf7-fe27-4ee1-9f6f-69cb1029fecb"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-2",
@@ -53,10 +54,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Celles ayant au moins deux des trois critères : bilan ≥ 20 M€, chiffre d’affaires ou recettes ≥ 40 M€, capitaux propres ≥ 2 M€.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "74c67ff5-c923-4a5c-8fc1-8f4e572708f0"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-6",
