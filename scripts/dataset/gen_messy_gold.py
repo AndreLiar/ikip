@@ -12,10 +12,9 @@ Usage:
 import json
 import pathlib
 
-from pydantic import BaseModel
-
 from ikip_common.llm import build_chat_client
 from ikip_common.llm.base import ChatMessage
+from pydantic import BaseModel
 
 SRC = "packages/common/tests/fixtures/gold/ntrs_silver_v2.json"
 DST = "eval-results/ab/ntrs_gold_v2_messy.json"
