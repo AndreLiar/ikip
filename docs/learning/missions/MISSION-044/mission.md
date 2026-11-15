@@ -153,8 +153,41 @@ until we can get the richer answers *without* the trust drop.
 5. **Best next feature = query rewrite** (behind the `analyze` node, ADR 0026): attacks retrieval —
    NTRS's real weak spot — without touching grounding, and is now A/B-able on the n=18 gold.
 
+## Query rewrite (ADR 0026) — measured on the n=18 gold, and it HURT
+Wired query rewriting behind the retriever (`make_hybrid_retrieve(rewrite=True)`, eval `--rewrite`):
+rewrite the question into a retrieval-optimised search query before searching; generation still
+answers the original question (grounding untouched). A/B on the n=18 gold:
+
+| metric | OFF | REWRITE | Δ |
+|---|--:|--:|--:|
+| **recall@5** (deterministic) | **0.889** | **0.778** | **−0.111** |
+| faithfulness | 0.944 | 0.922 | −0.022 |
+| answer_correctness | 0.696 | 0.643 | −0.053 |
+| answer_relevancy | 0.694 | 0.682 | −0.012 |
+| context_precision | 0.773 | 0.631 | −0.142 |
+| context_recall | 0.941 | 0.867 | −0.074 |
+
+**Query rewrite made retrieval worse on this gold set** — it fetched the correct source chunk *less*
+often (recall@5 0.889 → 0.778), and every Ragas metric dipped. The decisive, free metric is
+**recall@5** (did we retrieve the right chunk) — and it fell.
+
+**Why — and the honest caveat on the experiment itself:** our gold questions were **LLM-generated to
+be clean and well-formed** (semantic, no typos, correct terminology). Rewriting an *already-good*
+query has little to fix and mostly **adds drift** — paraphrasing can steer the vector away from the
+exact source passage. So this result does **not** say "query rewrite is bad"; it says **"query
+rewrite doesn't help *well-formed* questions, and can hurt."** Its hypothesised win is on **messy real
+user input** (typos, acronyms, vague phrasing) — which our synthetic gold **does not contain**. We
+measured it on the wrong population to see its upside.
+
+**Verdict:** keep `rewrite` **opt-in, off by default** (it's a measured regression on clean queries).
+The right follow-up is a **gold set of deliberately messy/vague questions** (the case rewrite targets)
+before judging it — otherwise we'd reject a tool for failing a test it was never meant to pass.
+
 ## Meta-lesson
 A confident conclusion from **n=5** ("auto-merge hurts grounding — keep it off") was **reversed** by
 the same experiment at **n=18**. Two cheap retrofixes (window, contract) were chased against noise.
-The fix was never a cleverer retriever — it was a **trustworthy ruler**. Build the measurement before
-believing the measurement.
+Then **query rewrite measured as a regression — but on clean synthetic questions it was never meant
+to help**, a reminder that *what you measure on* decides the verdict as much as the feature does.
+The fix was never a cleverer retriever — it was a **trustworthy ruler, pointed at the right
+population**. Build the measurement before believing the measurement; then check the measurement is
+testing the thing you actually care about.
