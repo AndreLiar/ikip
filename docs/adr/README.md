@@ -63,3 +63,8 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0021](./0021-framework-boundary-langchain-langgraph-vs-data-plane.md) | Framework boundary: reuse LangChain/LangGraph components behind our business ports (domain keeps schema, citations, tenant isolation, versioning) | Accepted           |
 | [0022](./0022-grounded-answer-langgraph-gpt5-mini.md)            | Grounded-answer service: LangGraph + gpt-5.4-mini, server-resolved citations, post-generation grounding validation | Accepted           |
 | [0023](./0023-web-bff-next-over-direct-cors.md)                  | Web app → API via a Next.js BFF (server route handlers), not direct browser→API CORS   | Accepted           |
+| [0024](./0024-per-page-extraction-routing-and-indra-ocr.md)      | Per-page extraction routing (PyMuPDF/OCR/Docling) + Indra OCR behind the OcrEngine seam | Accepted           |
+| [0025](./0025-ingestion-trigger-schedule-sensor-queue.md)        | Ingestion trigger: schedule → sensor → queue (watermark cursor, concurrency guard)     | Accepted           |
+| [0026](./0026-agentic-rag-evolution.md)                          | Agentic RAG evolution (query analysis, reformulation, iterative retrieval)             | Accepted           |
+| [0027](./0027-vector-storage-halfvec-now-qdrant-later.md)        | Vector storage: halfvec on pgvector/Neon now → dedicated vector store (Qdrant) later    | Accepted           |
+| [0028](./0028-build-vs-buy-rag-platform.md)                      | Build vs buy: build IKIP (learning + reference architecture) vs NotebookLM/AnythingLLM/managed RAG | Accepted           |
