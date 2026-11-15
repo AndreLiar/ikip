@@ -1,0 +1,139 @@
+{
+  "gold_set_version": "credit_conso_fr-silver-v1",
+  "language": "fr",
+  "note": "Silver gold from real credit_conso_fr chunks (MISSION-045). relevant_chunk_ids are dev-DB-specific (live eval against this tenant); questions+answers are portable. Not human-reviewed unless flagged.",
+  "cases": [
+    {
+      "case_key": "credit_conso_fr-1",
+      "question": "Dans quels cas le crédit renouvelable proposé pour un achat doit-il être accompagné d’une proposition alternative de crédit amortissable ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Lorsque l’achat est effectué sur le lieu de vente ou à distance et que le montant du financement est supérieur à 1 000 euros.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "5e025d60-af8f-4d44-936e-67b6016c94b7"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-2",
+      "question": "Les abonnés et les fournisseurs concernés peuvent-ils s’opposer à la communication et à la publication par des tiers des informations nécessaires à la constitution de l’outil prévu ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Non, ils ne peuvent pas s’y opposer.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "d7e569df-4a7c-44c8-bfc0-a25850b0c6d2"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-3",
+      "question": "Lorsque le prêteur demande la résolution du contrat, quelles sommes peut-il réclamer à l’emprunteur et que peut-il obtenir jusqu’au paiement effectif ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Le capital restant dû, les intérêts échus, des intérêts de retard au taux du prêt, et une indemnité plafonnée par décret.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "903abe11-042c-47fa-aee7-6c5ee80a56f0"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-4",
+      "question": "Que peuvent ordonner les agents habilités lorsqu’une prestation de services n’est pas conforme à la réglementation en vigueur prise en application du livre IV ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Sa mise en conformité dans un délai fixé par eux.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "8d4f77ce-c980-49ad-9370-cd60397fd587"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-5",
+      "question": "À quelles opérations de crédit s’appliquent les dispositions de ce chapitre, et quels sont les montants minimum et maximum concernés ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Aux crédits de 200 à 75 000 euros.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "ad6166f3-8831-4308-ba02-17c28edfbc3f"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-6",
+      "question": "Quelles autorités administratives sont mentionnées pour l’application des articles L. 522-1, L. 522-5 et L. 522-6 ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Le directeur général de la concurrence, de la consommation et de la répression des fraudes, le chef du service national des enquêtes de la DGCCRF, le directeur régional de l’économie, de l’emploi, du travail et des solidarités, ou le directeur de la direction départementale chargée de la protection des populations.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "5d5ba4ff-ea16-4adc-98af-854fedba59aa"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-7",
+      "question": "Quelles mentions l’acte introductif d’instance doit-il contenir, à peine de nullité, lorsqu’une association nationale agréée agit pour le compte de consommateurs ?",
+      "expected_behavior": "answered",
+      "ground_truth": "La dénomination de l’association, son siège social, l’organe qui la représente légalement, ainsi que les nom, prénoms et adresse de chaque consommateur concerné.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "6cc79bd4-e319-4bd4-81ac-c7016b55c8d8"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-8",
+      "question": "Dans quelles conditions peut-on créer des régies de dépenses et de recettes ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Par arrêté conjoint du ministre chargé de l’industrie et du ministre de l’économie, selon le décret n° 92-681 du 20 juillet 1992.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "8c065dfb-0465-4e20-8db8-8aeb49409d22"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-9",
+      "question": "Qu’est-ce qu’un plat « fait maison » ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Un plat élaboré sur place à partir de produits bruts.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "8f54c1d2-05a8-40e5-a356-413cde0fa7d1"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-10",
+      "question": "Quelle peine complémentaire peut être prononcée contre les personnes physiques et les personnes morales reconnues coupables de l’infraction réprimée par l’article R. 452-3 ?",
+      "expected_behavior": "answered",
+      "ground_truth": "La confiscation de la chose ayant servi ou destinée à commettre l’infraction, ou de son produit.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "57bba5ca-c277-4339-a4af-303ccdb59585"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-11",
+      "question": "Quelles sont les exigences de publication lorsque des fournisseurs d’accès à l’internet ou de services de communications interpersonnelles accessibles au public soumettent leurs services à certaines conditions ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Les informations correspondantes doivent être publiées de façon claire, complète, lisible par machine, accessible aux personnes handicapées et régulièrement mises à jour.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "e40f7aca-c679-4147-87ea-1c8ff1a30644"
+      ]
+    },
+    {
+      "case_key": "credit_conso_fr-12",
+      "question": "Dans quels cas le Conseil national de la consommation peut-il être consulté ou réuni, et quelles sont les règles de convocation ou d’urgence prévues ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Sur convocation du ministre, avec un préavis d’au moins deux semaines, en urgence sans délai ni quorum, ou par voie écrite.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "4425a78c-8980-401f-a287-dcb676c2bb81"
+      ]
+    }
+  ]
+}

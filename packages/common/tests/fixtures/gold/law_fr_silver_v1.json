@@ -1,0 +1,139 @@
+{
+  "gold_set_version": "law_fr-silver-v1",
+  "language": "fr",
+  "note": "Silver gold from real law_fr chunks (MISSION-045). relevant_chunk_ids are dev-DB-specific (live eval against this tenant); questions+answers are portable. Not human-reviewed unless flagged.",
+  "cases": [
+    {
+      "case_key": "law_fr-1",
+      "question": "À quelle date doit être calculé le montant des sommes à rembourser par l'employeur retardataire lorsque les cotisations ont été payées après l'ouverture du risque ?",
+      "expected_behavior": "answered",
+      "ground_truth": "À la date du paiement de l'arriéré par l'employeur.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "3b066ce5-ad3c-46f6-937d-bee2a507d5a8"
+      ]
+    },
+    {
+      "case_key": "law_fr-2",
+      "question": "Qu’a décidé la Cour de cassation à propos du pourvoi formé par Bernard X... ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Elle a retiré l’instance du rôle.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "33d5c973-e7ff-461c-ba2b-26961bd77a31"
+      ]
+    },
+    {
+      "case_key": "law_fr-3",
+      "question": "Quelle sanction est encourue en cas de non-respect du décret n° 67-1210 du 22 décembre 1967, courant à compter du 26 juillet 1973 ?",
+      "expected_behavior": "answered",
+      "ground_truth": "La déchéance, prononcée d’office.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "227bd54e-03e0-4d60-94f0-959d3560d832"
+      ]
+    },
+    {
+      "case_key": "law_fr-4",
+      "question": "La décision implicite du préfet de délivrer un récépissé des demandes de carte de séjour à M. X... constituait-elle une voie de fait permettant au juge des référés de se reconnaître compétent ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Non, elle ne constituait pas une voie de fait.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "2709bf86-ed47-4e37-8b9c-0059b9a927c2"
+      ]
+    },
+    {
+      "case_key": "law_fr-5",
+      "question": "Quelle somme est allouée à M. X... en réparation de son préjudice moral ?",
+      "expected_behavior": "answered",
+      "ground_truth": "13 000 euros",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "0fd282cb-9612-4c1a-a49d-b803f231d5cd"
+      ]
+    },
+    {
+      "case_key": "law_fr-6",
+      "question": "L’abattement fiscal lié à l’adhésion à une association de gestion agréée devait-il être déduit pour calculer l’assiette de la cotisation sociale de l’avocat ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Non, cet abattement ne devait pas être pris en compte.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "46de68df-ee00-42f9-a2a1-af6d215d9317"
+      ]
+    },
+    {
+      "case_key": "law_fr-7",
+      "question": "Un accident survenu pendant le trajet entre la résidence principale d’un travailleur et son lieu de travail est-il considéré comme un accident du travail ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Oui, sous réserve des dispositions prévues, il est assimilé à un accident du travail.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "dcb3d9a3-bf36-4b2b-8da7-02b7435ce9eb"
+      ]
+    },
+    {
+      "case_key": "law_fr-8",
+      "question": "Qui doit être compétent pour connaître de la demande d’indemnisation formée par Mme X... contre l’État à la suite de son agression par deux mineurs en fugue confiés à un foyer ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Le Tribunal des conflits retient la compétence de la juridiction administrative.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "3e2049ee-a285-4851-b46f-8e0f6cb87b2f"
+      ]
+    },
+    {
+      "case_key": "law_fr-9",
+      "question": "Dans cette affaire, la clause de la convention collective sur les jours chômés sans récupération s'applique-t-elle aux demi-veilles de fêtes légales ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Non, elle ne vise pas leur détermination.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "a5aed8b0-ae44-48f0-9c2e-8b06eb5a9d13"
+      ]
+    },
+    {
+      "case_key": "law_fr-10",
+      "question": "Dans quelles conditions un homme transsexuel ayant subi une opération de réassignation peut-il obtenir la modification de la mention de son sexe à l’état civil ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Si son syndrome transsexuel est médicalement constaté et que la transformation est irréversible.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "6489c850-faad-4e38-89ab-e95d6399b247"
+      ]
+    },
+    {
+      "case_key": "law_fr-11",
+      "question": "Quel a été l'effet de l'ordonnance du 5 janvier 1990 sur l'instance ouverte par le pourvoi de Patrick X... ?",
+      "expected_behavior": "answered",
+      "ground_truth": "L’instance a été retirée du rôle de la Cour.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "e62de1bd-3429-4deb-b44e-1a593a8ca031"
+      ]
+    },
+    {
+      "case_key": "law_fr-12",
+      "question": "Un salarié protégé dont le licenciement n’a pas été autorisé et à qui l’employeur interdit l’accès à l’usine reste-t-il électeur et éligible pour la désignation des délégués du personnel ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Oui, s’il demeure lié par un contrat de travail.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "dc394535-1d99-4b95-bd8b-b759f62c67ce"
+      ]
+    }
+  ]
+}

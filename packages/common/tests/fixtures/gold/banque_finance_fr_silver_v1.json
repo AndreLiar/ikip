@@ -1,0 +1,139 @@
+{
+  "gold_set_version": "banque_finance_fr-silver-v1",
+  "language": "fr",
+  "note": "Silver gold from real banque_finance_fr chunks (MISSION-045). relevant_chunk_ids are dev-DB-specific (live eval against this tenant); questions+answers are portable. Not human-reviewed unless flagged.",
+  "cases": [
+    {
+      "case_key": "banque_finance_fr-1",
+      "question": "Quelles sont les missions du secrétariat général et qui assure cette fonction ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Il prépare les décisions du comité d'orientation, anime la division opérationnelle et gère les moyens de fonctionnement de la cellule TRACFIN ; il est assuré par la direction générale des douanes et droits indirects.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "12252cf7-fe27-4ee1-9f6f-69cb1029fecb"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-2",
+      "question": "Combien de membres compose le directoire, et qui nomme son président ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Trois membres, nommés par le conseil de surveillance qui désigne l’un d’eux comme président.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "f2334d56-5f45-423d-8a0e-85ec94d42a5a"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-3",
+      "question": "Si un membre du Conseil de la politique monétaire est remplacé avant la fin de son mandat, pour quelle durée le nouveau membre exerce-t-il ses fonctions ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Pour la durée restant à courir du mandat remplacé.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "3a45c626-bd42-4fb0-835a-556867bbd11e"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-4",
+      "question": "Qui peut exercer les activités de conservation ou d'administration d'instruments financiers en France ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Les catégories 1° à 7° énumérées par le texte.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "3cfe1a0d-d64f-48ef-9ea0-bbe5a8b4ce8a"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-5",
+      "question": "Quelles personnes morales peuvent être traitées comme contreparties éligibles lorsqu’elles remplissent au moins deux des trois critères de taille financière prévus par la réglementation ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Celles ayant au moins deux des trois critères : bilan ≥ 20 M€, chiffre d’affaires ou recettes ≥ 40 M€, capitaux propres ≥ 2 M€.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "74c67ff5-c923-4a5c-8fc1-8f4e572708f0"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-6",
+      "question": "Dans quels cas des offres de services ou des conseils donnés de façon habituelle ne sont-ils pas soumis aux règles du démarchage en vue d’opérations sur valeurs mobilières ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Lorsqu’ils sont exercés dans les locaux des établissements de crédit ou des prestataires de services d’investissement, conformément à la destination de ces locaux et dans les conditions où ils y sont normalement pratiqués.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "1e796caf-0b5a-40ff-a18c-ddabcd48adb6"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-7",
+      "question": "Les banques mutualistes ou coopératives sont-elles soumises au régime des fusions, scissions et apports des sociétés anonymes du code de commerce, et quelle exception s’applique à l’article L. 236-10 ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Oui, sauf pour celles qui n’ont pas émis de titres donnant un droit sur l’actif net, auxquelles l’article L. 236-10 ne s’applique pas.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "a4b681fd-aec0-4283-a22f-1d8f789d4016"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-8",
+      "question": "Qu’est-ce qu’une opération réalisée en libre prestation de services pour une entreprise d’investissement ?",
+      "expected_behavior": "answered",
+      "ground_truth": "La fourniture, dans un État d’accueil, d’un service d’investissement sans présence permanente dans cet État.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "28c4bf45-9c37-4b84-9e08-8c0e24991c4f"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-9",
+      "question": "Quel délai de préavis doit être respecté avant l’application d’une modification des conditions tarifaires d’un compte de dépôt, et que vaut l’absence de contestation du client ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Préavis de trois mois ; silence du client pendant deux mois = acceptation.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "04a73728-83db-40be-b647-304f28567028"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-10",
+      "question": "Dans quel cas l’agrément d’une association peut-il être retiré ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Lorsqu’elle ne remplit plus l’une des conditions d’agrément.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "a6d85a80-bb2d-4568-869b-5d0618981ad4"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-11",
+      "question": "Qui préside le comité des établissements de crédit et des entreprises d'investissement ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Le gouverneur de la Banque de France, président de la commission bancaire, ou son représentant.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "cc3c69f9-f14c-48ee-8f73-5fcbe11a13f3"
+      ]
+    },
+    {
+      "case_key": "banque_finance_fr-12",
+      "question": "Quelles obligations principales pèsent sur une entreprise de marché qui gère un marché réglementé régi par le code ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Elle doit avoir son siège et sa direction effective en France et respecter en permanence les règles applicables au marché.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "425b5f78-80fc-40f4-8b4d-c88587f1712d"
+      ]
+    }
+  ]
+}
