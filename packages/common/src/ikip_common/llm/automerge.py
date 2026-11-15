@@ -23,6 +23,17 @@ from ikip_common.llm.hybrid import RetrievalOutcome
 
 _CHARS_PER_TOKEN = 4  # matches chunking.estimate_tokens (~4 chars/token)
 DEFAULT_PARENT_MAX_TOKENS = 1200
+# Delimiters wrapping the precise matched child inside the parent, so a "generation contract"
+# prompt can tell the model to ground its claims in the MATCHED passage and use the surrounding
+# text only as context (MISSION-044 follow-up on the context↔grounding trade-off).
+MATCH_OPEN = "<<<MATCHED PASSAGE (ground every claim strictly in here)>>>"
+MATCH_CLOSE = "<<<END MATCHED PASSAGE>>>"
+
+
+def _render(ordinal: int, content: str, hit_ordinal: int, mark_hit: bool) -> str:
+    if mark_hit and ordinal == hit_ordinal:
+        return f"{MATCH_OPEN}\n{content}\n{MATCH_CLOSE}"
+    return content
 
 
 def merge_section_window(
@@ -30,39 +41,44 @@ def merge_section_window(
     siblings: Sequence[tuple[int, str]],
     *,
     max_tokens: int = DEFAULT_PARENT_MAX_TOKENS,
+    mark_hit: bool = False,
 ) -> str:
     """Pure: merge a section's chunks into the parent context, bounded to ~max_tokens.
 
     `siblings` is (ordinal, content) for every chunk in the section. If the whole section fits
     the budget it is returned in document order; otherwise a contiguous window is grown outward
     from the hit chunk (forward first, then back) until the budget is reached — so the parent
-    always *contains* the hit and stays coherent (no gaps)."""
+    always *contains* the hit and stays coherent (no gaps). With `mark_hit`, the hit chunk is
+    wrapped in MATCH delimiters for a generation-contract prompt."""
     budget = max(max_tokens, 1) * _CHARS_PER_TOKEN
     ordered = sorted(siblings, key=lambda s: s[0])
-    contents = [c for _, c in ordered]
-    if not contents:
+    if not ordered:
         return ""
     sep = 2  # "\n\n" between chunks
-    if sum(len(c) for c in contents) + sep * (len(contents) - 1) <= budget:
-        return "\n\n".join(contents)
+
+    def join(items: Sequence[tuple[int, str]]) -> str:
+        return "\n\n".join(_render(o, c, hit_ordinal, mark_hit) for o, c in items)
+
+    if sum(len(c) for _, c in ordered) + sep * (len(ordered) - 1) <= budget:
+        return join(ordered)
 
     ordinals = [o for o, _ in ordered]
     center = ordinals.index(hit_ordinal) if hit_ordinal in ordinals else 0
     lo = hi = center
-    used = len(contents[center])
+    used = len(ordered[center][1])
     while True:
         extended = False
-        if hi + 1 < len(contents) and used + len(contents[hi + 1]) + sep <= budget:
+        if hi + 1 < len(ordered) and used + len(ordered[hi + 1][1]) + sep <= budget:
             hi += 1
-            used += len(contents[hi]) + sep
+            used += len(ordered[hi][1]) + sep
             extended = True
-        if lo - 1 >= 0 and used + len(contents[lo - 1]) + sep <= budget:
+        if lo - 1 >= 0 and used + len(ordered[lo - 1][1]) + sep <= budget:
             lo -= 1
-            used += len(contents[lo]) + sep
+            used += len(ordered[lo][1]) + sep
             extended = True
         if not extended:
             break
-    return "\n\n".join(contents[lo : hi + 1])
+    return join(ordered[lo : hi + 1])
 
 
 def expand_to_parents(
@@ -71,6 +87,7 @@ def expand_to_parents(
     outcome: RetrievalOutcome,
     *,
     parent_max_tokens: int = DEFAULT_PARENT_MAX_TOKENS,
+    mark_child: bool = False,
 ) -> RetrievalOutcome:
     """Expand each retrieved child chunk to its parent section (ADR 0029 Stage 1).
 
@@ -113,7 +130,9 @@ def expand_to_parents(
             (o for cid, o, _ in rows if cid == hit_cid and o is not None),
             siblings[0][0],
         )
-        parent_text = merge_section_window(hit_ord, siblings, max_tokens=parent_max_tokens)
+        parent_text = merge_section_window(
+            hit_ord, siblings, max_tokens=parent_max_tokens, mark_hit=mark_child
+        )
         # Keep the child's metadata → citation still resolves to the precise chunk/page (FR16).
         merged.append(Document(page_content=parent_text, metadata=dict(rep.metadata)))
 

@@ -45,6 +45,16 @@ def test_merge_hit_included_even_if_ordinal_missing() -> None:
     assert merge_section_window(99, sibs, max_tokens=100) == "a\n\nb"  # fits → whole section
 
 
+def test_merge_marks_only_the_hit_when_requested() -> None:
+    from ikip_common.llm.automerge import MATCH_CLOSE, MATCH_OPEN
+
+    sibs = [(0, "a body"), (1, "b body"), (2, "c body")]
+    out = merge_section_window(1, sibs, max_tokens=100, mark_hit=True)
+    assert f"{MATCH_OPEN}\nb body\n{MATCH_CLOSE}" in out  # the hit is wrapped
+    assert out.count(MATCH_OPEN) == 1  # only the hit, not the siblings
+    assert "a body" in out and "c body" in out  # surrounding context still present, unmarked
+
+
 def test_make_hybrid_retrieve_applies_automerge_only_when_enabled(monkeypatch) -> None:  # noqa: ANN001
     # No network/DB: stub hybrid_retrieve + expand_to_parents to prove the flag threads through.
     import ikip_common.llm.automerge as am_mod
