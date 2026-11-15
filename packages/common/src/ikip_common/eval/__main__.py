@@ -27,6 +27,15 @@ Documented, reproducible commands:
       --gold packages/common/tests/fixtures/gold/failure_modes.json --tenant <uuid> \
       --sample 5 --runs 3 --out eval-results
 
+  # Per-corpus faithfulness regression gate (ADR 0016). Either inline on a live Ragas run
+  # (--gate: exit 1 if this corpus's faithfulness < its floor), or OFFLINE/no-network from a
+  # recorded ragas.json (for CI after a batch of paid runs):
+  uv run --group embeddings --group ragas python -m ikip_common.eval ragas \
+      --gold <corpus_gold.json> --tenant <uuid> --sample 12 \
+      --gate packages/common/tests/fixtures/eval/faithfulness_floors.json
+  uv run python -m ikip_common.eval faithfulness-gate \
+      --ragas eval-results/ragas.json --gold <corpus_gold.json>
+
 The per-push CI gate does NOT call `run`/`check` (no network): they run the harness with a
 FakeChatClient over versioned fixtures (see tests). `safety` is the exception — it is a
 required, network-free release gate (scripted fakes) wired into CI. This CLI is otherwise
@@ -271,7 +280,42 @@ def _ragas(args: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     (out / "ragas.json").write_text(json.dumps(scores.to_dict(), indent=2, sort_keys=True))
     print(json.dumps(scores.means, indent=2, sort_keys=True))
+
+    # Per-corpus faithfulness regression gate (ADR 0016): fail if this corpus's measured
+    # faithfulness fell below its committed floor (keyed by gold_set_version).
+    if getattr(args, "gate", None):
+        from ikip_common.eval.faithfulness_gate import check_faithfulness, load_floors
+
+        res = check_faithfulness(
+            version, scores.means.get("faithfulness", 0.0), load_floors(args.gate)
+        )
+        print(res)
+        if not res.passed:
+            return 1
     return 0
+
+
+def _faithfulness_gate(args: argparse.Namespace) -> int:
+    """Offline gate (no network): check an already-measured faithfulness value — or a written
+    ragas.json + its gold version — against the committed per-corpus floors. For CI use."""
+    from ikip_common.eval.faithfulness_gate import check_faithfulness, load_floors
+
+    floors = load_floors(args.floors)
+    if args.ragas:  # read the recorded run
+        doc = json.loads(Path(args.ragas).read_text())
+        faithfulness = doc.get("means", {}).get("faithfulness")
+        if faithfulness is None:
+            print(f"no faithfulness in {args.ragas}")
+            return 2
+        version = args.version or _load_gold(args.gold)[0] if args.gold else args.version
+    else:
+        faithfulness, version = args.faithfulness, args.version
+    if not version:
+        print("need --version (or --gold to resolve it)")
+        return 2
+    res = check_faithfulness(version, float(faithfulness), floors)
+    print(res)
+    return 0 if res.passed else 1
 
 
 def _compare(args: argparse.Namespace) -> int:
@@ -572,8 +616,26 @@ def main(argv: list[str] | None = None) -> int:
     p_ragas.add_argument("--sample", type=int, default=0, help="bounded sample size (0=all)")
     p_ragas.add_argument("--budget-usd", type=float, default=0.0, help="hard cost cap (0=none)")
     p_ragas.add_argument("--out", default="eval-results")
+    p_ragas.add_argument(
+        "--gate",
+        default=None,
+        help="per-corpus faithfulness floors json; exit 1 if faithfulness < this corpus's floor",
+    )
     _add_automerge_flags(p_ragas)
     p_ragas.set_defaults(func=_ragas)
+
+    p_fg = sub.add_parser(
+        "faithfulness-gate",
+        help="offline per-corpus faithfulness regression gate (ADR 0016; no network)",
+    )
+    p_fg.add_argument(
+        "--floors", default="packages/common/tests/fixtures/eval/faithfulness_floors.json"
+    )
+    p_fg.add_argument("--ragas", default=None, help="read faithfulness from a written ragas.json")
+    p_fg.add_argument("--faithfulness", type=float, default=None, help="explicit value to check")
+    p_fg.add_argument("--version", default=None, help="gold_set_version key for the floor")
+    p_fg.add_argument("--gold", default=None, help="gold file to resolve --version from")
+    p_fg.set_defaults(func=_faithfulness_gate)
 
     p_compare = sub.add_parser("compare", help="custom-vs-Ragas comparison report (Story 5.2)")
     p_compare.add_argument("--gold", required=True)

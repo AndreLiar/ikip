@@ -1,0 +1,19 @@
+{
+  "_note": "Per-corpus faithfulness regression floors (ADR 0016). Keyed by gold_set_version. A corpus's measured Ragas faithfulness must stay >= its floor or the gate fails. Floors are set conservatively below the measured baseline (MISSION-043/044/045) so they catch real regressions, not n~12 LLM-judge noise. Raise a floor as the gold set grows + gets human-reviewed. `default` applies to any version without an explicit floor.",
+  "default": 0.80,
+  "floors": {
+    "ntrs-silver-v2": 0.80,
+    "law_fr-silver-v1": 0.85,
+    "assurance_fr-silver-v1": 0.85,
+    "banque_finance_fr-silver-v1": 0.85,
+    "credit_conso_fr-silver-v1": 0.80
+  },
+  "measured_baseline": {
+    "_comment": "faithfulness at authoring (MISSION-044/045, n=12-18, silver) — for provenance, not used by the gate",
+    "ntrs-silver-v2": 0.94,
+    "law_fr-silver-v1": 1.0,
+    "assurance_fr-silver-v1": 1.0,
+    "banque_finance_fr-silver-v1": 1.0,
+    "credit_conso_fr-silver-v1": 0.94
+  }
+}
