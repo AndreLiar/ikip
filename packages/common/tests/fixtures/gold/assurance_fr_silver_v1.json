@@ -9,10 +9,11 @@
       "expected_behavior": "answered",
       "ground_truth": "À la demande d’une autorité de contrôle d’un État membre de la CEE ayant exigé un plan de financement à court terme et restreint ou interdit la disposition de ses actifs.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "1fd03b50-0b88-48a3-b062-e088f19d3eff"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-2",
@@ -64,10 +65,11 @@
       "expected_behavior": "answered",
       "ground_truth": "L’assurance subsiste, mais le contrat peut être résilié pendant trois mois à compter de cette date.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "406665bc-53c5-4f3b-ab4b-03c5d75b2537"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "assurance_fr-7",

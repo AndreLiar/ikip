@@ -9,10 +9,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Lorsque l’achat est effectué sur le lieu de vente ou à distance et que le montant du financement est supérieur à 1 000 euros.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "5e025d60-af8f-4d44-936e-67b6016c94b7"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-2",
@@ -42,10 +43,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Sa mise en conformité dans un délai fixé par eux.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "8d4f77ce-c980-49ad-9370-cd60397fd587"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-5",

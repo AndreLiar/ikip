@@ -9,10 +9,11 @@
       "expected_behavior": "answered",
       "ground_truth": "À la date du paiement de l'arriéré par l'employeur.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "3b066ce5-ad3c-46f6-937d-bee2a507d5a8"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "law_fr-2",
@@ -75,10 +76,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Oui, sous réserve des dispositions prévues, il est assimilé à un accident du travail.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "dcb3d9a3-bf36-4b2b-8da7-02b7435ce9eb"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "law_fr-8",
