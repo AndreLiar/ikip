@@ -1,6 +1,6 @@
 # 0029. Hierarchical (parent/child) chunking via section-based auto-merging
 
-- **Status:** Proposed — design; Stage 1 is retrieval-only + storage-neutral, Stage 2 is gated.
+- **Status:** Accepted — **Stage 1 implemented** (opt-in `make_hybrid_retrieve(auto_merge=True)`, `ikip_common.llm.automerge`); Stage 2 remains gated on vector-store capacity.
 - **Date:** 2026-11-15
 - **Deciders:** Architect, PM
 - **Related:** [ADR 0019](./0019-structure-aware-chunking.md) (flat structure-aware chunking it extends) · [ADR 0027](./0027-vector-storage-halfvec-now-qdrant-later.md) (vector-store capacity gates Stage 2) · [ADR 0003](./0003-local-first-ports-and-adapters.md) (retriever port) · [ADR 0004](./0004-hybrid-retrieval-on-postgres.md) · FR16 (citations) · NFR6 (Recall@5) · [MISSION-043](../learning/missions/MISSION-043/mission.md) (NTRS detail-question weakness)

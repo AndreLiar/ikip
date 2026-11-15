@@ -316,13 +316,19 @@ def make_hybrid_retrieve(
     limit: int = DEFAULT_LIMIT,
     lexical_min_score: float | None = None,
     vector_min_score: float | None = None,
+    auto_merge: bool = False,
+    parent_max_tokens: int | None = None,
 ) -> Callable[[str], RetrievalOutcome]:
     """Bind our tenant-scoped hybrid retrieval into a `retrieve(query)` callable for
-    the graph. Tenant scoping + citations stay in our SQL (ADR 0021)."""
+    the graph. Tenant scoping + citations stay in our SQL (ADR 0021).
+
+    `auto_merge` enables Stage-1 hierarchical retrieval (ADR 0029): each retrieved child
+    chunk is expanded to its parent section so the LLM sees wider context, while the citation
+    still resolves to the precise child. Storage-neutral (no re-embedding)."""
     from ikip_common.llm.hybrid import hybrid_retrieve
 
     def retrieve(query: str) -> RetrievalOutcome:
-        return hybrid_retrieve(
+        outcome = hybrid_retrieve(
             session,
             tenant_id,
             query,
@@ -332,5 +338,15 @@ def make_hybrid_retrieve(
             lexical_min_score=lexical_min_score,
             vector_min_score=vector_min_score,
         )
+        if auto_merge:
+            from ikip_common.llm.automerge import DEFAULT_PARENT_MAX_TOKENS, expand_to_parents
+
+            outcome = expand_to_parents(
+                session,
+                tenant_id,
+                outcome,
+                parent_max_tokens=parent_max_tokens or DEFAULT_PARENT_MAX_TOKENS,
+            )
+        return outcome
 
     return retrieve
