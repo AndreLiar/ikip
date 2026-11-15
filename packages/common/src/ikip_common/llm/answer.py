@@ -319,6 +319,8 @@ def make_hybrid_retrieve(
     auto_merge: bool = False,
     parent_max_tokens: int | None = None,
     mark_child: bool = False,
+    rewrite: bool = False,
+    rewrite_client=None,  # noqa: ANN001 — ChatClient used only to rewrite the search query
 ) -> Callable[[str], RetrievalOutcome]:
     """Bind our tenant-scoped hybrid retrieval into a `retrieve(query)` callable for
     the graph. Tenant scoping + citations stay in our SQL (ADR 0021).
@@ -326,10 +328,18 @@ def make_hybrid_retrieve(
     `auto_merge` enables Stage-1 hierarchical retrieval (ADR 0029): each retrieved child
     chunk is expanded to its parent section so the LLM sees wider context, while the citation
     still resolves to the precise child. Storage-neutral (no re-embedding). `mark_child` wraps
-    the precise matched passage in MATCH delimiters for a generation-contract prompt."""
+    the precise matched passage in MATCH delimiters for a generation-contract prompt.
+
+    `rewrite` (ADR 0026) rewrites the query into a retrieval-optimised search query via
+    `rewrite_client` before searching; generation still answers the *original* question, so
+    grounding is untouched."""
     from ikip_common.llm.hybrid import hybrid_retrieve
 
     def retrieve(query: str) -> RetrievalOutcome:
+        if rewrite and rewrite_client is not None:
+            from ikip_common.llm.query_rewrite import rewrite_query
+
+            query = rewrite_query(rewrite_client, query)
         outcome = hybrid_retrieve(
             session,
             tenant_id,
