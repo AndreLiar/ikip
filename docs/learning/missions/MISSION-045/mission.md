@@ -62,7 +62,36 @@ answer_correctness; faithfulness/recall are the trustworthy signals and they're 
 - `relevant_chunk_ids` are dev-DB-specific; the questions/answers are portable.
 - law's single-gold-chunk recall is **known-strict** (see Discovery 2) — don't read 0.583 as "law retrieval is bad".
 
+## Follow-up — auto-merge on law (the hypothesis was: "this is where it finally helps") — REJECTED
+law looked like the ideal case for auto-merge (ADR 0029): redundant decisions split into sibling
+paragraphs, so merging a hit's section siblings "should" give the answer's full context. A/B'd it:
+
+| metric | OFF | auto-merge | Δ |
+|---|--:|--:|--:|
+| **faithfulness** | **1.000** | 0.861 | **−0.139** |
+| context_recall | 0.818 | 0.778 | **−0.040** |
+| context_precision | 0.924 | 0.979 | +0.055 |
+| answer_relevancy | 0.726 | 0.742 | +0.016 |
+| answer_correctness | 0.490 | 0.470 | −0.020 |
+| recall@5 (deterministic) | 0.583 | 0.333 | −0.250 (dedup artifact) |
+
+**The hypothesis does not hold.** The one metric we expected to *rise* — `context_recall` — **fell**
+(0.818→0.778), faithfulness dipped, correctness was flat-down. Only context_precision rose slightly.
+The reason, in hindsight, is simple: **law was already well-grounded** (OFF faithfulness 1.0), so there
+was almost no headroom for auto-merge to add — and merging whole sections just added surrounding text
+that diluted grounding without improving coverage. recall@5's −0.25 is the known dedup artifact (not a
+real signal). So auto-merge is **not** the fix for law's low recall@5 either; the low recall@5 was a
+measurement artifact of a corpus that is *already answering well*, not a retrieval deficit to patch.
+
+**Honest caveat (the recurring one):** n=12, and faithfulness 1.0→0.861 is ~1.7 claims — the same
+small-sample band where the NTRS n=5 faithfulness "drop" **reversed** at n=18 (MISSION-044). So read
+this as "auto-merge did **not** deliver the hypothesised win on law," **not** a confident "it hurts law".
+Across every corpus-level test now (NTRS n=18 ≈ neutral, law ≈ small dip), auto-merge has produced **no
+measured win** — it stays off by default.
+
 ## Next
-1. For law: evaluate at **section/parent granularity** (multi-chunk gold or auto-merge) to get a fair recall — and re-run auto-merge A/B on law, where its mechanism should help most.
-2. Human-review a slice of each FR gold (silver → trustworthy) + `--runs N`.
-3. Wire per-corpus thresholds as a **regression gate** (ADR 0016): faithfulness floor per tenant.
+1. Human-review a slice of each FR gold (silver → trustworthy) + `--runs N` to de-noise the n=12 figures.
+2. Wire per-corpus thresholds as a **regression gate** (ADR 0016): a faithfulness floor per tenant
+   (the FR corpora sit at 0.94–1.00 — a natural, already-passing gate to lock in).
+3. **Throttle the Ragas judge concurrency** — this A/B kept hitting Azure 429 (auto-merge's big
+   contexts burst the per-minute token budget); a concurrency cap would make paid evals robust.
