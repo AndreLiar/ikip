@@ -26,6 +26,12 @@ Both are orchestrated by **pytest** and wired into CI gates (Story 5.5): determi
 - **Comparison (5.2 AC4):** `eval/compare.py` aligns custom citation-grounding coverage with Ragas faithfulness and reports correlation / mean-abs-diff / agreement / divergent cases / cost / run-to-run variance + a release-gating recommendation.
 - **CI split (5.2 AC5):** deterministic metrics + the comparison math gate every push (`test_ragas_eval.py`); Ragas (live, costly) runs nightly/on-demand (`.github/workflows/ragas-eval.yml`, secret-guarded). CLI: `python -m ikip_common.eval {run,ragas,compare}`. See [MISSION-029](../learning/missions/MISSION-029/mission.md).
 
+### Update (2026-11-15) — Per-corpus faithfulness regression gate (MISSION-045)
+`faithfulness` = the hallucination meter. Once the FR corpora were measured ([MISSION-045](../learning/missions/MISSION-045/mission.md): faithfulness 0.94–1.00 across law/insurance/finance/credit), we lock that in as a **per-corpus regression gate** so a prompt/model/retrieval change can't silently lower it on any tenant:
+- **Floors** (versioned, keyed by `gold_set_version`): `packages/common/tests/fixtures/eval/faithfulness_floors.json` — set conservatively **below** the measured baseline so the gate catches real regressions, not n≈12 LLM-judge noise. `default` covers new corpora.
+- **Gate** (`eval/faithfulness_gate.py`, pure/no-network): `check_faithfulness(version, value, floors)` → pass/fail. Wired two ways: inline on a live run (`eval ragas … --gate <floors>`, exit 1 on breach) and **offline** for CI from a recorded `ragas.json` (`eval faithfulness-gate --ragas … --gold …`). The expensive measurement stays separate from the cheap check.
+- Rationale for a *floor* not an *exact baseline*: faithfulness is an LLM-judged, mildly noisy metric; a hard equality check would flake. The floor is the honest contract — "never regress below this grounding level per corpus."
+
 ## Consequences
 **Positive**
 - Standard, well-tested RAG metrics (Ragas) instead of bespoke ones; stronger and more comparable to the literature.
