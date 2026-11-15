@@ -1,0 +1,228 @@
+{
+  "gold_set_version": "ntrs-silver-v2-messy",
+  "language": "en",
+  "note": "Messy-phrasing variant of ntrs_silver_v2 (typos/acronyms/vague). Same relevant_chunk_ids + ground_truth as the clean set; only `question` is degraded. For the query-rewrite A/B: rewrite should RECOVER retrieval the raw messy query loses.",
+  "cases": [
+    {
+      "case_key": "ntrs-v2-1",
+      "question": "what kind of cable path is required, and what happens to transmission speed over longer distnaces?",
+      "expected_behavior": "answered",
+      "ground_truth": "Two twisted pairs of cable are required; full speed is practical for about 50 feet, and speed decreases over longer distances.",
+      "language": "en",
+      "reviewed": true,
+      "relevant_chunk_ids": [
+        "04912629-bce1-403e-a930-cca4236a4c9d"
+      ],
+      "reviewer": "human-spot-review",
+      "clean_question": "What kind of cable path is required, and what happens to transmission speed over longer distances?"
+    },
+    {
+      "case_key": "ntrs-v2-2",
+      "question": "what advnatage does the system claim to provide over common measurement-environment probs like vibration and turbulence?",
+      "expected_behavior": "answered",
+      "ground_truth": "Immunity to those common problems.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "7f637495-9ca9-488a-8df6-6e9c15f1bfdc"
+      ],
+      "clean_question": "What advantage does the system claim to provide over common measurement-environment problems like vibration and turbulence?"
+    },
+    {
+      "case_key": "ntrs-v2-3",
+      "question": "what could the space shuttle crew use as a backup device to align the imus if a star tracker failed, if it had been calibrated beforehand?",
+      "expected_behavior": "answered",
+      "ground_truth": "The HUD or the COAS.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "c5ebb291-9345-4350-9a87-c8497f064bb4"
+      ],
+      "clean_question": "What could the Space Shuttle crew use as a backup device to align the IMUs if a Star Tracker failed, provided it had been calibrated beforehand?"
+    },
+    {
+      "case_key": "ntrs-v2-4",
+      "question": "what type of flow is central center-of-pressure loading typical of, and how is load distribted in that case?",
+      "expected_behavior": "answered",
+      "ground_truth": "Supersonic flow, with the load distributed uniformly over the lifting surface.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "0367501b-9427-440d-bfdb-8419a45bd90c"
+      ],
+      "clean_question": "What type of flow is the central center-of-pressure loading typical of, and how is the load distributed in that case?"
+    },
+    {
+      "case_key": "ntrs-v2-5",
+      "question": "what seqeunce of measurements was taken during the sxr data collection procedure?",
+      "expected_behavior": "answered",
+      "ground_truth": "SXR dark data, ambient data, another ambient reading, then signal data with the laser covered and uncovered.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "002067cf-a51f-4441-be37-7ad578dada1d"
+      ],
+      "clean_question": "What sequence of measurements was taken during the SXR data collection procedure?"
+    },
+    {
+      "case_key": "ntrs-v2-6",
+      "question": "whats the nominal bin width of the oap used to measure droplets from 9.5 to 457.5 um in diametr?",
+      "expected_behavior": "answered",
+      "ground_truth": "15 \u03bcm",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "00df691a-1c63-4f09-a64f-4f391dd8ed15"
+      ],
+      "clean_question": "What is the nominal bin width of the OAP used to measure droplets from 9.5 to 457.5 \u03bcm in diameter?"
+    },
+    {
+      "case_key": "ntrs-v2-7",
+      "question": "how r the dimensions of embedded flaws defined in this notation?",
+      "expected_behavior": "answered",
+      "ground_truth": "Depth is denoted by 2a and length by 2c.",
+      "language": "en",
+      "reviewed": true,
+      "relevant_chunk_ids": [
+        "076080e8-d565-4380-8510-fc955c92e4d3"
+      ],
+      "reviewer": "human-spot-review",
+      "clean_question": "How are the dimensions of embedded flaws defined in this notation?"
+    },
+    {
+      "case_key": "ntrs-v2-8",
+      "question": "what 2 functions are combined in an inertial nav system to make it self-contained?",
+      "expected_behavior": "answered",
+      "ground_truth": "Detecting linear acceleration along three axes and deriving velocity, position, attitude, and heading.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "23c9bccc-9f4e-47f2-a2d3-43f26dff0560"
+      ],
+      "clean_question": "What two functions are combined in an inertial navigation system to make it self-contained?"
+    },
+    {
+      "case_key": "ntrs-v2-9",
+      "question": "why is seu/set performance less critical in freq synthesizers than in clock gen circuits?",
+      "expected_behavior": "answered",
+      "ground_truth": "Because communication protocols can handle errors, and a second SET is only problematic if it occurs before recovery from the first is complete.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "02fb9418-2f95-4837-af34-0dadebb8f980"
+      ],
+      "clean_question": "Why is SEU/SET performance less critical in frequency synthesizers than in clock generator circuits?"
+    },
+    {
+      "case_key": "ntrs-v2-10",
+      "question": "whats the 2 primary motives for the electronic documentation projects electronic system?",
+      "expected_behavior": "answered",
+      "ground_truth": "To reduce the cost of maintaining paper-based operations and to improve efficiency and document-use flexibility.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "062d7293-c06e-48c4-9a8b-f467111d3adc"
+      ],
+      "clean_question": "What are the two primary motives for the Electronic Documentation Project\u2019s electronic system?"
+    },
+    {
+      "case_key": "ntrs-v2-11",
+      "question": "whats kinds of emerging space activities + tech are making space more congested and harder to use safely/sustainably?",
+      "expected_behavior": "answered",
+      "ground_truth": "Satellite servicing, in-space manufacturing, tourism, small satellites, and large satellite constellations.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "0f962878-1ce5-4555-a021-6eabbf907ccf"
+      ],
+      "clean_question": "What kinds of emerging space activities and technologies are making space increasingly congested and harder to use safely and sustainably?"
+    },
+    {
+      "case_key": "ntrs-v2-12",
+      "question": "why must fertilizer applications at ksc be selected carefully for sandy soil, and what factors determine the fertilizer analysis, rate, type, and timing of applicatoin?",
+      "expected_behavior": "answered",
+      "ground_truth": "Because sandy soil rapidly leaches fertilizer due to rain and high temperatures; the Horticulturist chooses the analysis and rate based on plant or grass needs, soil deficiencies, desired maintenance level, and seasonal considerations.",
+      "language": "en",
+      "reviewed": true,
+      "relevant_chunk_ids": [
+        "06bc03cc-d44a-4a8b-a2b8-1aabed43aac2"
+      ],
+      "reviewer": "human-spot-review",
+      "clean_question": "Why must fertilizer applications at KSC be selected carefully for sandy soil, and what factors determine the fertilizer analysis, rate, type, and timing of application?"
+    },
+    {
+      "case_key": "ntrs-v2-13",
+      "question": "what does the doppler signal indicate and how does it behave when bubbles are absent or present?",
+      "expected_behavior": "answered",
+      "ground_truth": "It visually indicates the presence of bubbles; it is nominally flat with no bubbles and fluctuates in amplitude when bubbles pass by.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "0a40991a-3354-420a-a919-fcc0054ff9ff"
+      ],
+      "clean_question": "What does the Doppler signal indicate, and how does it behave when bubbles are absent or present?"
+    },
+    {
+      "case_key": "ntrs-v2-14",
+      "question": "what kind of instrument is the cloud-top scanning (c.t.s.) radiometer designed to be, and what spectral regions does it measur?",
+      "expected_behavior": "answered",
+      "ground_truth": "A three-channel aircraft-borne infrared radiometer measuring the 6.75 and 11.5 \u03bcm thermal emission regions.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "297d1d31-c796-4828-811a-a0bfe74f62d1"
+      ],
+      "clean_question": "What kind of instrument is the Cloud-Top Scanning (C.T.S.) Radiometer designed to be, and what spectral regions does it measure?"
+    },
+    {
+      "case_key": "ntrs-v2-15",
+      "question": "what does a zero result value mean in the test output and how is a failure indicated?",
+      "expected_behavior": "answered",
+      "ground_truth": "A zero means success; a non-zero value means failure, with the binary 1 bits showing which test patterns failed.",
+      "language": "en",
+      "reviewed": true,
+      "relevant_chunk_ids": [
+        "023569aa-d30e-4dd3-822b-b6009179c316"
+      ],
+      "reviewer": "human-spot-review",
+      "clean_question": "What does a zero result value mean in the test output, and how is a failure indicated?"
+    },
+    {
+      "case_key": "ntrs-v2-16",
+      "question": "what does NN1 represent in the node-var defs for the barrel geometery?",
+      "expected_behavior": "answered",
+      "ground_truth": "The total number of axial divisions through the barrel.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "00490f87-0868-451f-aef2-e2f0d0f1357e"
+      ],
+      "clean_question": "What does NN1 represent in the node-variable definitions for the barrel geometry?"
+    },
+    {
+      "case_key": "ntrs-v2-17",
+      "question": "what kind of filter bank did u.s. pat. no. 4,152,928 use for early detection of fat emboli in blood?",
+      "expected_behavior": "answered",
+      "ground_truth": "A bank of frequency-staggered band-pass filters spanning the relevant frequency range.",
+      "language": "en",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "04f79b1a-e4f8-4e72-a995-69b6612a08cb"
+      ],
+      "clean_question": "What kind of filter bank did U.S. Pat. No. 4,152,928 use for early detection of fat emboli in blood?"
+    },
+    {
+      "case_key": "ntrs-v2-18",
+      "question": "what major contaminants were found in the plasma detector's vacuumn system gas analysis, and roughly what fraction was water vapor?",
+      "expected_behavior": "answered",
+      "ground_truth": "About 90% to 95% was water vapor, with hydrocarbons, nitrogen, and oxygen also present.",
+      "language": "en",
+      "reviewed": true,
+      "relevant_chunk_ids": [
+        "06eb8f81-caa3-4c84-854f-93b422293faa"
+      ],
+      "reviewer": "human-spot-review",
+      "clean_question": "What major contaminants were found in the plasma detector\u2019s vacuum system gas analysis, and roughly what fraction was water vapor?"
+    }
+  ]
+}
