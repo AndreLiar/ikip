@@ -199,7 +199,7 @@ typos/abbreviations/case did **not** hurt retrieval at all — so rewrite had no
 its paraphrasing drift still cost one hit (messy-OFF misses `v2-2,v2-5`; messy-REWRITE *adds* `v2-15`
 — it **broke a question that worked**).
 
-**Real finding (about the system, not the feature):** our **hybrid retrieval (vector + BM25) is
+**Real finding (about the system, not the feature):** our **hybrid retrieval (vector + lexical `ts_rank`, ADR 0004 — *not* true BM25) is
 already robust to messy phrasing** — embeddings key on the surviving content nouns ("cable path",
 "doppler signal", "fertilizer KSC"), which typos don't erase. So query rewrite's core premise
 ("messy input → weak retrieval") **does not hold on this corpus**. rewrite stays **off**.

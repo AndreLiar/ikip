@@ -2,7 +2,8 @@
 
 Composes the two tenant-scoped `IkipRetriever` arms in LangChain `Document` space:
   1. **Fuse** both ranked lists with Reciprocal Rank Fusion (RRF) — rank-based, so
-     BM25 `ts_rank` and cosine scores need no normalization. (RRF is exactly what
+     the lexical `ts_rank` (full-text, not true BM25 — ADR 0004) and cosine scores
+     need no normalization. (RRF is exactly what
      LangChain's EnsembleRetriever does; it moved to a legacy compat package in
      LangChain 1.x, so we implement the ~15-line algorithm here, keeping full control
      of citations + thresholds.)

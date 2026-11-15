@@ -8,7 +8,7 @@
 ## Context
 Ingesting multiple corpora/tenants pushed the **free Neon tier (1 GB)** to ~89%. Measured breakdown: the **`embedding` table = 655 MB** (125k × 512-dim **float32** vectors + HNSW index) — i.e. **the vectors are ~85% of the database**; `chunk` text = 105 MB; everything else < 2 MB. Big-PDF corpora (e.g. 500 DOE energy manuals) would add another ~130 MB and blow the tier.
 
-So the question is **where and how vectors are stored**, without losing the invariants that put them in Postgres in the first place (ADR 0001): the `chunk → section → document_version` **citation chain** (FR16) and **tenant scoping** (NFR10), queried hybrid with BM25 in one place (ADR 0004).
+So the question is **where and how vectors are stored**, without losing the invariants that put them in Postgres in the first place (ADR 0001): the `chunk → section → document_version` **citation chain** (FR16) and **tenant scoping** (NFR10), queried hybrid with the lexical arm (`ts_rank`, ADR 0004 — not true BM25) in one place.
 
 ## Decision
 A **staged** strategy — cheap lever first, datastore move only when triggered:
@@ -16,7 +16,7 @@ A **staged** strategy — cheap lever first, datastore move only when triggered:
 1. **Now — `halfvec` (16-bit vectors).** Store the vector column as `halfvec(512)` instead of `vector(512)` float32 → **~half the storage** (655 MB → ~330 MB) with **negligible cosine-ANN recall loss**, **no re-embedding** (in-place `vector::halfvec` cast + HNSW rebuilt with `halfvec_cosine_ops`). Retrieval (`cosine_distance`), the dimension asset-check (`vector_dims`) and the citation chain are unchanged. (ADR 0015 anticipated exactly this: "512 dims and/or halfvec so the index fits the tier".)
 2. **Now — cap the free tier.** Do **not** bulk-ingest the largest (big-PDF) corpora into the free Neon; keep their raw in R2 (10 GB free) + their `IngestionJob` rows seeded, and process them selectively or after a capacity move. Small text corpora (legal codes, decisions) are cheap and stay.
 3. **Optional further halving — 256-dim Matryoshka.** `text-embedding-3-small` supports truncation to 256 dims (ADR 0020); combined with halfvec that is a **4× reduction** vs the original. Deferred unless needed (recall trade-off to eval first).
-4. **Later (triggered) — move the vector arm to a dedicated vector DB behind the `VectorStore` port.** **Qdrant Cloud free tier (4 GB disk / 1 GB RAM, free forever)** is the target: vectors + a `chunk_id`/tenant payload live in Qdrant; **Postgres keeps the chunks, metadata and the citation chain**. Hybrid retrieval stays BM25-in-Postgres + vector-in-Qdrant, **fused in-app** (we already own RRF). This is a **clean swap** because retrieval already sits behind our port (ADR 0001/0003) — the domain does not change.
+4. **Later (triggered) — move the vector arm to a dedicated vector DB behind the `VectorStore` port.** **Qdrant Cloud free tier (4 GB disk / 1 GB RAM, free forever)** is the target: vectors + a `chunk_id`/tenant payload live in Qdrant; **Postgres keeps the chunks, metadata and the citation chain**. Hybrid retrieval stays lexical-`ts_rank`-in-Postgres + vector-in-Qdrant, **fused in-app** (we already own RRF). This is a **clean swap** because retrieval already sits behind our port (ADR 0001/0003) — the domain does not change.
 
 ## Triggers for the Qdrant move (do it when the data says so, not before)
 - vector storage would exceed the Postgres tier even with halfvec (+256-dim), **or**
