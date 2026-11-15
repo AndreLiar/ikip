@@ -74,14 +74,23 @@ def _run(args: argparse.Namespace) -> int:
 
     version, cases = _load_gold(args.gold)
     tenant_id = uuid.UUID(args.tenant)
+    auto_merge = getattr(args, "auto_merge", False)
     with Session(make_engine()) as session:
-        retrieve = make_hybrid_retrieve(session, tenant_id, build_embedding_client(), limit=args.k)
+        retrieve = make_hybrid_retrieve(
+            session,
+            tenant_id,
+            build_embedding_client(),
+            limit=args.k,
+            auto_merge=auto_merge,
+            parent_max_tokens=getattr(args, "parent_max_tokens", None),
+        )
         report = evaluate_dataset(
             cases,
             retrieve=retrieve,
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
+            config={"auto_merge": auto_merge},  # ADR 0029 Stage-1 A/B: records the variant
         )
     run_path, latest = write_run(report, args.out)
     # Push the quality aggregate to Grafana Cloud (Story 5.6 AC2) — no-op without OTLP.
@@ -164,14 +173,23 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
     if getattr(args, "sample", 0):
         cases = cases[: args.sample]  # bounded sample (AC5: cost/variance control)
     tenant_id = uuid.UUID(args.tenant)
+    auto_merge = getattr(args, "auto_merge", False)
     with Session(make_engine()) as session:
-        retrieve = make_hybrid_retrieve(session, tenant_id, build_embedding_client(), limit=args.k)
+        retrieve = make_hybrid_retrieve(
+            session,
+            tenant_id,
+            build_embedding_client(),
+            limit=args.k,
+            auto_merge=auto_merge,
+            parent_max_tokens=getattr(args, "parent_max_tokens", None),
+        )
         report = evaluate_dataset(
             cases,
             retrieve=retrieve,
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
+            config={"auto_merge": auto_merge},  # ADR 0029 Stage-1 A/B: records the variant
             telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
         )
     return version, cases, report
@@ -449,11 +467,28 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    def _add_automerge_flags(p: argparse.ArgumentParser) -> None:
+        # ADR 0029 Stage-1 A/B: run the same gold set with/without parent/child auto-merge.
+        p.add_argument(
+            "--auto-merge",
+            dest="auto_merge",
+            action="store_true",
+            help="expand each child hit to its parent section (ADR 0029 Stage 1)",
+        )
+        p.add_argument(
+            "--parent-max-tokens",
+            dest="parent_max_tokens",
+            type=int,
+            default=None,
+            help="token budget for the merged parent context (default 1200)",
+        )
+
     p_run = sub.add_parser("run", help="live run against a gold set")
     p_run.add_argument("--gold", required=True)
     p_run.add_argument("--tenant", required=True)
     p_run.add_argument("--k", type=int, default=5)
     p_run.add_argument("--out", default="eval-results")
+    _add_automerge_flags(p_run)
     p_run.set_defaults(func=_run)
 
     p_check = sub.add_parser("check", help="compare latest.json to baseline.json")
@@ -503,6 +538,7 @@ def main(argv: list[str] | None = None) -> int:
     p_ragas.add_argument("--sample", type=int, default=0, help="bounded sample size (0=all)")
     p_ragas.add_argument("--budget-usd", type=float, default=0.0, help="hard cost cap (0=none)")
     p_ragas.add_argument("--out", default="eval-results")
+    _add_automerge_flags(p_ragas)
     p_ragas.set_defaults(func=_ragas)
 
     p_compare = sub.add_parser("compare", help="custom-vs-Ragas comparison report (Story 5.2)")
@@ -513,6 +549,7 @@ def main(argv: list[str] | None = None) -> int:
     p_compare.add_argument("--runs", type=int, default=1, help="repeat Ragas N× for variance")
     p_compare.add_argument("--budget-usd", type=float, default=0.0, help="hard cost cap (0=none)")
     p_compare.add_argument("--out", default="eval-results")
+    _add_automerge_flags(p_compare)
     p_compare.set_defaults(func=_compare)
 
     p_config = sub.add_parser("config", help="versioned prompt/model config registry (Story 5.5)")

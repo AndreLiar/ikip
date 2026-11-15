@@ -4,6 +4,7 @@
 → DB-backed, gated on TEST_DATABASE_URL (ephemeral Neon branch in CI; throwaway pg locally)."""
 
 import os
+import uuid
 
 import pytest
 
@@ -42,6 +43,26 @@ def test_merge_windows_around_hit_when_over_budget() -> None:
 def test_merge_hit_included_even_if_ordinal_missing() -> None:
     sibs = [(0, "a"), (1, "b")]
     assert merge_section_window(99, sibs, max_tokens=100) == "a\n\nb"  # fits → whole section
+
+
+def test_make_hybrid_retrieve_applies_automerge_only_when_enabled(monkeypatch) -> None:  # noqa: ANN001
+    # No network/DB: stub hybrid_retrieve + expand_to_parents to prove the flag threads through.
+    import ikip_common.llm.automerge as am_mod
+    import ikip_common.llm.hybrid as hybrid_mod
+    from ikip_common.llm.answer import make_hybrid_retrieve
+
+    base = RetrievalOutcome(
+        documents=[Document(page_content="x", metadata={"chunk_id": "c", "section_id": "s"})],
+        abstained=False,
+    )
+    monkeypatch.setattr(hybrid_mod, "hybrid_retrieve", lambda *a, **k: base)
+    calls: list[int] = []
+    monkeypatch.setattr(am_mod, "expand_to_parents", lambda *a, **k: calls.append(1) or base)
+
+    make_hybrid_retrieve(None, uuid.uuid4(), None, auto_merge=False)("q")
+    assert calls == []  # off → child chunks returned as-is
+    make_hybrid_retrieve(None, uuid.uuid4(), None, auto_merge=True)("q")
+    assert calls == [1]  # on → parent expansion applied
 
 
 # --- DB-backed: expand_to_parents ----------------------------------------------

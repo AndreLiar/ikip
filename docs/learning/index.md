@@ -48,6 +48,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-041](./missions/MISSION-041/mission.md) | Docling as a containerized, opt-in PDF extractor behind the `TextExtractor` port | Epic 2 / extraction |
 | [MISSION-042](./missions/MISSION-042/mission.md) | Per-page extraction routing (PyMuPDF/OCR/Docling) + Indra OCR, benchmarked on real manuals | Epic 2 / extraction |
 | [MISSION-043](./missions/MISSION-043/mission.md) | First *measured* RAG quality (Ragas per-corpus); boilerplate hypothesis disproven; law strong / NTRS weak | Epic 5 / eval |
+| [MISSION-044](./missions/MISSION-044/mission.md) | Wire the Stage-1 auto-merge A/B (`--auto-merge` through the eval CLI); recall@k-vs-dedup caveat; live run gated | Epic 3 / retrieval eval |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
