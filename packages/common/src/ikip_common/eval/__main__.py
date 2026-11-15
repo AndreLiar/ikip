@@ -82,6 +82,7 @@ def _run(args: argparse.Namespace) -> int:
     tenant_id = uuid.UUID(args.tenant)
     contract = getattr(args, "contract", False)
     auto_merge = getattr(args, "auto_merge", False) or contract  # contract implies auto_merge
+    rewrite = getattr(args, "rewrite", False)
     prompts = _contract_prompts() if contract else None
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
@@ -92,6 +93,8 @@ def _run(args: argparse.Namespace) -> int:
             auto_merge=auto_merge,
             parent_max_tokens=getattr(args, "parent_max_tokens", None),
             mark_child=contract,
+            rewrite=rewrite,
+            rewrite_client=build_chat_client() if rewrite else None,
         )
         report = evaluate_dataset(
             cases,
@@ -99,7 +102,7 @@ def _run(args: argparse.Namespace) -> int:
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
-            config={"auto_merge": auto_merge, "contract": contract},  # ADR 0029 A/B variant
+            config={"auto_merge": auto_merge, "contract": contract, "rewrite": rewrite},
             prompts=prompts,
         )
     run_path, latest = write_run(report, args.out)
@@ -185,6 +188,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
     tenant_id = uuid.UUID(args.tenant)
     contract = getattr(args, "contract", False)
     auto_merge = getattr(args, "auto_merge", False) or contract  # contract implies auto_merge
+    rewrite = getattr(args, "rewrite", False)
     prompts = _contract_prompts() if contract else None
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
@@ -195,6 +199,8 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             auto_merge=auto_merge,
             parent_max_tokens=getattr(args, "parent_max_tokens", None),
             mark_child=contract,
+            rewrite=rewrite,
+            rewrite_client=build_chat_client() if rewrite else None,
         )
         report = evaluate_dataset(
             cases,
@@ -202,7 +208,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
-            config={"auto_merge": auto_merge, "contract": contract},  # ADR 0029 A/B variant
+            config={"auto_merge": auto_merge, "contract": contract, "rewrite": rewrite},
             prompts=prompts,
             telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
         )
@@ -502,6 +508,13 @@ def main(argv: list[str] | None = None) -> int:
             action="store_true",
             help="generation contract: mark the matched child in the parent + prompt the model "
             "to ground claims there (implies --auto-merge; MISSION-044)",
+        )
+        p.add_argument(
+            "--rewrite",
+            dest="rewrite",
+            action="store_true",
+            help="rewrite the question into a retrieval-optimised search query before "
+            "retrieving (ADR 0026); generation still answers the original question",
         )
 
     p_run = sub.add_parser("run", help="live run against a gold set")
