@@ -88,7 +88,37 @@ only **OFF (1.00) vs any-ON (~0.8)** is trustworthy. No more clever retrieval tw
 trusted on this gold set. The next real step is a **bigger, human-reviewed NTRS gold + `--runs N`**,
 then (if the trade-off holds) treat it as a genuine per-use-case policy — not a bug to engineer away.
 
-## Discovery — it's a **trade-off, not a win**
+## ⚠️ Re-run on the bigger gold (n=18) — the n=5 verdict was NOISE
+Built a larger NTRS silver gold (18 cases from real chunks, with source `chunk_ids` + reference
+answers; `packages/common/tests/fixtures/gold/ntrs_silver_v2.json`, 5 spot-reviewed) and re-ran the
+OFF-vs-ON A/B.
+
+| metric | OFF | ON | Δ (n=18) | Δ was (n=5) |
+|---|--:|--:|--:|--:|
+| **faithfulness** | 0.944 | **0.972** | **+0.028** | −0.111 ❗**reversed** |
+| answer_correctness | 0.696 | 0.636 | −0.060 | +0.081 ❗**reversed** |
+| answer_relevancy | 0.694 | 0.767 | +0.073 | +0.043 |
+| context_precision | 0.773 | 0.889 | +0.116 | −0.017 |
+| context_recall | 0.941 | 0.938 | −0.003 | 0.000 |
+
+**The headline n=5 finding — "auto-merge costs faithfulness, keep it off" — does not survive.** At
+n=18 auto-merge **slightly improves** faithfulness (+0.03) and **clearly improves context precision
+(+0.12)** and relevancy (+0.07), while answer_correctness dips (−0.06). Two of the five metrics
+**flipped sign** between n=5 and n=18. So the earlier "grounding regression" (and by extension the
+window + contract verdicts, all on n=5) was a **small-sample artifact** — precisely the caveat
+written above. The honest net at n=18: auto-merge is **roughly neutral-to-positive** (better
+retrieval-context metrics, slightly worse answer correctness), and the reason to keep it off ("it
+hurts grounding") is **withdrawn**.
+
+Also notable: the OFF **baseline** jumped vs the old gold (correctness 0.46→0.70, context_recall
+0.60→0.94). So **NTRS was never as "weak" as MISSION-043's n=5 implied** — that was largely a
+weak-gold artifact, now confirmed.
+
+**Still honest limits:** n=18, single run, silver (5/18 reviewed), one Azure judge. Effects are
+small; `answer_correctness −0.06` is the one real question mark. Needs `--runs N` + more reviewed
+cases before a *default flip*. But the direction is now "not a grounding risk", not "keep off".
+
+## Discovery (n=5) — superseded; kept for the lesson
 Stage-1 auto-merge did exactly what the ADR predicted on both sides: **more context lifted
 answer correctness (+8 pts) and relevancy (+4 pts), but diluted grounding — faithfulness fell
 1.00 → 0.89.** On a safety-first system that *gates on faithfulness*, a −0.11 is a regression in
@@ -111,14 +141,20 @@ claim is backed by a real citation", we won't trade that away — so the feature
 until we can get the richer answers *without* the trust drop.
 
 ## Next
-1. ~~Tune the parent window down~~ — **tried (700), rejected.**
-2. ~~Generation contract (mark child + prompt)~~ — **tried, rejected** (faithfulness 0.792).
-3. **This is now a measurement problem, not a retrieval one.** Before any further tweak: build a
-   **larger, human-reviewed NTRS gold** (10–15 Q/A) + `--runs N` to de-noise. At n=5 the ON-variant
-   differences are within a single claim; stop trusting them.
-4. Treat auto-merge as a **per-use-case policy**, not a bug: `auto_merge` stays **off** by default
-   (safety-critical answers), opt-in where completeness > strict grounding. The code + `--contract`
-   stay available for the day a trustworthy gold says the trade-off is worth flipping.
-5. Genuinely different lever (not tried): **Stage-2 smaller children** (gated on Qdrant, ADR 0027)
-   changes what we *match on*, not just what we *show* — the one avenue these three experiments
-   didn't touch.
+1. **Bigger gold built** (`ntrs_silver_v2.json`, n=18) — done; it overturned the n=5 verdict.
+2. **The window + contract "rejections" were on n=5 → now untrustworthy.** If we care about those
+   levers, re-run them on the n=18 gold; don't cite the n=5 numbers.
+3. **De-noise once more before a default flip:** `eval ragas --runs N` (repeat for variance) + grow
+   the reviewed share of the gold. The remaining real question is `answer_correctness −0.06`.
+4. **Keep `auto_merge` opt-in for now, but the reason changed:** not "it's a grounding risk"
+   (withdrawn) — just "effect is small/mixed, confirm with more runs before making it the default."
+   If `--runs` holds faithfulness ≥ baseline and correctness recovers, **flip it on** + add a
+   per-corpus faithfulness gate (ADR 0016).
+5. **Best next feature = query rewrite** (behind the `analyze` node, ADR 0026): attacks retrieval —
+   NTRS's real weak spot — without touching grounding, and is now A/B-able on the n=18 gold.
+
+## Meta-lesson
+A confident conclusion from **n=5** ("auto-merge hurts grounding — keep it off") was **reversed** by
+the same experiment at **n=18**. Two cheap retrofixes (window, contract) were chased against noise.
+The fix was never a cleverer retriever — it was a **trustworthy ruler**. Build the measurement before
+believing the measurement.
