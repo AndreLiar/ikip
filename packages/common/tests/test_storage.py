@@ -83,3 +83,16 @@ def test_exists_and_delete(storage: R2ObjectStorage) -> None:
 def test_presigned_url(storage: R2ObjectStorage) -> None:
     url = storage.presigned_url("raw/t1/c.pdf", expires_s=120)
     assert "ikip-test/raw/t1/c.pdf" in url and "exp=120" in url
+
+
+def test_r2_client_has_bounded_timeouts(storage: R2ObjectStorage) -> None:
+    # A dropped/half-open R2 socket must fail fast + retry, not wedge a batch ingest loop
+    # forever (observed: a Cloudflare TCP stuck in CLOSE_WAIT froze a 2000-doc pass). The
+    # `storage` fixture sets the required env; client creation is offline.
+    from ikip_common.config import get_settings
+    from ikip_common.storage.r2 import _make_client
+
+    cfg = _make_client(get_settings()).meta.config
+    assert cfg.connect_timeout == 10
+    assert cfg.read_timeout == 30
+    assert cfg.retries["mode"] == "standard"

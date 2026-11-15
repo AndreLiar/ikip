@@ -16,13 +16,23 @@ def _make_client(settings: Settings) -> Any:
     import boto3
     from botocore.config import Config
 
+    # Bounded timeouts + retries so a dropped/half-open R2 connection fails fast instead of
+    # wedging a caller forever. A batch ingestion loop reads thousands of objects; without a
+    # read_timeout a single stalled socket (observed: a Cloudflare TCP in CLOSE_WAIT) blocks the
+    # whole pass indefinitely. On timeout botocore retries, then raises -> the loop's per-doc
+    # `except ... continue` skips that document rather than hanging the pipeline.
     return boto3.client(
         "s3",
         endpoint_url=settings.r2_endpoint,
         aws_access_key_id=settings.r2_access_key_id.get_secret_value(),
         aws_secret_access_key=settings.r2_secret_access_key.get_secret_value(),
         region_name=settings.r2_region,
-        config=Config(signature_version="s3v4"),
+        config=Config(
+            signature_version="s3v4",
+            connect_timeout=10,
+            read_timeout=30,
+            retries={"max_attempts": 3, "mode": "standard"},
+        ),
     )
 
 
