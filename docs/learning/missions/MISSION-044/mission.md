@@ -48,19 +48,35 @@ returns *fewer distinct child ids* — recall@k can **drop** even though the mer
 So the honest success criterion: **faithfulness holds, correctness/context-recall rise, at an
 acceptable cost increase** — not "recall@k went up".
 
-## Results
-_Pending the live A/B run (gated: paid Azure judge). Fill from `eval-results/ab/*`._
+## Results (live Ragas, NTRS, n=5 silver gold, 2026-11-15)
+Ran the A/B via `eval ragas … [--auto-merge]` (budget-capped). Azure judge.
 
 | metric | baseline (off) | Stage-1 (on) | Δ | read |
 |---|--:|--:|--:|---|
-| faithfulness | — | — | — | should **hold** (≈ no drop) |
-| answer_correctness | — | — | — | hoped **up** (more context) |
-| context_recall | — | — | — | hoped **up** |
-| recall_at_k | — | — | — | may **drop** (dedup artifact — not the point) |
-| latency_ms p50 | — | — | — | expected **up** |
-| est_cost_usd total | — | — | — | expected **up** |
+| **faithfulness** | **1.000** | **0.889** | **−0.111** | ⚠️ grounding slipped (one claim drifted) |
+| **answer_correctness** | 0.463 | **0.544** | **+0.081** | ✅ wider context → more correct |
+| answer_relevancy | 0.476 | 0.519 | +0.043 | ✅ slightly more on-point |
+| context_precision | 0.567 | 0.550 | −0.017 | parents carry more non-essential text (expected) |
+| context_recall | 0.600 | 0.600 | 0.000 | relevant content was already retrieved; merge adds surrounds, not new coverage |
+| recall_at_k | n/a | n/a | — | gold has no `relevant_chunk_ids`; and it's the wrong metric here anyway |
+
+## Discovery — it's a **trade-off, not a win**
+Stage-1 auto-merge did exactly what the ADR predicted on both sides: **more context lifted
+answer correctness (+8 pts) and relevancy (+4 pts), but diluted grounding — faithfulness fell
+1.00 → 0.89.** On a safety-first system that *gates on faithfulness*, a −0.11 is a regression in
+the one property we refuse to trade. So the measured verdict is **do NOT flip `auto_merge` on by
+default yet** — the correctness gain is real but not free.
+
+**Honest caveats:** n=5, **silver** gold (LLM-from-corpus), LLM-judge variance, and `ntrs-3` is a
+degenerate positional-lookup question (MISSION-043) that no retrieval change can fix. faithfulness
+1.00→0.89 is ~one claim on a tiny set — directionally real (more context → more room to over-reach),
+but the magnitude is noisy. This is indicative, not definitive.
 
 ## Next
-1. Run the live A/B (bounded `--sample`, `--budget-usd` cap) and fill the table.
-2. If correctness/context-recall rise and faithfulness holds → propose flipping `auto_merge` default on (and wire it into the ask path + a per-corpus regression gate, ADR 0016).
-3. If not → keep opt-in; revisit `parent_max_tokens` or move to Stage-2 (smaller children, gated on Qdrant, ADR 0027).
+1. **Tune, don't flip.** Re-run with a **smaller `--parent-max-tokens`** (e.g. 600–800): less
+   context dilution should recover faithfulness while keeping some of the correctness gain — find
+   the knee of the trade-off.
+2. **De-noise the verdict:** larger, **human-reviewed** NTRS gold + `--runs N` before any default change.
+3. Keep `auto_merge` **opt-in**; if a tuned setting holds faithfulness ≥ baseline AND lifts
+   correctness, *then* propose the default flip + a per-corpus faithfulness regression gate (ADR 0016).
+4. Orthogonal lever if context dilution is the real problem → Stage-2 smaller children (gated on Qdrant, ADR 0027).
