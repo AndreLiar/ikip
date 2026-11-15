@@ -60,6 +60,25 @@ Ran the A/B via `eval ragas … [--auto-merge]` (budget-capped). Azure judge.
 | context_recall | 0.600 | 0.600 | 0.000 | relevant content was already retrieved; merge adds surrounds, not new coverage |
 | recall_at_k | n/a | n/a | — | gold has no `relevant_chunk_ids`; and it's the wrong metric here anyway |
 
+## Follow-up — parent-window sweep (does a smaller window buy back trust?)
+Hypothesis: a **smaller** `parent_max_tokens` = less context dilution → faithfulness recovers while
+keeping the correctness gain. Re-ran ON at **700** tokens (vs the 1200 default):
+
+| metric | off | on @1200 | on @700 |
+|---|--:|--:|--:|
+| **faithfulness** | **1.000** | 0.889 | **0.825** |
+| answer_correctness | 0.463 | 0.544 | **0.562** |
+| answer_relevancy | 0.476 | 0.519 | **0.605** |
+| context_precision | 0.567 | 0.550 | 0.550 |
+| context_recall | 0.600 | 0.600 | 0.600 |
+
+**Hypothesis rejected.** The smaller window did **not** recover faithfulness (0.825 ≤ 0.889 — no
+gain, and within n=5 judge noise either way), while correctness/relevancy kept drifting up. So the
+grounding cost is **not** a "too much context" artifact fixable by shrinking the parent — showing
+*any* merged parent context on this corpus costs some grounding. The robust signal across both
+windows is **ON-vs-OFF**: auto-merge trades ~one claim of faithfulness for better correctness,
+independent of window size. Parent-size tuning is **not** the lever.
+
 ## Discovery — it's a **trade-off, not a win**
 Stage-1 auto-merge did exactly what the ADR predicted on both sides: **more context lifted
 answer correctness (+8 pts) and relevancy (+4 pts), but diluted grounding — faithfulness fell
@@ -72,11 +91,24 @@ degenerate positional-lookup question (MISSION-043) that no retrieval change can
 1.00→0.89 is ~one claim on a tiny set — directionally real (more context → more room to over-reach),
 but the magnitude is noisy. This is indicative, not definitive.
 
+## In plain language
+We tested handing the AI the **whole surrounding section** instead of just the single best-matching
+paragraph. Result: the answers got **more complete and correct** (it had the fuller picture) — but
+also **slightly less trustworthy** (with more text in front of it, the model occasionally said
+something that *sounded* right but wasn't strictly backed by the source; grounding slipped from
+perfect to ~one claim drifting). Like giving a student the whole chapter instead of one paragraph:
+richer answers, but they start "filling in" from memory. Because this system's core promise is "every
+claim is backed by a real citation", we won't trade that away — so the feature stays **built but off**
+until we can get the richer answers *without* the trust drop.
+
 ## Next
-1. **Tune, don't flip.** Re-run with a **smaller `--parent-max-tokens`** (e.g. 600–800): less
-   context dilution should recover faithfulness while keeping some of the correctness gain — find
-   the knee of the trade-off.
-2. **De-noise the verdict:** larger, **human-reviewed** NTRS gold + `--runs N` before any default change.
-3. Keep `auto_merge` **opt-in**; if a tuned setting holds faithfulness ≥ baseline AND lifts
-   correctness, *then* propose the default flip + a per-corpus faithfulness regression gate (ADR 0016).
-4. Orthogonal lever if context dilution is the real problem → Stage-2 smaller children (gated on Qdrant, ADR 0027).
+1. ~~Tune the parent window down~~ — **tried (700), rejected**: it didn't recover faithfulness.
+   Parent-size is not the lever.
+2. **De-noise before any verdict-level decision:** larger, **human-reviewed** NTRS gold + `--runs N`.
+   At n=5 the faithfulness numbers (1.00 / 0.89 / 0.825) are each ~one claim — too coarse to trust
+   the *magnitude*; only the *direction* (ON costs grounding) is solid.
+3. Keep `auto_merge` **opt-in** (default off). Reasonable **per-use-case** policy: enable it where
+   completeness matters more than strict grounding, keep it off for safety-critical answers.
+4. If grounding-under-more-context is the real problem, the lever is **not** a smaller parent but a
+   better *generation* contract (prompt the model to cite only within the hit child's span) or
+   **Stage-2 smaller children** (gated on Qdrant, ADR 0027) — both separate experiments.
