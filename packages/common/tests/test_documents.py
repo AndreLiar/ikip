@@ -82,6 +82,32 @@ def test_near_duplicate_becomes_new_version_superseding(session: Session) -> Non
     assert current == {"A": False, "B": True}
 
 
+def test_near_duplicates_sharing_revision_label_get_unique_revisions(session: Session) -> None:
+    # Duplicate-heavy corpora (e.g. OSTI reports all tagged "33") feed near-duplicates that
+    # carry the SAME revision label; (document_id, revision) must stay unique instead of
+    # raising UniqueViolation. The second version's label is disambiguated with its checksum.
+    repo = _repo(session)
+    out1 = repo.ingest_version(
+        title="Report", checksum="c1", fingerprint="0000000000000000", revision="33"
+    )
+    session.flush()
+    out2 = repo.ingest_version(
+        title="Report", checksum="c2", fingerprint="0000000000000001", revision="33"
+    )
+    session.flush()  # would raise UniqueViolation before the fix
+
+    assert out2.document.id == out1.document.id  # same (near-dup) document
+    revisions = sorted(
+        session.execute(
+            select(DocumentVersion.revision).where(DocumentVersion.document_id == out1.document.id)
+        )
+        .scalars()
+        .all()
+    )
+    assert revisions == ["33", "33-c2"]  # original label kept, collision disambiguated
+    assert out2.version.is_current is True
+
+
 def test_unrelated_content_creates_separate_document(session: Session) -> None:
     repo = _repo(session)
     repo.ingest_version(title="A", checksum="a", fingerprint="0000000000000000", revision="A")

@@ -1,8 +1,8 @@
 """Ingestion-job repository + state transitions (Story 2.1).
 
 Tenant-scoped (inherits isolation). Encodes the valid job lifecycle so state
-changes are consistent: pending → running → (succeeded | failed) ; failed → running
-(retry) ; failed → dead_letter.
+changes are consistent: pending → running → (succeeded | failed) ; pending → failed
+(hard error before running persists) ; failed → running (retry) ; failed → dead_letter.
 """
 
 from __future__ import annotations
@@ -14,7 +14,11 @@ from ikip_common.db.repository import TenantScopedRepository
 
 # Allowed state transitions (Story 2.6 dead-letter/retry builds on this).
 _ALLOWED: dict[IngestionState, set[IngestionState]] = {
-    IngestionState.pending: {IngestionState.running},
+    # pending -> failed: a per-doc worker transitions pending->running then does its work in
+    # one transaction; if that work raises, the running transition is rolled back, so the
+    # failure must be recordable directly from pending — otherwise the error handler itself
+    # throws (IllegalStateTransition) and one bad document aborts the whole batch.
+    IngestionState.pending: {IngestionState.running, IngestionState.failed},
     IngestionState.running: {IngestionState.succeeded, IngestionState.failed},
     IngestionState.failed: {IngestionState.running, IngestionState.dead_letter},
     IngestionState.succeeded: set(),

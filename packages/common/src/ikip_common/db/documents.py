@@ -64,6 +64,18 @@ class DocumentRepository(TenantScopedRepository[Document]):
         )
         return self.session.execute(stmt).scalar_one_or_none()
 
+    def _revision_taken(self, document_id: uuid.UUID, revision: str) -> bool:
+        """True if this document already has a version with this revision label."""
+        stmt = (
+            select(DocumentVersion.id)
+            .where(
+                DocumentVersion.document_id == document_id,
+                DocumentVersion.revision == revision,
+            )
+            .limit(1)
+        )
+        return self.session.execute(stmt).first() is not None
+
     # --- ingest with dedup + versioning --------------------------------
 
     def ingest_version(
@@ -130,6 +142,13 @@ class DocumentRepository(TenantScopedRepository[Document]):
         prev = self.current_version(document.id)
         if prev is not None:
             prev.is_current = False
+        # Keep (document_id, revision) unique. A near-duplicate becomes a new version, but its
+        # revision label is caller-supplied (document metadata, or `r-<checksum>`); duplicate-
+        # heavy corpora reuse the same label across near-dups (e.g. OSTI reports all tagged
+        # "33"), which would violate uq_docver_document_revision. The checksum is already known
+        # new here (exact-checksum dups are rejected upstream), so it disambiguates uniquely.
+        if self._revision_taken(document.id, revision):
+            revision = f"{revision}-{checksum[:8]}"
         version = DocumentVersion(
             document_id=document.id,
             revision=revision,
