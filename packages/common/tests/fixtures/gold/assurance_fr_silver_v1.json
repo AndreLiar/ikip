@@ -1,0 +1,139 @@
+{
+  "gold_set_version": "assurance_fr-silver-v1",
+  "language": "fr",
+  "note": "Silver gold from real assurance_fr chunks (MISSION-045). relevant_chunk_ids are dev-DB-specific (live eval against this tenant); questions+answers are portable. Not human-reviewed unless flagged.",
+  "cases": [
+    {
+      "case_key": "assurance_fr-1",
+      "question": "Dans quel cas le ministre de l'économie et des finances peut-il restreindre ou interdire la libre disposition des actifs d'une entreprise situés en France ?",
+      "expected_behavior": "answered",
+      "ground_truth": "À la demande d’une autorité de contrôle d’un État membre de la CEE ayant exigé un plan de financement à court terme et restreint ou interdit la disposition de ses actifs.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "1fd03b50-0b88-48a3-b062-e088f19d3eff"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-2",
+      "question": "Quels risques situés en France peuvent être couverts en coassurance communautaire ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Ceux pouvant être couverts en libre prestation de services, ainsi que les risques des travaux de bâtiment soumis à une assurance obligatoire.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "454dc915-4d66-448f-b34f-01f4cc3d3352"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-3",
+      "question": "Dans quels départements peut-il être dérogé à la loi locale du 30 mai 1908 sur le contrat d'assurance, et selon quelles conditions ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Dans le Bas-Rhin, le Haut-Rhin et la Moselle, selon les conditions de l'article 10 de la loi du 24 juillet 1921.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "9752c599-2aba-4158-a87a-6be9385308e5"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-4",
+      "question": "Que se passe-t-il si la marge de solvabilité d’une entreprise étrangère non établie dans un État membre de la CEE est insuffisante ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Le ministre exige un plan de redressement à soumettre dans le mois.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "4c42a81a-d678-450f-b0d2-dcbd52ff1b04"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-5",
+      "question": "Quels pouvoirs la commission exerce-t-elle à l'égard des entreprises d'assurance et des sociétés de participations d'assurance pour obtenir des informations et contrôler leurs հրապարակations ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Elle peut demander toutes informations et documents comptables, vérifier les publications, ordonner des publications rectificatives et rendre publiques certaines informations.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "d6a25ba5-4661-4f82-b8e9-7a03fc256f8e"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-6",
+      "question": "Que devient le contrat d’assurance si l’assuré fait l’objet d’un redressement judiciaire, et pendant quel délai le contrat peut-il encore être résilié ?",
+      "expected_behavior": "answered",
+      "ground_truth": "L’assurance subsiste, mais le contrat peut être résilié pendant trois mois à compter de cette date.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "406665bc-53c5-4f3b-ab4b-03c5d75b2537"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-7",
+      "question": "Dans quelles conditions les sociétés peuvent-elles prélever des frais sur les premiers versements d’une souscription, et quelle limite ne peuvent-elles pas dépasser ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Si les statuts le prévoient, elles peuvent prélever au plus 3,50 % du montant de la souscription, sans dépasser la moitié du prélèvement statutaire total.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "8157c95e-d650-4442-8cc9-dbb70ce63c68"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-8",
+      "question": "Les entreprises soumises au contrôle de l'État doivent-elles obtenir un agrément administratif avant de commencer leurs opérations, et existe-t-il une exception pour l'acceptation en réassurance ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Oui, sauf pour certaines entreprises françaises et européennes en réassurance.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "c7ea39c0-15c2-49f1-83de-4d95fe091338"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-9",
+      "question": "Quel est l’objet des sociétés d’assurance mutuelles ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Elles ont un objet non commercial.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "2353e89f-d485-4e47-b5ec-76299065aaa5"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-10",
+      "question": "Que fait le ministre de l'économie et des finances lorsqu'une entreprise française demande l'agrément à l'autorité de contrôle d'un État membre de la Communauté économique européenne pour pratiquer des opérations d'assurances ?",
+      "expected_behavior": "answered",
+      "ground_truth": "Il présente ses observations dans un délai de trois mois.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "f7c9b47f-7f15-47e3-9594-e564bdf2fd47"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-11",
+      "question": "Qui est habilité à fixer les caractéristiques essentielles de l’émission d’obligations, de titres participatifs ou de titres subordonnés remboursables, et peut-il déléguer cette compétence ?",
+      "expected_behavior": "answered",
+      "ground_truth": "L’assemblée générale des sociétaires, avec possibilité de délégation au conseil d’administration pour les modalités pratiques.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "c20a0c24-2a28-4464-92db-1b11f302a4b9"
+      ]
+    },
+    {
+      "case_key": "assurance_fr-12",
+      "question": "Que constate le comité des entreprises d'assurance lorsqu'une société déjà agréée souscrit un traité de réassurance et obtient l'accord de l'Autorité de contrôle des assurances et des mutuelles ?",
+      "expected_behavior": "answered",
+      "ground_truth": "La caducité de l'ensemble des agréments.",
+      "language": "fr",
+      "reviewed": false,
+      "relevant_chunk_ids": [
+        "6cb399e1-ef02-4b57-958f-017aece829b0"
+      ]
+    }
+  ]
+}
