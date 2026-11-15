@@ -21,10 +21,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Non, ils ne peuvent pas s’y opposer.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "d7e569df-4a7c-44c8-bfc0-a25850b0c6d2"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-3",
@@ -32,10 +33,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Le capital restant dû, les intérêts échus, des intérêts de retard au taux du prêt, et une indemnité plafonnée par décret.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "903abe11-042c-47fa-aee7-6c5ee80a56f0"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-4",
@@ -55,10 +57,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Aux crédits de 200 à 75 000 euros.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "ad6166f3-8831-4308-ba02-17c28edfbc3f"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-6",
@@ -66,10 +69,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Le directeur général de la concurrence, de la consommation et de la répression des fraudes, le chef du service national des enquêtes de la DGCCRF, le directeur régional de l’économie, de l’emploi, du travail et des solidarités, ou le directeur de la direction départementale chargée de la protection des populations.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "5d5ba4ff-ea16-4adc-98af-854fedba59aa"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-7",
@@ -77,10 +81,11 @@
       "expected_behavior": "answered",
       "ground_truth": "La dénomination de l’association, son siège social, l’organe qui la représente légalement, ainsi que les nom, prénoms et adresse de chaque consommateur concerné.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "6cc79bd4-e319-4bd4-81ac-c7016b55c8d8"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-8",
@@ -88,10 +93,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Par arrêté conjoint du ministre chargé de l’industrie et du ministre de l’économie, selon le décret n° 92-681 du 20 juillet 1992.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "8c065dfb-0465-4e20-8db8-8aeb49409d22"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-9",
@@ -99,10 +105,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Un plat élaboré sur place à partir de produits bruts.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "8f54c1d2-05a8-40e5-a356-413cde0fa7d1"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-10",
@@ -110,10 +117,11 @@
       "expected_behavior": "answered",
       "ground_truth": "La confiscation de la chose ayant servi ou destinée à commettre l’infraction, ou de son produit.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "57bba5ca-c277-4339-a4af-303ccdb59585"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-11",
@@ -121,10 +129,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Les informations correspondantes doivent être publiées de façon claire, complète, lisible par machine, accessible aux personnes handicapées et régulièrement mises à jour.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "e40f7aca-c679-4147-87ea-1c8ff1a30644"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "credit_conso_fr-12",
@@ -132,10 +141,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Sur convocation du ministre, avec un préavis d’au moins deux semaines, en urgence sans délai ni quorum, ou par voie écrite.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "4425a78c-8980-401f-a287-dcb676c2bb81"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     }
   ]
 }

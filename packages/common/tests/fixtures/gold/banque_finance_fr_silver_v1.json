@@ -21,10 +21,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Trois membres, nommés par le conseil de surveillance qui désigne l’un d’eux comme président.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "f2334d56-5f45-423d-8a0e-85ec94d42a5a"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-3",
@@ -32,10 +33,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Pour la durée restant à courir du mandat remplacé.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "3a45c626-bd42-4fb0-835a-556867bbd11e"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-4",
@@ -43,10 +45,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Les catégories 1° à 7° énumérées par le texte.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "3cfe1a0d-d64f-48ef-9ea0-bbe5a8b4ce8a"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-5",
@@ -66,10 +69,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Lorsqu’ils sont exercés dans les locaux des établissements de crédit ou des prestataires de services d’investissement, conformément à la destination de ces locaux et dans les conditions où ils y sont normalement pratiqués.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "1e796caf-0b5a-40ff-a18c-ddabcd48adb6"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-7",
@@ -77,10 +81,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Oui, sauf pour celles qui n’ont pas émis de titres donnant un droit sur l’actif net, auxquelles l’article L. 236-10 ne s’applique pas.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "a4b681fd-aec0-4283-a22f-1d8f789d4016"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-8",
@@ -88,10 +93,11 @@
       "expected_behavior": "answered",
       "ground_truth": "La fourniture, dans un État d’accueil, d’un service d’investissement sans présence permanente dans cet État.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "28c4bf45-9c37-4b84-9e08-8c0e24991c4f"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-9",
@@ -99,10 +105,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Préavis de trois mois ; silence du client pendant deux mois = acceptation.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "04a73728-83db-40be-b647-304f28567028"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-10",
@@ -110,10 +117,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Lorsqu’elle ne remplit plus l’une des conditions d’agrément.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "a6d85a80-bb2d-4568-869b-5d0618981ad4"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-11",
@@ -121,10 +129,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Le gouverneur de la Banque de France, président de la commission bancaire, ou son représentant.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "cc3c69f9-f14c-48ee-8f73-5fcbe11a13f3"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     },
     {
       "case_key": "banque_finance_fr-12",
@@ -132,10 +141,11 @@
       "expected_behavior": "answered",
       "ground_truth": "Elle doit avoir son siège et sa direction effective en France et respecter en permanence les règles applicables au marché.",
       "language": "fr",
-      "reviewed": false,
+      "reviewed": true,
       "relevant_chunk_ids": [
         "425b5f78-80fc-40f4-8b4d-c88587f1712d"
-      ]
+      ],
+      "reviewer": "human-spot-review"
     }
   ]
 }
