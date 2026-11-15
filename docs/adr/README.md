@@ -68,4 +68,4 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0026](./0026-agentic-rag-evolution.md)                          | Agentic RAG evolution (query analysis, reformulation, iterative retrieval)             | Accepted           |
 | [0027](./0027-vector-storage-halfvec-now-qdrant-later.md)        | Vector storage: halfvec on pgvector/Neon now → dedicated vector store (Qdrant) later    | Accepted           |
 | [0028](./0028-build-vs-buy-rag-platform.md)                      | Build vs buy: build IKIP (learning + reference architecture) vs NotebookLM/AnythingLLM/managed RAG | Accepted           |
-| [0029](./0029-hierarchical-parent-child-chunking.md)             | Hierarchical (parent/child) chunking via section-based auto-merging (Stage 1 storage-neutral; Stage 2 gated) | Proposed           |
+| [0029](./0029-hierarchical-parent-child-chunking.md)             | Hierarchical (parent/child) chunking via section-based auto-merging (Stage 1 implemented; Stage 2 gated) | Accepted           |
