@@ -63,6 +63,12 @@ def _load_gold(path: str) -> tuple[str, list]:
     return doc.get("gold_set_version", "unknown"), cases
 
 
+def _contract_prompts():  # noqa: ANN202 — PromptConfig (generation-contract variant)
+    from ikip_common.llm.prompts import GROUNDING_CONTRACT_V1
+
+    return GROUNDING_CONTRACT_V1
+
+
 def _run(args: argparse.Namespace) -> int:
     from sqlalchemy.orm import Session
 
@@ -74,7 +80,9 @@ def _run(args: argparse.Namespace) -> int:
 
     version, cases = _load_gold(args.gold)
     tenant_id = uuid.UUID(args.tenant)
-    auto_merge = getattr(args, "auto_merge", False)
+    contract = getattr(args, "contract", False)
+    auto_merge = getattr(args, "auto_merge", False) or contract  # contract implies auto_merge
+    prompts = _contract_prompts() if contract else None
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
             session,
@@ -83,6 +91,7 @@ def _run(args: argparse.Namespace) -> int:
             limit=args.k,
             auto_merge=auto_merge,
             parent_max_tokens=getattr(args, "parent_max_tokens", None),
+            mark_child=contract,
         )
         report = evaluate_dataset(
             cases,
@@ -90,7 +99,8 @@ def _run(args: argparse.Namespace) -> int:
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
-            config={"auto_merge": auto_merge},  # ADR 0029 Stage-1 A/B: records the variant
+            config={"auto_merge": auto_merge, "contract": contract},  # ADR 0029 A/B variant
+            prompts=prompts,
         )
     run_path, latest = write_run(report, args.out)
     # Push the quality aggregate to Grafana Cloud (Story 5.6 AC2) — no-op without OTLP.
@@ -173,7 +183,9 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
     if getattr(args, "sample", 0):
         cases = cases[: args.sample]  # bounded sample (AC5: cost/variance control)
     tenant_id = uuid.UUID(args.tenant)
-    auto_merge = getattr(args, "auto_merge", False)
+    contract = getattr(args, "contract", False)
+    auto_merge = getattr(args, "auto_merge", False) or contract  # contract implies auto_merge
+    prompts = _contract_prompts() if contract else None
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
             session,
@@ -182,6 +194,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             limit=args.k,
             auto_merge=auto_merge,
             parent_max_tokens=getattr(args, "parent_max_tokens", None),
+            mark_child=contract,
         )
         report = evaluate_dataset(
             cases,
@@ -189,7 +202,8 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
-            config={"auto_merge": auto_merge},  # ADR 0029 Stage-1 A/B: records the variant
+            config={"auto_merge": auto_merge, "contract": contract},  # ADR 0029 A/B variant
+            prompts=prompts,
             telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
         )
     return version, cases, report
@@ -481,6 +495,13 @@ def main(argv: list[str] | None = None) -> int:
             type=int,
             default=None,
             help="token budget for the merged parent context (default 1200)",
+        )
+        p.add_argument(
+            "--contract",
+            dest="contract",
+            action="store_true",
+            help="generation contract: mark the matched child in the parent + prompt the model "
+            "to ground claims there (implies --auto-merge; MISSION-044)",
         )
 
     p_run = sub.add_parser("run", help="live run against a gold set")

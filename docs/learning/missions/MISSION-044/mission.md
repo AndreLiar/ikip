@@ -60,24 +60,33 @@ Ran the A/B via `eval ragas … [--auto-merge]` (budget-capped). Azure judge.
 | context_recall | 0.600 | 0.600 | 0.000 | relevant content was already retrieved; merge adds surrounds, not new coverage |
 | recall_at_k | n/a | n/a | — | gold has no `relevant_chunk_ids`; and it's the wrong metric here anyway |
 
-## Follow-up — parent-window sweep (does a smaller window buy back trust?)
-Hypothesis: a **smaller** `parent_max_tokens` = less context dilution → faithfulness recovers while
-keeping the correctness gain. Re-ran ON at **700** tokens (vs the 1200 default):
+## Follow-up — two attempts to recover the lost trust (both failed)
+Tried two levers to keep the correctness gain **without** the faithfulness cost:
+1. **Smaller parent window** (`--parent-max-tokens 700`) — less context to drift into.
+2. **Generation contract** (`--contract`) — wrap the precise matched child in `<<<MATCHED
+   PASSAGE>>>` delimiters inside the parent + a prompt telling the model to ground every claim
+   there and use the surround only to interpret.
 
-| metric | off | on @1200 | on @700 |
-|---|--:|--:|--:|
-| **faithfulness** | **1.000** | 0.889 | **0.825** |
-| answer_correctness | 0.463 | 0.544 | **0.562** |
-| answer_relevancy | 0.476 | 0.519 | **0.605** |
-| context_precision | 0.567 | 0.550 | 0.550 |
-| context_recall | 0.600 | 0.600 | 0.600 |
+| metric | off | on @1200 | on @700 | **contract** |
+|---|--:|--:|--:|--:|
+| **faithfulness** | **1.000** | 0.889 | 0.825 | **0.792** |
+| answer_correctness | 0.463 | 0.544 | 0.562 | **0.559** |
+| answer_relevancy | 0.476 | 0.519 | 0.605 | **0.623** |
+| context_precision | 0.567 | 0.550 | 0.550 | 0.517 |
+| context_recall | 0.600 | 0.600 | 0.600 | 0.600 |
 
-**Hypothesis rejected.** The smaller window did **not** recover faithfulness (0.825 ≤ 0.889 — no
-gain, and within n=5 judge noise either way), while correctness/relevancy kept drifting up. So the
-grounding cost is **not** a "too much context" artifact fixable by shrinking the parent — showing
-*any* merged parent context on this corpus costs some grounding. The robust signal across both
-windows is **ON-vs-OFF**: auto-merge trades ~one claim of faithfulness for better correctness,
-independent of window size. Parent-size tuning is **not** the lever.
+**Both hypotheses rejected.** Neither the smaller window nor the generation contract recovered
+faithfulness — every variant that shows the parent context sits in the **0.79–0.89** band (vs 1.00
+off), while correctness stays lifted (0.54–0.56 vs 0.46). The contract even trended *lower* on
+faithfulness while pushing relevancy up — plausibly because the richer instruction produced more
+elaborate answers = more claims = more room to over-reach. The grounding cost is **robust**: it is
+not a "too much context" artifact (window) nor a "model wasn't told" artifact (contract).
+
+**The honest blocker is now measurement, not retrieval.** At n=5, faithfulness 1.00 / 0.89 / 0.83 /
+0.79 differ by *fractions of a single claim* — the differences *among the ON variants are noise*;
+only **OFF (1.00) vs any-ON (~0.8)** is trustworthy. No more clever retrieval tweaks should be
+trusted on this gold set. The next real step is a **bigger, human-reviewed NTRS gold + `--runs N`**,
+then (if the trade-off holds) treat it as a genuine per-use-case policy — not a bug to engineer away.
 
 ## Discovery — it's a **trade-off, not a win**
 Stage-1 auto-merge did exactly what the ADR predicted on both sides: **more context lifted
@@ -102,13 +111,14 @@ claim is backed by a real citation", we won't trade that away — so the feature
 until we can get the richer answers *without* the trust drop.
 
 ## Next
-1. ~~Tune the parent window down~~ — **tried (700), rejected**: it didn't recover faithfulness.
-   Parent-size is not the lever.
-2. **De-noise before any verdict-level decision:** larger, **human-reviewed** NTRS gold + `--runs N`.
-   At n=5 the faithfulness numbers (1.00 / 0.89 / 0.825) are each ~one claim — too coarse to trust
-   the *magnitude*; only the *direction* (ON costs grounding) is solid.
-3. Keep `auto_merge` **opt-in** (default off). Reasonable **per-use-case** policy: enable it where
-   completeness matters more than strict grounding, keep it off for safety-critical answers.
-4. If grounding-under-more-context is the real problem, the lever is **not** a smaller parent but a
-   better *generation* contract (prompt the model to cite only within the hit child's span) or
-   **Stage-2 smaller children** (gated on Qdrant, ADR 0027) — both separate experiments.
+1. ~~Tune the parent window down~~ — **tried (700), rejected.**
+2. ~~Generation contract (mark child + prompt)~~ — **tried, rejected** (faithfulness 0.792).
+3. **This is now a measurement problem, not a retrieval one.** Before any further tweak: build a
+   **larger, human-reviewed NTRS gold** (10–15 Q/A) + `--runs N` to de-noise. At n=5 the ON-variant
+   differences are within a single claim; stop trusting them.
+4. Treat auto-merge as a **per-use-case policy**, not a bug: `auto_merge` stays **off** by default
+   (safety-critical answers), opt-in where completeness > strict grounding. The code + `--contract`
+   stay available for the day a trustworthy gold says the trade-off is worth flipping.
+5. Genuinely different lever (not tried): **Stage-2 smaller children** (gated on Qdrant, ADR 0027)
+   changes what we *match on*, not just what we *show* — the one avenue these three experiments
+   didn't touch.

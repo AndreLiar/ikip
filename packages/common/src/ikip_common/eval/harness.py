@@ -111,6 +111,7 @@ def _evaluate_case(
     validator: GroundingValidator | None,
     k: int,
     telemetry,  # noqa: ANN001 — Telemetry port (Story 5.4); Null in deterministic CI
+    prompts=None,  # noqa: ANN001 — optional PromptConfig override (e.g. generation-contract A/B)
 ) -> CaseResult:
     from ikip_common.llm.answer import grounded_answer
 
@@ -119,7 +120,11 @@ def _evaluate_case(
     # Trace the case so Ragas scores can later attach to this trace (Story 5.4 ↔ 5.2).
     with telemetry.span("eval.case", case_key=case.case_key, operation="eval") as span:
         result: AnswerResult = grounded_answer(
-            case.question, retrieve=capturing, chat_client=chat_client, validator=validator
+            case.question,
+            retrieve=capturing,
+            chat_client=chat_client,
+            validator=validator,
+            prompts=prompts,
         )
         trace_id = span.trace_id
     latency_ms = (time.perf_counter() - start) * 1000
@@ -171,6 +176,7 @@ def evaluate_dataset(
     gold_set_version: str = "unknown",
     config: dict | None = None,
     telemetry=None,  # noqa: ANN001 — Telemetry port; None -> NullTelemetry (no tracing)
+    prompts=None,  # noqa: ANN001 — optional PromptConfig override (generation-contract A/B)
 ) -> EvalReport:
     """Run all cases, aggregating retrieval + answer metrics. Deterministic given a fixed
     retrieve + FakeChatClient. Pass a `telemetry` (Story 5.4) to trace each case so Ragas
@@ -179,7 +185,9 @@ def evaluate_dataset(
         from ikip_common.telemetry import NullTelemetry
 
         telemetry = NullTelemetry()
-    results = [_evaluate_case(c, retrieve, chat_client, validator, k, telemetry) for c in cases]
+    results = [
+        _evaluate_case(c, retrieve, chat_client, validator, k, telemetry, prompts) for c in cases
+    ]
     latencies = [r.latency_ms for r in results]
     aggregate = {
         "n_cases": len(results),

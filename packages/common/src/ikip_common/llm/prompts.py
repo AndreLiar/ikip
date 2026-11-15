@@ -312,3 +312,19 @@ def build_prompt_publisher(settings=None) -> PromptPublisher:  # noqa: ANN001
 def _builtin_variant(version: str, **changes: object) -> PromptConfig:
     """Helper for tests/tools: a new version derived from BUILTIN_V1."""
     return replace(BUILTIN_V1, version=version, **changes)
+
+
+# Generation contract for ADR 0029 Stage-1 auto-merge (MISSION-044 follow-up). When the model is
+# shown the *parent section* for context, grounding slipped (it reasoned beyond the matched span).
+# This variant tells it to answer from the MATCHED passage and use the surround only to interpret —
+# aiming to keep the correctness gain of wider context without the faithfulness cost.
+GROUNDING_CONTRACT_V1 = _builtin_variant(
+    "v1-contract",
+    generate_system=(
+        BUILTIN_V1.generate_system
+        + "\n- Each evidence block may wrap its precise retrieved passage in "
+        "<<<MATCHED PASSAGE …>>> … <<<END MATCHED PASSAGE>>>. Base every claim on the MATCHED "
+        "passage; use the surrounding text ONLY to interpret it. Do not assert, synthesise or "
+        "generalise anything not directly stated in a MATCHED passage."
+    ),
+)
