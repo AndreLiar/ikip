@@ -81,6 +81,18 @@ def test_illegal_transition_rejected(session: Session) -> None:
         repo.transition(job, IngestionState.succeeded)  # pending -> succeeded not allowed
 
 
+def test_pending_can_fail_directly(session: Session) -> None:
+    # A per-doc worker's pending->running is rolled back when the work raises, so the error
+    # handler must record the failure straight from pending (else it throws and aborts the batch).
+    repo, _ = _repo(session)
+    job = repo.create("src")
+    session.flush()
+    repo.transition(job, IngestionState.failed, error_info={"error": "boom"})
+    assert job.state is IngestionState.failed
+    assert job.finished_at is not None
+    assert job.error_info == {"error": "boom"}
+
+
 def test_job_is_tenant_scoped(session: Session) -> None:
     repo_a, _ = _repo(session)
     repo_b, _ = _repo(session)
