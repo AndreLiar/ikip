@@ -183,6 +183,33 @@ measured it on the wrong population to see its upside.
 The right follow-up is a **gold set of deliberately messy/vague questions** (the case rewrite targets)
 before judging it — otherwise we'd reject a tool for failing a test it was never meant to pass.
 
+### Follow-up — the messy-question gold (the fair test), and a surprise
+Built the fair test: `scripts/dataset/gen_messy_gold.py` degrades ONLY the phrasing of the n=18
+clean questions (typos, dropped caps, unexpanded acronyms, terse/colloquial — "advnatage",
+"nav system", "whats", "how r") while keeping the **same source chunk + reference answer**. So the
+single variable is question quality. recall@5 (deterministic, free, decisive):
+
+| recall@5 | OFF (raw query) | REWRITE |
+|---|--:|--:|
+| clean questions | 0.889 | 0.778 |
+| **messy questions** | **0.889** | 0.833 |
+
+**Surprise: the messy questions retrieved exactly as well as the clean ones (both 0.889).** The
+typos/abbreviations/case did **not** hurt retrieval at all — so rewrite had nothing to recover, and
+its paraphrasing drift still cost one hit (messy-OFF misses `v2-2,v2-5`; messy-REWRITE *adds* `v2-15`
+— it **broke a question that worked**).
+
+**Real finding (about the system, not the feature):** our **hybrid retrieval (vector + BM25) is
+already robust to messy phrasing** — embeddings key on the surviving content nouns ("cable path",
+"doppler signal", "fertilizer KSC"), which typos don't erase. So query rewrite's core premise
+("messy input → weak retrieval") **does not hold on this corpus**. rewrite stays **off**.
+
+**Honest limits:** our LLM-degraded "messy" keeps the key nouns intact; a truly broken query (wrong
+terminology, zero keywords, non-English) might still benefit — untested. And recall@5 on one relevant
+chunk/question, n=18, single run. But across *clean AND messy*, rewrite only ever **hurt or drew** —
+there is no measured case where it helped. Burden of proof is now on finding a query population it
+rescues; until then it's a correctly-built, correctly-shelved tool.
+
 ## Meta-lesson
 A confident conclusion from **n=5** ("auto-merge hurts grounding — keep it off") was **reversed** by
 the same experiment at **n=18**. Two cheap retrofixes (window, contract) were chased against noise.
