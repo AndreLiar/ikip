@@ -133,6 +133,8 @@ class RagasAdapter(RagasEvaluator):
         self._settings = settings or get_settings()
 
     def _judge(self):  # noqa: ANN202 — ragas wrappers, lazy
+        import os
+
         from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
         from ragas.embeddings import LangchainEmbeddingsWrapper
         from ragas.llms import LangchainLLMWrapper
@@ -143,6 +145,10 @@ class RagasAdapter(RagasEvaluator):
             api_version=s.azure_openai_api_version,
             azure_endpoint=s.azure_openai_endpoint,
             api_key=s.azure_openai_api_key.get_secret_value() if s.azure_openai_api_key else None,
+            # Client-level retry with exponential backoff: a transient 429 (per-minute token
+            # rate limit) on a single judge call is retried here before it propagates and fails
+            # the whole Ragas run. Complements the low-concurrency RunConfig (_run_config).
+            max_retries=int(os.environ.get("IKIP_AZURE_MAX_RETRIES", "6")),
         )
         emb = AzureOpenAIEmbeddings(
             azure_deployment=s.azure_openai_embedding_deployment,
@@ -151,6 +157,21 @@ class RagasAdapter(RagasEvaluator):
             api_key=s.azure_openai_api_key.get_secret_value() if s.azure_openai_api_key else None,
         )
         return LangchainLLMWrapper(llm), LangchainEmbeddingsWrapper(emb)
+
+    def _run_config(self):  # noqa: ANN202 — ragas RunConfig (or None if unavailable), lazy
+        import os
+
+        # Throttle judge concurrency: Ragas defaults to 16 concurrent workers, which bursts past
+        # the Azure per-minute TOKEN rate limit (429) — badly, since auto-merge's large contexts
+        # inflate tokens/call. Cap workers low + give generous retry/backoff so a capped deployment
+        # drains steadily instead of failing the whole run. Tunable via env for bigger quotas.
+        # Degrades to Ragas default (None) if RunConfig isn't importable (API drift) — no crash.
+        try:
+            from ragas.run_config import RunConfig
+        except ImportError:
+            return None
+        max_workers = int(os.environ.get("IKIP_RAGAS_MAX_WORKERS", "4"))
+        return RunConfig(max_workers=max_workers, max_retries=10, max_wait=90, timeout=300)
 
     def evaluate(self, samples: Sequence[EvalSample]) -> RagasScores:
         from ragas import evaluate as ragas_evaluate
@@ -165,6 +186,8 @@ class RagasAdapter(RagasEvaluator):
         from datasets import Dataset
 
         llm, emb = self._judge()
+        run_config = self._run_config()
+        extra = {"run_config": run_config} if run_config is not None else {}
         rows = {
             "question": [s.question for s in samples],
             "answer": [s.answer for s in samples],
@@ -186,12 +209,12 @@ class RagasAdapter(RagasEvaluator):
 
             with get_openai_callback() as cb:
                 result = ragas_evaluate(
-                    Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb
+                    Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb, **extra
                 )
             prompt_tok, completion_tok = cb.prompt_tokens, cb.completion_tokens
         except ImportError:
             result = ragas_evaluate(
-                Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb
+                Dataset.from_dict(rows), metrics=metrics, llm=llm, embeddings=emb, **extra
             )
 
         df = result.to_pandas()
