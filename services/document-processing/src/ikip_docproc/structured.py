@@ -67,7 +67,15 @@ class SecCompanyFactsExtractor:
     (Story 8.1 AC4); the count is available via `last_dropped`."""
 
     def __init__(self, taxonomies: Sequence[str] | None = None) -> None:
-        # Default to the quantitative taxonomies; `dei` is mostly metadata.
+        # Taxonomy coverage is explicit/configurable. Default = the quantitative taxonomies
+        # (`dei` is mostly metadata; pass it explicitly to include share counts etc.).
+        #
+        # DIMENSIONAL NOTE (ADR 0030, honest limit): the companyfacts API is **consolidated** —
+        # it carries NO segment/axis breakdowns, so `FactSpec.dimensions` is always {} from this
+        # source. True dimensional facts (e.g. revenue by geography) live in the raw XBRL instance
+        # docs / the per-dimension frames API, which is a separate (larger) ingestion path. The
+        # model + persist layer are already dimension-ready (`dimensions` JSONB + unique key);
+        # adopting a dimensional source is a documented follow-up, not a change here.
         self._taxonomies = set(taxonomies) if taxonomies else {"us-gaap", "ffd"}
         self.last_dropped = 0
 

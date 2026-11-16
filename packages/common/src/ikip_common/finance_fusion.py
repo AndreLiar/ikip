@@ -46,6 +46,25 @@ class DocEvidence:
     page_start: int | None = None
 
 
+def documents_to_doc_evidence(documents: list) -> list[DocEvidence]:
+    """Adapt the hybrid retriever's hits (LangChain `Document`s, citation metadata set by
+    `IkipRetriever`) into `DocEvidence` for fusion. Duck-typed (`.page_content` + `.metadata`) so
+    the mapping is testable without LangChain; the request edge passes the real Documents."""
+    out: list[DocEvidence] = []
+    for i, doc in enumerate(documents, 1):
+        m = getattr(doc, "metadata", {}) or {}
+        out.append(
+            DocEvidence(
+                marker=f"D{i}",
+                text=getattr(doc, "page_content", "") or "",
+                chunk_id=m.get("chunk_id"),
+                document_id=m.get("document_id"),
+                page_start=m.get("page_start"),
+            )
+        )
+    return out
+
+
 @dataclass
 class FusedAnswer:
     status: str  # answered | abstained | not_a_figure_query
