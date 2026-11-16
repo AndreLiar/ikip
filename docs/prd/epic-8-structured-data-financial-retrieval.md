@@ -6,6 +6,8 @@ _Sharded from `../prd.md`. Part of the [epic index](./index.md). **Post-MVP** â€
 
 **Addresses:** RAG dimension C (documents + structured data) in [`../rag-design-challenges.md`](../rag-design-challenges.md). Builds on Epic 3 (retrieval), data model.
 
+**Architecture:** [ADR 0030](../adr/0030-structured-financial-data-retrieval.md) â€” typed `financial_fact` store (one datastore), `StructuredExtractor` port for XBRL, a numeric retrieval path distinct from vector search, figures **retrieved-not-generated** + cited to source/period, and deterministic exact-match/tolerance eval. Epic-8-MVP scope (point figures + simple comparisons, SEC EDGAR) is defined there.
+
 ---
 
 ## Story 8.1 Structured-Data Ingestion (statements / XBRL)
