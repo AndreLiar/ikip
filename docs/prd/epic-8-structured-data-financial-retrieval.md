@@ -2,6 +2,8 @@
 
 _Sharded from `../prd.md`. Part of the [epic index](./index.md). **Post-MVP** — sequenced after Epics 1–6; not part of the initial production scope._
 
+> **Status (2026-11-16): core delivered** ([ADR 0030](../adr/0030-structured-financial-data-retrieval.md)). 8.1 typed `financial_fact` store + SEC XBRL extractor (#107); 8.2 numeric retrieval + comparison + abstention (#108), NL router + numeric-guarded answer (#109), figure+narrative fusion (#110); 8.3 deterministic numeric-accuracy eval + gate (#111). **Remaining for production**: wire a `finance-sec` tenant through the ingestion pipeline (link facts → `DocumentVersion`), adapt the real hybrid retriever into `DocEvidence`, and expand the XBRL taxonomy/dimensional coverage (deferred per ADR 0030).
+
 **Goal:** Add the ability to retrieve and reason over structured data (financial statements/XBRL) alongside documents — hybrid structured+unstructured retrieval with numerical accuracy and comparative analysis — establishing the finance vertical.
 
 **Addresses:** RAG dimension C (documents + structured data) in [`../rag-design-challenges.md`](../rag-design-challenges.md). Builds on Epic 3 (retrieval), data model.
