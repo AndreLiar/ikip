@@ -1,9 +1,9 @@
 # 0031. Multimodal retrieval: caption-and-embed now → native multimodal later (Epic 9)
 
-- **Status:** Proposed — architecture for Epic 9 (post-MVP visual/multimodal); no code until agreed.
+- **Status:** Accepted — **core implemented** (caption-and-embed: 9.1 extraction, 9.2 caption→chunk retrieval + visual eval, 9.3 viewer). Deferred/gated: the Azure GPT-4o vision adapter + Docling crop extraction (feed real image bytes), and native multimodal embeddings (storage/model trigger).
 - **Date:** 2026-11-16
 - **Deciders:** Architect, PM
-- **Related:** [Epic 9](../prd/epic-9-advanced-multimodal-retrieval.md) · RAG dimension B ([rag-design-challenges](../rag-design-challenges.md)) · [ADR 0024](./0024-per-page-extraction-routing-and-indra-ocr.md) (LayoutEngine/Docling) · [ADR 0020](./0020-embedding-model-text-embedding-3-small.md) (text embeddings) · [ADR 0027](./0027-vector-storage-halfvec-now-qdrant-later.md) (vector storage reality) · [ADR 0022](./0022-grounded-answer-langgraph-gpt5-mini.md) · FR16 (citations) · NFR10
+- **Related:** [Epic 9](../prd/epic-9-advanced-multimodal-retrieval.md) · concept [multimodal-retrieval](../learning/concepts/multimodal-retrieval.md) (why OCR/Docling/vision-LLM each do a different job + cost) · RAG dimension B ([rag-design-challenges](../rag-design-challenges.md)) · [ADR 0024](./0024-per-page-extraction-routing-and-indra-ocr.md) (LayoutEngine/Docling) · [ADR 0020](./0020-embedding-model-text-embedding-3-small.md) (text embeddings) · [ADR 0027](./0027-vector-storage-halfvec-now-qdrant-later.md) (vector storage reality) · [ADR 0022](./0022-grounded-answer-langgraph-gpt5-mini.md) · FR16 (citations) · NFR10
 
 ## Context
 Epic 9 makes **diagrams, schematics and visual tables** retrievable evidence with **visual citations** (highlight the cited region on the page). Two parts of the groundwork already exist and should be reused, not rebuilt:
