@@ -321,6 +321,8 @@ def make_hybrid_retrieve(
     mark_child: bool = False,
     rewrite: bool = False,
     rewrite_client=None,  # noqa: ANN001 — ChatClient used only to rewrite the search query
+    history: Sequence[tuple[str, str]] | None = None,  # prior (user, assistant) turns (ADR 0032)
+    contextualize_client=None,  # noqa: ANN001 — ChatClient for conversational query contextualization
 ) -> Callable[[str], RetrievalOutcome]:
     """Bind our tenant-scoped hybrid retrieval into a `retrieve(query)` callable for
     the graph. Tenant scoping + citations stay in our SQL (ADR 0021).
@@ -336,6 +338,13 @@ def make_hybrid_retrieve(
     from ikip_common.llm.hybrid import hybrid_retrieve
 
     def retrieve(query: str) -> RetrievalOutcome:
+        # Conversational memory (ADR 0032 layer 1): fold the thread into a standalone query FIRST,
+        # so a follow-up ("and Q2?") is resolved before any search-query rewrite. Changes only the
+        # retrieval query — generation still answers the original question (grounding untouched).
+        if history and contextualize_client is not None:
+            from ikip_common.conversation_memory import contextualize_query
+
+            query = contextualize_query(contextualize_client, query, history)
         if rewrite and rewrite_client is not None:
             from ikip_common.llm.query_rewrite import rewrite_query
 
