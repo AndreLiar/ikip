@@ -33,8 +33,18 @@ Implement **hybrid retrieval inside PostgreSQL**: lexical via Postgres full-text
 - **Azure AI Search (managed hybrid + semantic ranker):** removes fusion/rerank build effort, but is a paid managed service, still needs our ACL/tenant layer, and has no true local equivalent — breaking local-first parity ([ADR 0003](./0003-local-first-ports-and-adapters.md)). Deferred.
 - **Vector-only retrieval (drop lexical):** fails exact-term needs (fault codes, part numbers) and hurts Recall on identifier queries (FR11). Rejected.
 
+## Measured backing (2026-11-16, MISSION-046)
+Before adopting BM25/OpenSearch, we **measured** whether the lexical arm is the bottleneck
+([MISSION-046](../learning/missions/MISSION-046/mission.md), `scripts/probe_lexical_value.py`):
+lexical-only recall@5 on the FR gold is **~0.00 on natural-language questions** (the vector arm
+carries all NL retrieval) and **already 0.83–0.92 on keyword/identifier queries** (BM25's own
+strength) with plain `ts_rank`. A **French analyzer** did not help NL and *hurt* identifier
+matching (stemming mangles `l 1950`/article refs). **Conclusion: the lexical arm is not the limiter
+— true BM25 would re-rank an already-good set on a query type users rarely issue, and OpenSearch's
+second-datastore tax buys nothing.** This empirically supports "no dedicated search engine at MVP".
+
 ## Revisit When
-- Recall@K / ranking quality plateaus below targets (NFR6: Recall@5 ≥ 90%) and analysis attributes it to **the lexical arm specifically** (keyword/identifier queries ranking poorly) → **upgrade `ts_rank` → true BM25** via a Postgres extension (ParadeDB `pg_search` / VectorChord-bm25) on a Postgres that supports it, A/B'd on the gold set first, **or**
+- Recall@K / ranking quality plateaus below targets (NFR6: Recall@5 ≥ 90%) and analysis attributes it to **the lexical arm specifically** (keyword/identifier queries ranking poorly — re-run `scripts/probe_lexical_value.py` to confirm, as MISSION-046 found it is *not* currently the limiter) → **upgrade `ts_rank` → true BM25** via a Postgres extension (ParadeDB `pg_search` / VectorChord-bm25) on a Postgres that supports it, A/B'd on the gold set first, **or**
 - p95 retrieval latency breaches NFR1 (< 1.5 s) under load attributable to Postgres full-text, **or**
 - Corpus/QPS scale outgrows Postgres full-text (see also [ADR 0001](./0001-vector-store-pgvector.md) vector triggers), **or**
 - A managed semantic ranker (Azure AI Search) demonstrably lifts quality enough to justify its cost and the loss of local parity.
