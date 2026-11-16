@@ -490,3 +490,29 @@ class FinancialFact(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     document_version_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("document_version.id", ondelete="SET NULL"), default=None, index=True
     )
+
+
+class VisualElement(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A diagram / schematic / visual table on a page, as retrievable evidence (Epic 9,
+    Story 9.1, ADR 0031). Located by page + bbox (the region the viewer highlights, FR16) and
+    linked to its Section/DocumentVersion. `caption` is filled by caption-and-embed (Story 9.2);
+    `crop_object_key` points at the cropped image in R2 (not the DB). Low-confidence detections
+    are flagged for review (AC3). Tenant-scoped (NFR10)."""
+
+    __tablename__ = "visual_element"
+    __table_args__ = (Index("ix_visual_element_version_page", "document_version_id", "page"),)
+
+    document_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_version.id", ondelete="CASCADE"), index=True
+    )
+    # Nearest section (resolvable back-reference, AC2); nullable if none resolved.
+    section_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("section.id", ondelete="SET NULL"), default=None, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(32))  # table | figure | schematic | chart
+    page: Mapped[int] = mapped_column()
+    bbox: Mapped[dict | None] = mapped_column(JSONB, default=None)  # {x0,y0,x1,y1} normalized
+    caption: Mapped[str | None] = mapped_column(default=None)  # filled by caption-and-embed (9.2)
+    confidence: Mapped[float] = mapped_column(default=1.0)
+    low_confidence: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    crop_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
