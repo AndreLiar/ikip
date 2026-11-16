@@ -57,4 +57,25 @@ describe('PdfRegionViewer', () => {
     render(<PdfRegionViewer url="https://r2/x.pdf" pageNumber={1} regions={REGIONS} />);
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });
+
+  it('distinguishes and labels a visual (diagram/table) region (Story 9.3)', async () => {
+    const regions = [
+      {
+        page: 1,
+        bbox: [0.1, 0.1, 0.9, 0.6] as [number, number, number, number],
+        kind: 'schematic' as const,
+      },
+      { page: 1, bbox: [0.0, 0.7, 0.3, 0.8] as [number, number, number, number] }, // plain text region
+    ];
+    render(<PdfRegionViewer url="https://r2/x.pdf" pageNumber={1} regions={regions} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+
+    const highlights = screen.getAllByTestId('pdf-highlight');
+    const visual = highlights.find((h) => h.dataset.kind === 'schematic');
+    const text = highlights.find((h) => !h.dataset.kind);
+    // the visual region is styled distinctly and carries a kind label; the text region is plain
+    expect(visual?.className).toContain('pdf-highlight--visual');
+    expect(screen.getByTestId('pdf-highlight-label')).toHaveTextContent('schematic');
+    expect(text?.className).toBe('pdf-highlight');
+  });
 });
