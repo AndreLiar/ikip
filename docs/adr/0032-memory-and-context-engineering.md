@@ -1,6 +1,6 @@
 # 0032. Memory & context engineering — serve retrieval, never the answer
 
-- **Status:** Proposed — architecture for memory + context engineering; no code until agreed.
+- **Status:** Accepted — all three layers implemented (L1 conversational contextualization #119; L2 long-term memory `ikip_common.user_memory` #120; L3 context engineering `ikip_common.context_engineering` #121). Each shipped opt-in + grounding-safe per the decision below; the context-engineering knobs remain opt-in until A/B measurement promotes one.
 - **Date:** 2026-11-16
 - **Deciders:** Architect, PM
 - **Related:** [ADR 0022](./0022-grounded-answer-langgraph-gpt5-mini.md) (grounded answer) · [ADR 0026](./0026-agentic-rag-evolution.md) (query analysis/reformulation) · [ADR 0004](./0004-hybrid-retrieval-on-postgres.md) / [ADR 0016](./0016-rag-evaluation-custom-plus-ragas.md) · concept [grounded-answers](../learning/concepts/grounded-answers.md) · [MISSION-044](../learning/missions/MISSION-044/mission.md) (context is a measured trade-off) · FR16 (citations) · NFR10 (tenant isolation)
