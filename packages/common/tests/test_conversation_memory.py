@@ -3,6 +3,7 @@
 import uuid
 from collections.abc import Sequence
 
+import pytest
 from ikip_common.conversation_memory import StandaloneQuery, contextualize_query
 from ikip_common.llm.base import ChatMessage
 
@@ -52,6 +53,8 @@ def test_standalone_query_model() -> None:
 
 
 def test_make_hybrid_retrieve_contextualizes_only_with_history(monkeypatch) -> None:  # noqa: ANN001
+    # make_hybrid_retrieve pulls llm.hybrid (langchain) → skip in the base `validate` CI env.
+    pytest.importorskip("langchain_core")
     # No network/DB: stub hybrid_retrieve to capture the query it actually searches with, and
     # stub the contextualizer to prove the thread is used BEFORE retrieval.
     import ikip_common.conversation_memory as cm
