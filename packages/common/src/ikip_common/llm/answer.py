@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TypedDict
 
 from langchain_core.documents import Document
@@ -323,6 +323,7 @@ def make_hybrid_retrieve(
     rewrite_client=None,  # noqa: ANN001 — ChatClient used only to rewrite the search query
     history: Sequence[tuple[str, str]] | None = None,  # prior (user, assistant) turns (ADR 0032)
     contextualize_client=None,  # noqa: ANN001 — ChatClient for conversational query contextualization
+    context_budget=None,  # noqa: ANN001 — ContextBudget (ADR 0032 layer 3); None = no-op
 ) -> Callable[[str], RetrievalOutcome]:
     """Bind our tenant-scoped hybrid retrieval into a `retrieve(query)` callable for
     the graph. Tenant scoping + citations stay in our SQL (ADR 0021).
@@ -334,7 +335,12 @@ def make_hybrid_retrieve(
 
     `rewrite` (ADR 0026) rewrites the query into a retrieval-optimised search query via
     `rewrite_client` before searching; generation still answers the *original* question, so
-    grounding is untouched."""
+    grounding is untouched.
+
+    `context_budget` (ADR 0032 layer 3) applies the opt-in context-engineering transforms
+    (dedup/token-budget/lost-in-the-middle reorder) to the retrieved documents *after* retrieval
+    and auto-merge. It only drops/reorders retrieved chunks — each survivor keeps its citation — so
+    grounding is untouched; `None` is a no-op."""
     from ikip_common.llm.hybrid import hybrid_retrieve
 
     def retrieve(query: str) -> RetrievalOutcome:
@@ -368,6 +374,12 @@ def make_hybrid_retrieve(
                 outcome,
                 parent_max_tokens=parent_max_tokens or DEFAULT_PARENT_MAX_TOKENS,
                 mark_child=mark_child,
+            )
+        if context_budget is not None and not outcome.abstained and outcome.documents:
+            from ikip_common.context_engineering import engineer_context
+
+            outcome = replace(
+                outcome, documents=engineer_context(outcome.documents, context_budget)
             )
         return outcome
 
