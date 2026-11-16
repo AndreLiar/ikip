@@ -10,6 +10,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from pgvector.sqlalchemy import HALFVEC
 from sqlalchemy import (
@@ -21,6 +22,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Numeric,
     PrimaryKeyConstraint,
     String,
     UniqueConstraint,
@@ -427,4 +429,64 @@ class QueryTrace(UUIDPrimaryKey, TenantScoped, Base):
     trace_id: Mapped[str | None] = mapped_column(String(128), default=None, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
+
+
+class FinancialFact(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """A typed financial figure from a structured filing (XBRL/SEC) — Epic 8, ADR 0030.
+
+    Figures are **retrieved, not generated**: the exact value is stored as `NUMERIC` (never a
+    float — no rounding) and resolves to its source filing + period for citation (FR16). Modelled
+    against real SEC EDGAR companyfacts: a fact is instant (balance-sheet: `period_start` NULL) or
+    duration (income-statement: `period_start`..`period_end`). Tenant-scoped (NFR10)."""
+
+    __tablename__ = "financial_fact"
+    __table_args__ = (
+        # A filing states each (entity, concept, period, unit) fact once. NULLS NOT DISTINCT
+        # (PG15+) so instant facts (period_start IS NULL) dedupe on re-ingest instead of NULL!=NULL.
+        UniqueConstraint(
+            "tenant_id",
+            "entity_cik",
+            "taxonomy",
+            "concept",
+            "unit",
+            "period_start",
+            "period_end",
+            "accession",
+            name="uq_financial_fact_identity",
+            postgresql_nulls_not_distinct=True,
+        ),
+        # The hot path: resolve (entity, concept, period) for a figure query (ADR 0030 §3).
+        Index("ix_financial_fact_lookup", "tenant_id", "entity_cik", "concept", "period_end"),
+    )
+
+    # --- identity -------------------------------------------------------
+    entity_cik: Mapped[str] = mapped_column(String(16))  # SEC CIK (zero-padded) — the filer
+    entity_name: Mapped[str | None] = mapped_column(String(512), default=None)
+    taxonomy: Mapped[str] = mapped_column(String(32))  # us-gaap | dei | ffd
+    concept: Mapped[str] = mapped_column(String(256))  # XBRL tag, e.g. "Assets"
+    # period: instant => period_start NULL, period_end = the instant; duration => both set.
+    period_start: Mapped[date | None] = mapped_column(Date, default=None)
+    period_end: Mapped[date] = mapped_column(Date)
+    dimensions: Mapped[dict] = mapped_column(
+        JSONB, default=dict
+    )  # segment/axis members; {} = consolidated
+
+    # --- value (EXACT) --------------------------------------------------
+    value_numeric: Mapped[Decimal] = mapped_column(Numeric(38, 6))  # never float
+    unit: Mapped[str] = mapped_column(String(32))  # USD | USD/shares | shares | pure
+
+    # --- fiscal context -------------------------------------------------
+    fiscal_year: Mapped[int | None] = mapped_column(default=None)
+    fiscal_period: Mapped[str | None] = mapped_column(String(8), default=None)  # FY | Q1..Q4
+    form: Mapped[str | None] = mapped_column(String(16), default=None)  # 10-K | 10-Q
+    filed_date: Mapped[date | None] = mapped_column(Date, default=None)
+    frame: Mapped[str | None] = mapped_column(String(32), default=None)  # normalized calendar frame
+
+    # --- provenance (FR16) ----------------------------------------------
+    accession: Mapped[str] = mapped_column(String(32))  # SEC accession no. — the source filing
+    # Set when the filing is also ingested as a Document (links fact -> version -> page). Nullable
+    # in the Story 8.1 walking skeleton: the accession already identifies the filing.
+    document_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("document_version.id", ondelete="SET NULL"), default=None, index=True
     )
