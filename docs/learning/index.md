@@ -50,6 +50,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-043](./missions/MISSION-043/mission.md) | First *measured* RAG quality (Ragas per-corpus); boilerplate hypothesis disproven; law strong / NTRS weak | Epic 5 / eval |
 | [MISSION-044](./missions/MISSION-044/mission.md) | Wire the Stage-1 auto-merge A/B (`--auto-merge` through the eval CLI); recall@k-vs-dedup caveat; live run gated | Epic 3 / retrieval eval |
 | [MISSION-045](./missions/MISSION-045/mission.md) | Measure the 4 FR corpora (law/insurance/finance/credit): faithfulness ~1.0 across languages; law's low recall@5 is a strict-metric artifact | Epic 5 / eval |
+| [MISSION-046](./missions/MISSION-046/mission.md) | Would BM25/OpenSearch help? Measured the lexical arm: ~0 on NL questions (vector carries), already 0.83–0.92 on keyword queries; french analyzer rejected → no second datastore | Epic 3 / retrieval |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
