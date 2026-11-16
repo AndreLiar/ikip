@@ -60,7 +60,11 @@ describe('PdfRegionViewer', () => {
 
   it('distinguishes and labels a visual (diagram/table) region (Story 9.3)', async () => {
     const regions = [
-      { page: 1, bbox: [0.1, 0.1, 0.9, 0.6] as [number, number, number, number], kind: 'schematic' as const },
+      {
+        page: 1,
+        bbox: [0.1, 0.1, 0.9, 0.6] as [number, number, number, number],
+        kind: 'schematic' as const,
+      },
       { page: 1, bbox: [0.0, 0.7, 0.3, 0.8] as [number, number, number, number] }, // plain text region
     ];
     render(<PdfRegionViewer url="https://r2/x.pdf" pageNumber={1} regions={regions} />);
