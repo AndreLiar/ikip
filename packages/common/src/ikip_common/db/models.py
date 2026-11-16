@@ -516,3 +516,22 @@ class VisualElement(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
     confidence: Mapped[float] = mapped_column(default=1.0)
     low_confidence: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     crop_object_key: Mapped[str | None] = mapped_column(String(2048), default=None)
+
+
+class UserMemory(UUIDPrimaryKey, TenantScoped, Timestamped, Base):
+    """Long-term memory for a user (Epic/ADR 0032 layer 2): preferences (language, units,
+    document scope) + entities (the filers/assets they work with). Used ONLY to bias retrieval
+    and personalize presentation — **never** as a source of answer content (memory is not
+    evidence; the grounding/citation guarantee is untouched). User-editable, tenant+user-scoped
+    (NFR10), retention-governed (Story 6.5)."""
+
+    __tablename__ = "user_memory"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "user_id", "kind", "key", name="uq_user_memory"),
+        Index("ix_user_memory_tenant_user", "tenant_id", "user_id"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    kind: Mapped[str] = mapped_column(String(32))  # preference | entity
+    key: Mapped[str] = mapped_column(String(128))  # e.g. language, document_type, usual_supplier
+    value: Mapped[dict] = mapped_column(JSONB, default=dict)  # the stored value (JSON)
