@@ -32,6 +32,16 @@ class TextRegion:
     bbox: tuple[float, float, float, float]
 
 
+@dataclass(frozen=True)
+class PictureRef:
+    """A detected picture/diagram/figure located by page + bbox, with the detector's
+    confidence (Story 9.1, ADR 0031). Content becomes searchable via caption-and-embed (9.2)."""
+
+    page: int
+    bbox: tuple[float, float, float, float] | None = None
+    confidence: float = 1.0
+
+
 @dataclass
 class PageExtraction:
     page: int  # 1-based page number (preserves page references, AC1)
@@ -40,6 +50,7 @@ class PageExtraction:
     needs_ocr: bool = False  # set by stage 1 when the native text layer is empty/sparse
     tables: list[TableRef] = field(default_factory=list)
     regions: list[TextRegion] = field(default_factory=list)
+    pictures: list[PictureRef] = field(default_factory=list)  # diagrams/figures (Story 9.1)
     quality_score: float = 0.0  # 0..1; low -> flagged (AC4)
     low_quality: bool = False
 
