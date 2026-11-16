@@ -76,3 +76,4 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [grounded-answers](./concepts/grounded-answers.md) | LangGraph flow, opaque handles + server-resolved citations, grounding validation, reasoning vs temperature |
 | [rag-evaluation](./concepts/rag-evaluation.md) | deterministic metrics (Recall@K, citation resolution/coverage), resolution≠entailment, 3-artifact regression reports |
 | [caching](./concepts/caching.md) | Cache port, key-as-correctness (tenant/version/epoch), answer cache, abstention-preserving hits, semantic deferred |
+| [multimodal-retrieval](./concepts/multimodal-retrieval.md) | caption-and-embed; OCR vs Docling vs vision-LLM (three jobs); why each tool can't do another's; cost (build-time, $0 so far) |
