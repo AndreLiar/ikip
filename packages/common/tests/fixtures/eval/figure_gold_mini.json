@@ -1,0 +1,16 @@
+{
+  "gold_set_version": "finance-sec-numeric-v1",
+  "_note": "Self-contained numeric-accuracy gold (Epic 8, Story 8.3). `facts` seed the store; `cases` are figure questions with known values + expected citation. Values are real Apple FY2022/FY2023 10-K figures (SEC EDGAR, public domain).",
+  "facts": [
+    {"entity_cik": "0000320193", "entity_name": "Apple Inc.", "taxonomy": "us-gaap", "concept": "Revenues", "value": "383285000000", "unit": "USD", "period_start": "2022-09-25", "period_end": "2023-09-30", "fiscal_year": 2023, "fiscal_period": "FY", "form": "10-K", "filed_date": "2023-11-03", "accession": "0000320193-23-000106", "dimensions": {}},
+    {"entity_cik": "0000320193", "entity_name": "Apple Inc.", "taxonomy": "us-gaap", "concept": "Revenues", "value": "394328000000", "unit": "USD", "period_start": "2021-09-26", "period_end": "2022-09-24", "fiscal_year": 2022, "fiscal_period": "FY", "form": "10-K", "filed_date": "2022-10-28", "accession": "0000320193-22-000108", "dimensions": {}},
+    {"entity_cik": "0000320193", "entity_name": "Apple Inc.", "taxonomy": "us-gaap", "concept": "Assets", "value": "352583000000", "unit": "USD", "period_start": null, "period_end": "2023-09-30", "fiscal_year": 2023, "fiscal_period": "FY", "form": "10-K", "filed_date": "2023-11-03", "accession": "0000320193-23-000106", "dimensions": {}},
+    {"entity_cik": "0000320193", "entity_name": "Apple Inc.", "taxonomy": "us-gaap", "concept": "NetIncomeLoss", "value": "96995000000", "unit": "USD", "period_start": "2022-09-25", "period_end": "2023-09-30", "fiscal_year": 2023, "fiscal_period": "FY", "form": "10-K", "filed_date": "2023-11-03", "accession": "0000320193-23-000106", "dimensions": {}}
+  ],
+  "cases": [
+    {"case_key": "aapl-rev-2023", "question": "What was Apple's total revenue in FY2023?", "query": {"entity_cik": "0000320193", "concept": "Revenues", "fiscal_year": 2023, "fiscal_period": "FY"}, "expected_behavior": "resolved", "expected_value": "383285000000", "expected_unit": "USD", "expected_accession": "0000320193-23-000106", "expected_period_end": "2023-09-30"},
+    {"case_key": "aapl-assets-2023", "question": "What were Apple's total assets at FY2023 year-end?", "query": {"entity_cik": "0000320193", "concept": "Assets", "fiscal_year": 2023, "fiscal_period": "FY"}, "expected_behavior": "resolved", "expected_value": "352583000000", "expected_unit": "USD", "expected_accession": "0000320193-23-000106", "expected_period_end": "2023-09-30"},
+    {"case_key": "aapl-netincome-2023", "question": "What was Apple's net income in FY2023?", "query": {"entity_cik": "0000320193", "concept": "NetIncomeLoss", "fiscal_year": 2023, "fiscal_period": "FY"}, "expected_behavior": "resolved", "expected_value": "96995000000", "expected_unit": "USD", "expected_accession": "0000320193-23-000106", "expected_period_end": "2023-09-30"},
+    {"case_key": "aapl-rev-2099-unavailable", "question": "What was Apple's revenue in FY2099?", "query": {"entity_cik": "0000320193", "concept": "Revenues", "fiscal_year": 2099, "fiscal_period": "FY"}, "expected_behavior": "abstained"}
+  ]
+}
