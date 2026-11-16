@@ -70,3 +70,4 @@ This directory records significant architectural decisions for IKIP — the cont
 | [0028](./0028-build-vs-buy-rag-platform.md)                      | Build vs buy: build IKIP (learning + reference architecture) vs NotebookLM/AnythingLLM/managed RAG | Accepted           |
 | [0029](./0029-hierarchical-parent-child-chunking.md)             | Hierarchical (parent/child) chunking via section-based auto-merging (Stage 1 implemented; Stage 2 gated) | Accepted           |
 | [0030](./0030-structured-financial-data-retrieval.md)            | Structured financial data & numeric retrieval (Epic 8): typed fact store, retrieved-not-generated figures, numeric eval | Proposed           |
+| [0031](./0031-multimodal-retrieval-caption-and-embed.md)         | Multimodal retrieval (Epic 9): caption-and-embed now (reuse text stack, storage-safe) → native multimodal gated | Proposed           |
