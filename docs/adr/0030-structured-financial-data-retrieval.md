@@ -40,6 +40,16 @@ A new gold type: **figure questions with known values** (Story 8.3). Metrics: **
 ### Epic-8-MVP scope (and what's deferred)
 **In:** point figures (single entity/concept/period), simple period-over-period + entity-vs-entity comparisons, SEC EDGAR XBRL subset, a `finance-sec` tenant (SEC data is US-government **public domain** — clean for the licensing gate, Story 6.5). **Deferred:** full XBRL taxonomy/dimensional modelling, calculation-linkbase validation, footnote-level reconciliation, non-XBRL statement formats, multi-currency normalization.
 
+## Data-semantics note (found wiring real SEC data, 2026-11-16)
+In SEC **companyfacts**, a fact's `fy`/`fp` is the **filing's** fiscal context, **not** the data
+period's: Apple's FY2023 revenue (period ending 2023-09-30) appears under filing years 2023, 2024
+*and* 2025 (as comparatives). So the correct key for "the FY2023 figure" is **`period_end`** (or a
+data-period derivation), not `fiscal_year`. `retrieve_figure` supports `period_end`; the NL router
+must resolve a requested period to `period_end`, and the restatement rule (keep latest-filed)
+then correctly returns the most recent statement of that figure (verified: the FY2023 revenue
+resolves to the 2025 10-K's restated value, cited to that filing). Treat `fiscal_year` as a
+"as-reported-in-filing-FY" filter, not a period selector.
+
 ## Consequences
 **Positive**
 - Numbers are **retrieved + cited**, never generated → the financial-RAG failure mode (confident wrong figure) is designed out; abstention + numeric validation enforce it.

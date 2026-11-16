@@ -14,9 +14,31 @@ from ikip_common.finance_answer import FigureNarration, RoutedFigureQuery
 from ikip_common.finance_fusion import (
     DocEvidence,
     answer_financial_question,
+    documents_to_doc_evidence,
     fuse_answer,
 )
 from ikip_common.llm.base import ChatMessage
+
+
+class _FakeDoc:
+    """Duck-types a LangChain Document (page_content + metadata)."""
+
+    def __init__(self, text: str, **meta) -> None:  # noqa: ANN003
+        self.page_content = text
+        self.metadata = meta
+
+
+def test_documents_to_doc_evidence_maps_text_and_citation_metadata() -> None:
+    docs = [
+        _FakeDoc("iPhone revenue fell.", chunk_id="c1", document_id="d1", page_start=12),
+        _FakeDoc("Services grew.", chunk_id="c2"),
+    ]
+    ev = documents_to_doc_evidence(docs)
+    assert [e.marker for e in ev] == ["D1", "D2"]  # stable markers
+    assert (
+        ev[0].chunk_id == "c1" and ev[0].page_start == 12 and ev[0].text == "iPhone revenue fell."
+    )
+    assert ev[1].chunk_id == "c2"
 
 
 class _FakeChat:
