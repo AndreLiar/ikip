@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 export interface PdfRegion {
   page: number;
   bbox: [number, number, number, number];
+  /** Visual-evidence kind (Epic 9, Story 9.3): a diagram/table region is labeled + styled
+   * distinctly from a plain text highlight. Absent for text citations. */
+  kind?: 'figure' | 'table' | 'schematic' | 'chart';
 }
 
 export function PdfRegionViewer({
@@ -64,10 +67,12 @@ export function PdfRegionViewer({
         .filter((region) => region.page === pageNumber)
         .map((region, index) => {
           const [x0, y0, x1, y1] = region.bbox;
+          const isVisual = Boolean(region.kind);
           return (
             <span
-              className="pdf-highlight"
+              className={isVisual ? 'pdf-highlight pdf-highlight--visual' : 'pdf-highlight'}
               data-testid="pdf-highlight"
+              data-kind={region.kind}
               key={`${index}-${region.bbox.join('-')}`}
               style={{
                 left: `${x0 * 100}%`,
@@ -75,7 +80,13 @@ export function PdfRegionViewer({
                 width: `${(x1 - x0) * 100}%`,
                 height: `${(y1 - y0) * 100}%`,
               }}
-            />
+            >
+              {isVisual ? (
+                <span className="pdf-highlight-label" data-testid="pdf-highlight-label">
+                  {region.kind}
+                </span>
+              ) : null}
+            </span>
           );
         })}
     </div>
