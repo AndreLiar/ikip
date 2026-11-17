@@ -23,15 +23,19 @@ from pathlib import Path
 _SRC = Path("eval-results/ab/ntrs_gold_v2.json")
 _OUT_DIR = Path("eval-results/ab")
 
+# Language-appropriate connector joining the parts of a compound question.
+_CONNECTOR = {"en": " Separately, ", "fr": " Par ailleurs, "}
 
-def _combine(cases: list[dict], hops: int) -> list[dict]:
+
+def _combine(cases: list[dict], hops: int, *, lang: str = "en") -> list[dict]:
     """Chain consecutive cases into compound questions of `hops` parts (non-overlapping)."""
+    conn = _CONNECTOR.get(lang, _CONNECTOR["en"])
     out: list[dict] = []
     for i in range(0, len(cases) - hops + 1, hops):
         group = cases[i : i + hops]
-        # A genuine multi-part user turn: the parts are distinct NTRS topics, so answering needs
+        # A genuine multi-part user turn: the parts are distinct topics, so answering needs
         # every part's chunk — exactly what single-shot retrieval is stressed by.
-        question = " Separately, ".join(c["question"].rstrip("?") + "?" for c in group)
+        question = conn.join(c["question"].rstrip("?") + "?" for c in group)
         ground_truth = " ".join(c["ground_truth"] for c in group if c.get("ground_truth"))
         chunk_ids: list[str] = []
         for c in group:
@@ -42,7 +46,7 @@ def _combine(cases: list[dict], hops: int) -> list[dict]:
                 "question": question,
                 "expected_behavior": "answered",  # a multi-step system SHOULD answer every part
                 "ground_truth": ground_truth,
-                "language": "en",
+                "language": lang,
                 "reviewed": False,
                 "category": f"multi_hop_{hops}",
                 "relevant_chunk_ids": chunk_ids,  # UNION — all parts must be retrieved
@@ -51,9 +55,10 @@ def _combine(cases: list[dict], hops: int) -> list[dict]:
     return out
 
 
-def _combine_offset(cases: list[dict]) -> list[dict]:
+def _combine_offset(cases: list[dict], *, lang: str = "en") -> list[dict]:
     """Extra 2-hop pairs (i, i+half) — a *different* pairing than consecutive, to widen the gold
     (n=9 -> n=18) with distinct compound questions for a less noisy gate (MISSION-047)."""
+    conn = _CONNECTOR.get(lang, _CONNECTOR["en"])
     half = len(cases) // 2
     out: list[dict] = []
     for i in range(half):
@@ -61,12 +66,12 @@ def _combine_offset(cases: list[dict]) -> list[dict]:
         out.append(
             {
                 "case_key": f"mho-{a['case_key'].split('-')[-1]}-{b['case_key'].split('-')[-1]}",
-                "question": a["question"].rstrip("?") + "? Separately, " + b["question"],
+                "question": a["question"].rstrip("?") + "?" + conn + b["question"],
                 "expected_behavior": "answered",
                 "ground_truth": " ".join(
                     c["ground_truth"] for c in (a, b) if c.get("ground_truth")
                 ),
-                "language": "en",
+                "language": lang,
                 "reviewed": False,
                 "category": "multi_hop_2",
                 "relevant_chunk_ids": a.get("relevant_chunk_ids", [])
@@ -98,6 +103,21 @@ def main() -> None:
     out = _OUT_DIR / "ntrs_multihop_probe_2hop_wide.json"
     out.write_text(json.dumps(wide, indent=2))
     print(f"{out}: {len(wide['cases'])} 2-hop cases (wide)")
+
+    # FR re-confirm (MISSION-052): the decompose split is language-general, but FR is half the
+    # corpora — build an FR 2-hop probe from a reviewed FR gold to gate decomposition in French.
+    for name, path in [("assurance_fr", _OUT_DIR / "gold_assurance_fr.json")]:
+        if not path.exists():
+            continue
+        fr = json.loads(path.read_text())["cases"]
+        probe = {
+            "gold_set_version": f"{name}-multihop-2hop-v1",
+            "language": "fr",
+            "cases": _combine(fr, 2, lang="fr") + _combine_offset(fr, lang="fr"),
+        }
+        out = _OUT_DIR / f"{name}_multihop_probe_2hop.json"
+        out.write_text(json.dumps(probe, indent=2, ensure_ascii=False))
+        print(f"{out}: {len(probe['cases'])} FR 2-hop cases")
 
 
 if __name__ == "__main__":
