@@ -45,6 +45,13 @@ def test_fingerprint_independent_of_user_id_only_filter() -> None:
     assert _context_fingerprint([], RetrievalFilters(user_id=uuid.uuid4())) is None
 
 
+def test_fingerprint_partitions_the_cache_when_decompose_is_active() -> None:
+    # ADR 0033: a decomposed answer must not collide with a single-shot answer to the same question.
+    base = RetrievalFilters(user_id=uuid.uuid4())
+    assert _context_fingerprint([], base, decompose=False) is None  # off -> key unchanged
+    assert _context_fingerprint([], base, decompose=True) is not None  # on -> partitioned
+
+
 # --------------------------------------------------------------- _load_history (fake session)
 
 
