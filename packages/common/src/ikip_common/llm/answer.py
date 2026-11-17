@@ -324,6 +324,7 @@ def make_hybrid_retrieve(
     history: Sequence[tuple[str, str]] | None = None,  # prior (user, assistant) turns (ADR 0032)
     contextualize_client=None,  # noqa: ANN001 — ChatClient for conversational query contextualization
     context_budget=None,  # noqa: ANN001 — ContextBudget (ADR 0032 layer 3); None = no-op
+    reranker=None,  # noqa: ANN001 — Reranker (ADR 0032 §3); None = IdentityReranker (default)
 ) -> Callable[[str], RetrievalOutcome]:
     """Bind our tenant-scoped hybrid retrieval into a `retrieve(query)` callable for
     the graph. Tenant scoping + citations stay in our SQL (ADR 0021).
@@ -364,6 +365,7 @@ def make_hybrid_retrieve(
             limit=limit,
             lexical_min_score=lexical_min_score,
             vector_min_score=vector_min_score,
+            reranker=reranker,
         )
         if auto_merge:
             from ikip_common.llm.automerge import DEFAULT_PARENT_MAX_TOKENS, expand_to_parents

@@ -106,6 +106,18 @@ def _context_config(budget) -> dict | None:  # noqa: ANN001 — serialise the bu
     }
 
 
+def _build_reranker(args: argparse.Namespace):  # noqa: ANN202 — Reranker | None (ADR 0032 §3)
+    """A CrossEncoderReranker for `--reranker cross-encoder`, else None (IdentityReranker default).
+    The live model lazy-loads sentence-transformers (uncommitted dep) on first use."""
+    if getattr(args, "reranker", "identity") != "cross-encoder":
+        return None
+    from ikip_common.rerank import DEFAULT_CROSS_ENCODER_MODEL, CrossEncoderReranker
+
+    return CrossEncoderReranker(
+        model_name=getattr(args, "reranker_model", None) or DEFAULT_CROSS_ENCODER_MODEL
+    )
+
+
 def _run(args: argparse.Namespace) -> int:
     from sqlalchemy.orm import Session
 
@@ -122,6 +134,7 @@ def _run(args: argparse.Namespace) -> int:
     rewrite = getattr(args, "rewrite", False)
     prompts = _contract_prompts() if contract else None
     budget = _context_budget(args)
+    reranker = _build_reranker(args)
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
             session,
@@ -134,6 +147,7 @@ def _run(args: argparse.Namespace) -> int:
             rewrite=rewrite,
             rewrite_client=build_chat_client() if rewrite else None,
             context_budget=budget,
+            reranker=reranker,
         )
         report = evaluate_dataset(
             cases,
@@ -146,6 +160,7 @@ def _run(args: argparse.Namespace) -> int:
                 "contract": contract,
                 "rewrite": rewrite,
                 "context_engineering": _context_config(budget),
+                "reranker": getattr(args, "reranker", "identity"),
             },
             prompts=prompts,
         )
@@ -235,6 +250,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
     rewrite = getattr(args, "rewrite", False)
     prompts = _contract_prompts() if contract else None
     budget = _context_budget(args)
+    reranker = _build_reranker(args)
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
             session,
@@ -247,6 +263,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             rewrite=rewrite,
             rewrite_client=build_chat_client() if rewrite else None,
             context_budget=budget,
+            reranker=reranker,
         )
         report = evaluate_dataset(
             cases,
@@ -259,6 +276,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
                 "contract": contract,
                 "rewrite": rewrite,
                 "context_engineering": _context_config(budget),
+                "reranker": getattr(args, "reranker", "identity"),
             },
             prompts=prompts,
             telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
@@ -629,6 +647,21 @@ def main(argv: list[str] | None = None) -> int:
             dest="ctx_litm",
             action="store_true",
             help="reorder strongest evidence to the edges (lost-in-the-middle, ADR 0032 L3)",
+        )
+        # ADR 0032 §3 A/B: rerank the fused candidates behind the Reranker port before top-k.
+        p.add_argument(
+            "--reranker",
+            dest="reranker",
+            choices=["identity", "cross-encoder"],
+            default="identity",
+            help="candidate reranker: identity (default, RRF order) or cross-encoder "
+            "(needs sentence-transformers; ADR 0032 §3)",
+        )
+        p.add_argument(
+            "--reranker-model",
+            dest="reranker_model",
+            default=None,
+            help="cross-encoder model name (default: ms-marco-MiniLM-L-6-v2)",
         )
 
     p_run = sub.add_parser("run", help="live run against a gold set")
