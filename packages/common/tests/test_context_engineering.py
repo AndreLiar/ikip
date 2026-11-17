@@ -1,7 +1,9 @@
 """Context-engineering transform tests (ADR 0032 layer 3). Pure — tiny fake docs, base-env safe."""
 
+import uuid
 from dataclasses import dataclass, field
 
+import pytest
 from ikip_common.context_engineering import (
     ContextBudget,
     apply_token_budget,
@@ -105,3 +107,51 @@ def test_engineer_context_applies_dedup_then_budget_then_reorder() -> None:
     assert "b" not in out  # dedup removed the duplicate
     assert set(out) == {"a", "c", "d"}  # survivors kept, all citations intact
     assert out[0] == "a"  # strongest stays at the front edge after reorder
+
+
+# ----------------------------------------------------------- wiring into the retrieval path
+
+
+def test_make_hybrid_retrieve_applies_budget_only_when_set(monkeypatch) -> None:  # noqa: ANN001
+    # make_hybrid_retrieve pulls llm.hybrid (langchain) → skip in the base `validate` CI env.
+    pytest.importorskip("langchain_core")
+    import ikip_common.llm.hybrid as hybrid_mod
+    from ikip_common.llm.answer import make_hybrid_retrieve
+    from ikip_common.llm.hybrid import RetrievalOutcome
+    from langchain_core.documents import Document
+
+    # Two near-identical chunks + a distinct one; stub retrieval to return them verbatim.
+    dup_a = Document(page_content="pump pressure stays below five bar", metadata={"chunk_id": "a"})
+    dup_b = Document(page_content="pump pressure stays below five bar", metadata={"chunk_id": "b"})
+    other = Document(page_content="lubricate the main bearing yearly", metadata={"chunk_id": "c"})
+
+    def fake_hybrid(session, tenant, query, emb, **kw):  # noqa: ANN001, ANN202, ARG001
+        return RetrievalOutcome(documents=[dup_a, dup_b, other], abstained=False)
+
+    monkeypatch.setattr(hybrid_mod, "hybrid_retrieve", fake_hybrid)
+
+    # baseline: no budget → all three survive, original order (citations untouched)
+    base = make_hybrid_retrieve(None, uuid.uuid4(), None)("q")
+    assert [d.metadata["chunk_id"] for d in base.documents] == ["a", "b", "c"]
+
+    # treatment: dedup on → the near-duplicate "b" is dropped, "a"/"c" keep their citations
+    budget = ContextBudget(dedup=True)
+    treat = make_hybrid_retrieve(None, uuid.uuid4(), None, context_budget=budget)("q")
+    assert [d.metadata["chunk_id"] for d in treat.documents] == ["a", "c"]
+
+
+def test_budget_never_touches_an_abstention(monkeypatch) -> None:  # noqa: ANN001
+    pytest.importorskip("langchain_core")
+    import ikip_common.llm.hybrid as hybrid_mod
+    from ikip_common.llm.answer import make_hybrid_retrieve
+    from ikip_common.llm.hybrid import RetrievalOutcome
+
+    def fake_abstain(session, tenant, query, emb, **kw):  # noqa: ANN001, ANN202, ARG001
+        return RetrievalOutcome(documents=[], abstained=True, reason="insufficient evidence")
+
+    monkeypatch.setattr(hybrid_mod, "hybrid_retrieve", fake_abstain)
+    out = make_hybrid_retrieve(
+        None, uuid.uuid4(), None, context_budget=ContextBudget(dedup=True, max_tokens=10)
+    )("q")
+    assert out.abstained is True
+    assert out.documents == []

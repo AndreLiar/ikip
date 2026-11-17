@@ -78,6 +78,34 @@ def _contract_prompts():  # noqa: ANN202 — PromptConfig (generation-contract v
     return GROUNDING_CONTRACT_V1
 
 
+def _context_budget(args: argparse.Namespace):  # noqa: ANN202 — ContextBudget | None (ADR 0032 L3)
+    """Build a ContextBudget from --ctx-* flags, or None if none set (A/B treatment vs baseline)."""
+    dedup = getattr(args, "ctx_dedup", False)
+    max_tokens = getattr(args, "ctx_max_tokens", None)
+    litm = getattr(args, "ctx_litm", False)
+    if not dedup and max_tokens is None and not litm:
+        return None
+    from ikip_common.context_engineering import ContextBudget
+
+    return ContextBudget(
+        max_tokens=max_tokens,
+        dedup=dedup,
+        dedup_threshold=getattr(args, "ctx_dedup_threshold", 0.9),
+        lost_in_the_middle=litm,
+    )
+
+
+def _context_config(budget) -> dict | None:  # noqa: ANN001 — serialise the budget into run config
+    if budget is None:
+        return None
+    return {
+        "max_tokens": budget.max_tokens,
+        "dedup": budget.dedup,
+        "dedup_threshold": budget.dedup_threshold,
+        "lost_in_the_middle": budget.lost_in_the_middle,
+    }
+
+
 def _run(args: argparse.Namespace) -> int:
     from sqlalchemy.orm import Session
 
@@ -93,6 +121,7 @@ def _run(args: argparse.Namespace) -> int:
     auto_merge = getattr(args, "auto_merge", False) or contract  # contract implies auto_merge
     rewrite = getattr(args, "rewrite", False)
     prompts = _contract_prompts() if contract else None
+    budget = _context_budget(args)
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
             session,
@@ -104,6 +133,7 @@ def _run(args: argparse.Namespace) -> int:
             mark_child=contract,
             rewrite=rewrite,
             rewrite_client=build_chat_client() if rewrite else None,
+            context_budget=budget,
         )
         report = evaluate_dataset(
             cases,
@@ -111,7 +141,12 @@ def _run(args: argparse.Namespace) -> int:
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
-            config={"auto_merge": auto_merge, "contract": contract, "rewrite": rewrite},
+            config={
+                "auto_merge": auto_merge,
+                "contract": contract,
+                "rewrite": rewrite,
+                "context_engineering": _context_config(budget),
+            },
             prompts=prompts,
         )
     run_path, latest = write_run(report, args.out)
@@ -199,6 +234,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
     auto_merge = getattr(args, "auto_merge", False) or contract  # contract implies auto_merge
     rewrite = getattr(args, "rewrite", False)
     prompts = _contract_prompts() if contract else None
+    budget = _context_budget(args)
     with Session(make_engine()) as session:
         retrieve = make_hybrid_retrieve(
             session,
@@ -210,6 +246,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             mark_child=contract,
             rewrite=rewrite,
             rewrite_client=build_chat_client() if rewrite else None,
+            context_budget=budget,
         )
         report = evaluate_dataset(
             cases,
@@ -217,7 +254,12 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             chat_client=build_chat_client(),
             k=args.k,
             gold_set_version=version,
-            config={"auto_merge": auto_merge, "contract": contract, "rewrite": rewrite},
+            config={
+                "auto_merge": auto_merge,
+                "contract": contract,
+                "rewrite": rewrite,
+                "context_engineering": _context_config(budget),
+            },
             prompts=prompts,
             telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
         )
@@ -559,6 +601,34 @@ def main(argv: list[str] | None = None) -> int:
             action="store_true",
             help="rewrite the question into a retrieval-optimised search query before "
             "retrieving (ADR 0026); generation still answers the original question",
+        )
+        # ADR 0032 layer 3 A/B: context-engineering transforms on retrieved docs (post-retrieval,
+        # drop/reorder only — citations preserved). Each opt-in; any one set enables the budget.
+        p.add_argument(
+            "--ctx-dedup",
+            dest="ctx_dedup",
+            action="store_true",
+            help="drop near-duplicate retrieved chunks (ADR 0032 L3)",
+        )
+        p.add_argument(
+            "--ctx-dedup-threshold",
+            dest="ctx_dedup_threshold",
+            type=float,
+            default=0.9,
+            help="Jaccard threshold for --ctx-dedup (default 0.9)",
+        )
+        p.add_argument(
+            "--ctx-max-tokens",
+            dest="ctx_max_tokens",
+            type=int,
+            default=None,
+            help="token budget for the evidence block (ADR 0032 L3)",
+        )
+        p.add_argument(
+            "--ctx-litm",
+            dest="ctx_litm",
+            action="store_true",
+            help="reorder strongest evidence to the edges (lost-in-the-middle, ADR 0032 L3)",
         )
 
     p_run = sub.add_parser("run", help="live run against a gold set")
