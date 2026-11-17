@@ -51,6 +51,31 @@ def _combine(cases: list[dict], hops: int) -> list[dict]:
     return out
 
 
+def _combine_offset(cases: list[dict]) -> list[dict]:
+    """Extra 2-hop pairs (i, i+half) — a *different* pairing than consecutive, to widen the gold
+    (n=9 -> n=18) with distinct compound questions for a less noisy gate (MISSION-047)."""
+    half = len(cases) // 2
+    out: list[dict] = []
+    for i in range(half):
+        a, b = cases[i], cases[i + half]
+        out.append(
+            {
+                "case_key": f"mho-{a['case_key'].split('-')[-1]}-{b['case_key'].split('-')[-1]}",
+                "question": a["question"].rstrip("?") + "? Separately, " + b["question"],
+                "expected_behavior": "answered",
+                "ground_truth": " ".join(
+                    c["ground_truth"] for c in (a, b) if c.get("ground_truth")
+                ),
+                "language": "en",
+                "reviewed": False,
+                "category": "multi_hop_2",
+                "relevant_chunk_ids": a.get("relevant_chunk_ids", [])
+                + b.get("relevant_chunk_ids", []),
+            }
+        )
+    return out
+
+
 def main() -> None:
     src = json.loads(_SRC.read_text())
     cases = src["cases"]
@@ -62,8 +87,17 @@ def main() -> None:
         }
         out = _OUT_DIR / f"ntrs_multihop_probe_{hops}hop.json"
         out.write_text(json.dumps(probe, indent=2))
-        n = len(probe["cases"])
-        print(f"{out}: {n} {hops}-hop cases (each needs {hops} distinct chunks)")
+        print(f"{out}: {len(probe['cases'])} {hops}-hop cases (each needs {hops} distinct chunks)")
+
+    # Wider 2-hop set (consecutive + offset pairings) for a less noisy promote gate.
+    wide = {
+        "gold_set_version": "ntrs-multihop-2hop-wide-v1",
+        "language": "en",
+        "cases": _combine(cases, 2) + _combine_offset(cases),
+    }
+    out = _OUT_DIR / "ntrs_multihop_probe_2hop_wide.json"
+    out.write_text(json.dumps(wide, indent=2))
+    print(f"{out}: {len(wide['cases'])} 2-hop cases (wide)")
 
 
 if __name__ == "__main__":
