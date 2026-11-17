@@ -63,30 +63,51 @@ gpt-5.4-mini.
    on order alone → **heavy judge non-determinism at n=18 / single run.** The faithfulness +0.050
    lives in that same noise band, so it **cannot be trusted from one pass.**
 
-## Verdict
-**Do not promote any knob on this evidence** — ADR 0032's bar (faithfulness ≥ baseline AND a
-recall/correctness win) is not cleared. But the two knobs now have **different** standing:
-- **`dedup` → reject** (real recall cost + worse answers; its premise, redundant chunks, barely
-  exists in this gold).
-- **`litm` → promising, unproven.** Recall-neutral by construction and faithfulness +0.050, but a
-  single noisy run can't promote it. It is the **one knob worth a proper `--runs`-averaged re-test**
-  before a promote/reject call. Stays opt-in until then.
+## Follow-up — `--runs 3` judge-averaged (resolves litm, overturns the single-run caution)
+The single-run worry was that litm's gain lived in judge noise. So I re-ran **baseline** and
+**litm-only** with `eval compare --runs 3` (generation once per arm, then the Ragas judge **3×** on
+the *same* answers — this averages exactly the judge noise). Both arms answered the **same 17** cases
+(1 abstention excluded, as Ragas faithfulness is NaN on an empty answer):
 
-This is the MISSION-044 result with a sharper edge: *context changes are a trade-off* — and the A/B
-is what separated a knob that hurts (`dedup`) from one that might help (`litm`). The value delivered
-is the **measurement + the reusable instrument**, not a new default; the opt-in + A/B-gated design is
-vindicated — as defaults, dedup would have silently degraded quality.
+| arm | faithfulness (judge-avg, n=17) | judge-noise std (across the 3 passes) |
+|---|--:|--:|
+| baseline | 0.9145 | 0.0042 |
+| litm-only | **0.9902** | 0.0006 |
+| **Δ** | **+0.076** | — |
+
+**The faithfulness gain is real, not noise.** Judge-noise std is ±0.004 (baseline) / ±0.001 (litm),
+so **+0.076 is ~18× the noise floor.** Per case, 5 of 6 that moved went up — the weak cases are
+exactly where reorder helped (`ntrs-v2-16` 0.33→1.00, `ntrs-v2-1` 0.60→1.00, `ntrs-v2-7` 0.83→1.00),
+one regressed (`ntrs-v2-11` 1.00→0.83). This **corrects the single-run read**: the judge is noisy
+*per case* (hence the `ntrs-v2-2` context_recall 1.0→0.0 swing) but **stable in aggregate**, and
+averaging shows litm's lost-in-the-middle reorder genuinely lifts grounding. Recall stays untouched
+(litm is a pure reorder of the same chunk set — deterministic recall@5 = baseline, provably).
+
+## Verdict
+- **`dedup` → reject.** Real recall cost (0.889→0.833) + worse answer_correctness; its premise
+  (redundant chunks) barely exists in this gold.
+- **`litm` → promote candidate (grounding win, confirmed).** Judge-averaged faithfulness **+0.076**
+  at **zero recall cost**, well outside judge noise and stable across passes. It clears the part of
+  ADR 0032's bar that matters most for this product — *grounding* (faithfulness ≫ baseline, recall
+  neutral). Recommendation: **promote `--ctx-litm` from opt-in toward default**, pending the one
+  check below (generation variance). `dedup` stays off.
+
+This sharpens the MISSION-044 story: context changes are a trade-off, and a *properly averaged* A/B
+is what told a knob that hurts (`dedup`) apart from one that helps (`litm`) — where a single run had
+them both looking like losers. The instrument + the averaging discipline are the asset.
 
 ## Honest limits
-- **n=18, single Ragas run per arm** → the context metrics swing on an *identical* chunk set
-  (proof above), so treat all deltas < ~0.05 as noise. Promoting `litm` needs `--runs`-averaged
-  Ragas (ideally a larger n); the *rejections* (dedup, combined arm) are safe — they lost broadly.
-- **litm's faithfulness win is single-run** and `answer_correctness`/`relevancy` were flat-to-down,
-  so even the optimistic read is "maybe helps grounding, doesn't help correctness."
-- **NTRS (EN) only**, k=5. A corpus with genuinely redundant/duplicated chunks (where `dedup` has
-  real work) could differ — this gold had few near-duplicates, so dedup mostly just lost a chunk.
-- The cross-encoder reranker (ADR 0032 §3) is **not** tested here — it's model-dependent and belongs
-  behind the `Reranker` port, measured separately.
+- **`--runs` averages the judge, not generation.** Each arm generated its answers **once**, judged
+  3×. The +0.076 is a rock-solid *judge* measurement of those two generations; it does **not** average
+  out generation non-determinism. The effect is large and the per-case pattern is coherent (weak
+  cases → 1.0), so luck is unlikely — but the clean final step before defaulting is to **re-generate**
+  litm a few times (not just re-judge) and confirm the gain holds.
+- **Faithfulness, not correctness.** `answer_correctness`/`answer_relevancy` were flat-to-slightly-
+  down single-run. litm makes answers *stick to the retrieved evidence* (grounding) more, which is
+  the core promise — but it is not shown to make them more *correct vs ground truth*.
+- **NTRS (EN) only**, n=17 answered, k=5. Re-confirm on an FR corpus before a global default.
+- The cross-encoder reranker (ADR 0032 §3) is **not** tested here — model-dependent, belongs behind
+  the `Reranker` port, measured separately.
 
 ## Operational lesson (recorded)
 Running the two Ragas arms **in parallel** tripped Azure **429 rate-limits** (`gpt-5.4-mini`,
@@ -95,8 +116,11 @@ the arms **serially** succeeded cleanly. **Serialize paid LLM-judged A/B arms** 
 quota; parallelism buys nothing but throttling.
 
 ## See also
-Reproduce (**serial**, one arm at a time): `… eval ragas --gold eval-results/ab/ntrs_gold_v2.json
---tenant <ntrs> --k 5 [--ctx-litm] [--ctx-dedup] --out eval-results/ab/<arm>`. Results:
-`eval-results/ab/{ctx_baseline,ctx_litm_only,ctx_dedup_litm}/ragas.json`. Strengthens
-[ADR 0032](../../adr/0032-memory-and-context-engineering.md)'s opt-in + A/B-gated stance with
-measured backing — and leaves `litm` flagged for a `--runs`-averaged re-test.
+Reproduce (**serial**, one arm at a time). Single-run: `… eval ragas --gold
+eval-results/ab/ntrs_gold_v2.json --tenant <ntrs> --k 5 [--ctx-litm] [--ctx-dedup] --out
+eval-results/ab/<arm>`. Judge-averaged: `… eval compare … --runs 3 [--ctx-litm] --budget-usd 1.0
+--out eval-results/ab/ctx_cmp_<arm>` (per-run means/variance in `comparison.json → ragas_variance`;
+per-case faithfulness in `pairs`). Results under `eval-results/ab/{ctx_baseline,ctx_litm_only,
+ctx_dedup_litm,ctx_cmp_baseline,ctx_cmp_litm}/`. Strengthens
+[ADR 0032](../../adr/0032-memory-and-context-engineering.md)'s opt-in + A/B-gated stance — and turns
+`litm` into a measured promote candidate (grounding win, pending a generation-variance check).
