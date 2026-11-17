@@ -149,6 +149,10 @@ def _run(args: argparse.Namespace) -> int:
             context_budget=budget,
             reranker=reranker,
         )
+        if getattr(args, "decompose", False):
+            from ikip_common.agent.decompose import make_decomposed_retrieve
+
+            retrieve = make_decomposed_retrieve(retrieve, build_chat_client())
         report = evaluate_dataset(
             cases,
             retrieve=retrieve,
@@ -161,6 +165,7 @@ def _run(args: argparse.Namespace) -> int:
                 "rewrite": rewrite,
                 "context_engineering": _context_config(budget),
                 "reranker": getattr(args, "reranker", "identity"),
+                "decompose": getattr(args, "decompose", False),
             },
             prompts=prompts,
         )
@@ -265,6 +270,10 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             context_budget=budget,
             reranker=reranker,
         )
+        if getattr(args, "decompose", False):
+            from ikip_common.agent.decompose import make_decomposed_retrieve
+
+            retrieve = make_decomposed_retrieve(retrieve, build_chat_client())
         report = evaluate_dataset(
             cases,
             retrieve=retrieve,
@@ -277,6 +286,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
                 "rewrite": rewrite,
                 "context_engineering": _context_config(budget),
                 "reranker": getattr(args, "reranker", "identity"),
+                "decompose": getattr(args, "decompose", False),
             },
             prompts=prompts,
             telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
@@ -662,6 +672,13 @@ def main(argv: list[str] | None = None) -> int:
             dest="reranker_model",
             default=None,
             help="cross-encoder model name (default: ms-marco-MiniLM-L-6-v2)",
+        )
+        # ADR 0033 / Story 10.5: decompose a compound question, fan-out retrieve each part, merge.
+        p.add_argument(
+            "--decompose",
+            dest="decompose",
+            action="store_true",
+            help="agentic query decomposition: split -> fan-out retrieval -> merge (ADR 0033)",
         )
 
     p_run = sub.add_parser("run", help="live run against a gold set")
