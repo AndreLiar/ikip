@@ -86,10 +86,15 @@ def cached_grounded_answer(
     validator: GroundingValidator | None = None,
     equipment_model: str | None = None,
     revision: str | None = None,
+    context_fingerprint: str | None = None,
     ttl_s: int = DEFAULT_TTL_S,
 ) -> tuple[AnswerResult, bool]:
     """Return (result, cache_hit). On miss, run the grounded-answer graph and store the
-    result (including abstentions) under a tenant/version-aware key."""
+    result (including abstentions) under a tenant/version-aware key.
+
+    `context_fingerprint` (ADR 0032) partitions the cache by conversational history / long-term
+    memory so a memory-influenced answer never collides with another user's (or a context-free)
+    answer to the same raw question. `None` keeps the pre-memory key exactly."""
     epoch = current_answer_epoch(cache, tenant_id)
     key = answer_key(
         tenant_id,
@@ -98,6 +103,7 @@ def cached_grounded_answer(
         revision=revision,
         current_version_ids=current_version_ids,
         epoch=epoch,
+        context_fingerprint=context_fingerprint,
     )
     hit = cache.get(key)
     if hit is not None:
