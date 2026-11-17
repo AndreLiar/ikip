@@ -2,6 +2,8 @@
 
 Mission notes record how each non-trivial implementation was built **and** how to reproduce it without an agent. Architecture decisions live in [`../adr/`](../adr/README.md); reproduction/runbooks in [`../runbooks/`](../runbooks); these notes cross-link them.
 
+> **Start here for the big picture:** [**synthesis.md**](./synthesis.md) — the architecture at a glance + the measure-first thesis (what was accepted, rejected, deferred, and the evidence that decided each).
+
 ## Missions
 | Mission | Scope | Story |
 |---------|-------|-------|
