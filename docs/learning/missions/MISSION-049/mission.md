@@ -16,43 +16,77 @@ compound question whose `relevant_chunk_ids` is the **union** of the parts (9 tw
 The fixed flow does **one** retrieval for the whole question, so `recall@5` on the union measures
 whether a single query embedding can surface **all** the distinct chunks at once. Each chunk is known
 to exist and be individually retrievable (single-hop recall@5 = 0.89), so any drop is attributable to
-the multi-hop **structure**, not missing data. Deterministic `eval run`, k=5, NTRS tenant (~$0.015/arm).
+the multi-hop **structure**, not missing data. Deterministic `eval run`, NTRS tenant (~$0.015/arm).
+Then a **decision battery** to rule out the cheap fixes: k-sweep (k=10/20), the existing `--rewrite`,
+and a decomposition baseline (per-part retrieval unioned — computed free from the single-hop run).
 
 ## Results
+### A. The gap (single-shot, k=5)
 | arm | chunks needed | recall@5 | abstention | behavior conformity |
 |---|--:|--:|--:|--:|
 | single-hop (baseline) | 1 | **0.889** | 0.056 | 0.944 |
 | 2-hop probe | 2 | **0.444** | 0.111 | 0.889 |
 | 3-hop probe | 3 | **0.278** | 0.333 | 0.667 |
 
-## Discovery — single-shot retrieves ≈one hop, no matter how many the question needs
-1. **Recall collapses with hops, and it is NOT a k-budget problem.** k=5 easily holds 2–3 chunks, yet
-   recall falls 0.889 → 0.444 → 0.278. The arithmetic is the tell: 0.444×2 ≈ **0.89 chunks** retrieved
-   of 2; 0.278×3 ≈ **0.83 chunks** of 3. Single-shot retrieval reliably fetches **about one hop's
-   worth of evidence** regardless of the question's arity. The failure is **query representation** —
-   one blended embedding of a multi-part question is dominated by one part, so the other parts' chunks
-   never rank into the top-k. This is exactly the gap decomposition (Story 10.5) / iterative retrieval
-   (Story 10.3) target.
-2. **The end answer degrades, not just the metric.** Abstention climbs 0.056 → 0.111 → 0.333 and
-   behavior conformity falls 0.944 → 0.889 → 0.667: as hops increase, the flow increasingly can't
-   ground and gives up — a real failure, not a recall-metric artifact.
-3. **The fix is already quantified.** The single-hop baseline *is* the decomposed case: each
-   sub-question retrieved **alone** scores 0.889. So decomposing the 2-hop question into its parts and
-   unioning the retrievals would recover recall **0.444 → ~0.89**. That's the measured value of
-   Story 10.5, in one number, before writing it.
+### B. Decision battery — rule out the cheap fixes before concluding "go agentic"
+A real reason to change the pipeline must survive the cheaper alternatives. It does:
 
-## Verdict
-**The multi-hop failure class is real and measured — the ADR 0026 trigger is met for decomposition /
-iterative retrieval (Epic 10 Stories 10.5 / 10.3).** This is the opposite of the BM25 (MISSION-046)
-and dedup (MISSION-047) results: there the add-on couldn't beat an already-strong baseline; here the
-baseline **structurally fails** (recall halves at 2 hops) and the decomposed recall shows the fix
-works. If/when Epic 10 is built, this probe is its gold set and `recall@5 0.444 → ~0.89` is its target.
+| fix | 2-hop recall | 3-hop recall | ruled out? |
+|---|--:|--:|---|
+| single-shot @k=5 (baseline) | 0.444 | 0.278 | — (the gap) |
+| **bigger k** @k=10 | 0.444 | 0.389 | ✓ no help |
+| **bigger k** @k=20 (4×) | 0.500 | 0.444 | ✓ 4× budget barely moves it |
+| **existing query-rewrite** @k=5 | 0.444 | 0.111 | ✓ no help — *hurts* 3-hop |
+| **decomposition (multi-query)** @k=5 | **0.889** | **0.889** | ← the only thing that fixes it |
+
+"decomposition" = split the compound question into its parts, retrieve each **separately** at k=5,
+union the results (computed from the single-hop run's per-case retrieved ids — the baseline *is* the
+decomposed retrieval). It **fully recovers** recall at both arities.
+
+## Discovery — single-shot retrieves ≈one hop, and only decomposition fixes it
+1. **Recall collapses with hops, and it is NOT a k-budget problem.** k=5 easily holds 2–3 chunks, and
+   raising k to **20 (4×) barely moves it** (2-hop 0.444→0.500; 3-hop 0.278→0.444). The arithmetic is
+   the tell: single-shot fetches **≈one hop's worth of evidence** regardless of arity. The failure is
+   **query representation** — one blended embedding of a multi-part question is dominated by one part,
+   so the other parts' chunks never rank into the top-k, *even at k=20*.
+2. **The one single-query knob we already have makes it worse.** `--rewrite` (ADR 0026 reformulation)
+   leaves 2-hop flat (0.444) and **drops 3-hop to 0.111** — reformulating into *one* query can only
+   re-blend the hops, not separate them. Confirms the fix must be **multi-query**, not a better single
+   query.
+3. **Decomposition fully recovers recall (0.444/0.278 → 0.889).** Retrieve each sub-question
+   separately and union — the baseline single-hop run *is* that decomposition — and recall returns to
+   the single-hop level at both arities. The mechanism is proven, not assumed.
+4. **The end answer degrades too, not just the metric.** Abstention climbs 0.056 → 0.111 → 0.333 as
+   hops increase — a real failure, not a recall artifact.
+
+## Verdict — a real reason for *decomposition*, not (yet) for a full agent
+**The multi-hop failure is real, and the cheap fixes are ruled out** (bigger k: no; single-query
+rewrite: no/worse) — **only multi-query decomposition recovers recall.** That is a genuine,
+measured reason to go beyond single-shot retrieval, and it is the *opposite* of BM25 (MISSION-046) /
+dedup (MISSION-047), where the baseline was already strong and the add-on didn't earn its place.
+
+But be precise about **what** is justified:
+- **Justified now (measured):** **query decomposition / multi-query retrieval** — Epic 10
+  **Story 10.5** (+ the retrieval half of 10.3). The minimal form is bounded and barely "agentic":
+  *one* LLM split-call → N parallel retrievals → synthesize with per-part citations. One extra LLM
+  call, deterministic fan-out. This probe is its gold set; `recall 0.444 → ~0.89` is its target.
+- **NOT yet justified:** the **full cyclic plan–act–observe agent** (Story 10.2), self-critique
+  (10.6), tool-selection, iterative conditional steps. This probe says nothing about them — they
+  answer a *different* failure (decomposition not knowable up front, cross-tool reasoning) that we
+  have **not** measured. Building the whole controller on this evidence would repeat the mistake we
+  avoided with the reranker: paying for complexity the measurement doesn't demand.
+
+So: **yes, there is a real reason to evolve — but the measured reason is a decomposition *step*, the
+smallest slice of Epic 10, not a wholesale switch to an agentic pipeline.**
 
 ## Honest limits — what this does and does NOT justify
 - **Capability failure, not proven demand.** This shows the flow *can't* do multi-hop; it doesn't show
-  users *ask* multi-hop. Before shipping Epic 10, confirm multi-hop/compositional questions are a real
-  share of traffic (sample `trace`/conversation logs). The probe justifies the *capability*, not the
-  priority.
+  users *ask* multi-hop. Before shipping even the decomposition step, confirm multi-hop/compositional
+  questions are a real share of traffic (sample `trace`/conversation logs — none meaningful yet, this
+  is pre-production). The probe justifies the *capability*, not the priority.
+- **Recall, not end-to-end answer quality.** Measured retrieval recall, not final `answer_correctness`.
+  But recall is the binding ceiling — un-retrieved evidence can't be answered — so 0.444 caps answer
+  quality regardless. The natural confirmation is a decomposed-vs-baseline Ragas run (deferred).
 - **Compound phrasing is synthetic.** "q1 Separately q2" concatenates two NTRS topics; real multi-hop
   ("compare X vs Y") is more integrated — but that blends the embedding *more*, so the measured
   degradation is a floor, not an exaggeration.
