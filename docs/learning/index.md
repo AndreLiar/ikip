@@ -52,6 +52,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-045](./missions/MISSION-045/mission.md) | Measure the 4 FR corpora (law/insurance/finance/credit): faithfulness ~1.0 across languages; law's low recall@5 is a strict-metric artifact | Epic 5 / eval |
 | [MISSION-046](./missions/MISSION-046/mission.md) | Would BM25/OpenSearch help? Measured the lexical arm: ~0 on NL questions (vector carries), already 0.83–0.92 on keyword queries; french analyzer rejected → no second datastore | Epic 3 / retrieval |
 | [MISSION-047](./missions/MISSION-047/mission.md) | A/B context engineering on NTRS: dedup rejected (hurts recall+correctness); litm-only — `--runs 3` judge-averaged faithfulness +0.076 (~18× noise floor) at zero recall cost → promote candidate (grounding win, pending generation-variance check); judge noisy per-case, stable in aggregate; serialize paid arms (429) | ADR 0032 / context eng |
+| [MISSION-048](./missions/MISSION-048/mission.md) | Cross-encoder reranker: measured headroom small (recall@5 0.89, faithfulness ~0.9–1.0) vs certain torch cost → build the port seam with an injectable score_fn (pure, tested, A/B-wired), commit ZERO deps; defer the model/dep until a live A/B is justified | ADR 0032 §3 / retrieval |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
