@@ -135,6 +135,7 @@ class AskService(Protocol):
         equipment_model: str | None,
         revision: str | None,
         user_id: uuid.UUID,
+        conversation_id: uuid.UUID | None = None,
     ) -> AskResponse: ...
 
 
@@ -234,11 +235,86 @@ def get_retrieve_service() -> RetrieveService:
     return service
 
 
+_HISTORY_MAX_TURNS = 4  # bounded thread window for contextualization (ADR 0032 layer 1)
+
+
+def _load_history(session, *, tenant_id, user_id, conversation_id):  # noqa: ANN001, ANN202
+    """Last ≤4 (user, assistant) turns of an **owned** conversation (NFR10: tenant+user scoped);
+    [] if the conversation isn't the caller's. Feeds query contextualization only — never the
+    answer (ADR 0032)."""
+    from sqlalchemy import select
+
+    from ikip_common.db.models import Conversation, ConversationMessage
+
+    owned = session.execute(
+        select(Conversation.id).where(
+            Conversation.id == conversation_id,
+            Conversation.tenant_id == tenant_id,
+            Conversation.user_id == user_id,
+        )
+    ).first()
+    if owned is None:
+        return []
+    rows = session.execute(
+        select(ConversationMessage.role, ConversationMessage.content)
+        .where(ConversationMessage.conversation_id == conversation_id)
+        .order_by(ConversationMessage.created_at.asc())
+    ).all()
+    pairs: list[tuple[str, str]] = []
+    pending_user: str | None = None
+    for role, content in rows:
+        if role == "user":
+            pending_user = content
+        elif role == "assistant" and pending_user is not None:
+            pairs.append((pending_user, content))
+            pending_user = None
+    return pairs[-_HISTORY_MAX_TURNS:]
+
+
+def _memory_filters(session, *, tenant_id, user_id):  # noqa: ANN001, ANN202
+    """Long-term memory → RetrievalFilters (ADR 0032 layer 2). Preferences bias retrieval; the
+    base keeps the per-user ACL filter. Returns filters only — never answer content."""
+    from ikip_common.db.retrieval import RetrievalFilters
+    from ikip_common.user_memory import get_memory, memory_retrieval_filters
+
+    entries = get_memory(session, tenant_id=tenant_id, user_id=user_id)
+    return memory_retrieval_filters(entries, base=RetrievalFilters(user_id=user_id))
+
+
+def _context_fingerprint(history, filters):  # noqa: ANN001, ANN202
+    """Stable hash of the memory/history signals that changed retrieval, or None when neither is
+    active (so the cache key is byte-identical to the pre-memory key). Partitions the answer cache
+    so a memory-influenced answer can't collide with another user's answer to the same question."""
+    memory_active = (filters.document_type, filters.equipment_id, filters.metadata) != (
+        None,
+        None,
+        None,
+    )
+    if not history and not memory_active:
+        return None
+    import hashlib
+    import json
+
+    payload = {
+        "history": [list(t) for t in history],
+        "document_type": filters.document_type,
+        "equipment_id": str(filters.equipment_id) if filters.equipment_id else None,
+        "metadata": filters.metadata,
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
 def get_ask_service() -> AskService:
-    """Default (production) grounded-answer service with caching (Stories 3.5 + 3.7)."""
+    """Default (production) grounded-answer service with caching (Stories 3.5 + 3.7) and
+    memory (ADR 0032): conversational history contextualizes the retrieval query, long-term
+    memory biases the retrieval filters. Memory shapes *what is retrieved*, never the answer —
+    the grounding/citation guarantee is untouched (generation still answers over retrieved,
+    cited evidence); and the answer cache is partitioned by a context fingerprint so a
+    memory-influenced answer never collides with another user's."""
 
     def service(  # noqa: ANN001
-        *, tenant_id, query, equipment_model, revision, user_id
+        *, tenant_id, query, equipment_model, revision, user_id, conversation_id=None
     ) -> AskResponse:
         from ikip_common.cache import CachingEmbeddingClient, build_cache
         from ikip_common.db import make_session_factory
@@ -252,6 +328,7 @@ def get_ask_service() -> AskService:
 
         metrics = get_metrics()
         cache = build_cache()
+        chat_client = build_chat_client()
 
         with make_session_factory()() as session:
             current_ids = [
@@ -262,13 +339,23 @@ def get_ask_service() -> AskService:
                     .where(Document.tenant_id == tenant_id, DocumentVersion.is_current.is_(True))
                 ).scalars()
             ]
-            from ikip_common.db.retrieval import RetrievalFilters
-
+            # ADR 0032 layer 2: long-term memory → retrieval filters (user prefs bias retrieval).
+            filters = _memory_filters(session, tenant_id=tenant_id, user_id=user_id)
+            # ADR 0032 layer 1: conversational history → standalone-query contextualization.
+            history = (
+                _load_history(
+                    session, tenant_id=tenant_id, user_id=user_id, conversation_id=conversation_id
+                )
+                if conversation_id is not None
+                else []
+            )
             retrieve = make_hybrid_retrieve(
                 session,
                 tenant_id,
                 CachingEmbeddingClient(build_embedding_client(), cache, metrics=metrics),
-                filters=RetrievalFilters(user_id=user_id),
+                filters=filters,
+                history=history or None,
+                contextualize_client=chat_client if history else None,
             )
             result, hit = cached_grounded_answer(
                 query,
@@ -276,9 +363,10 @@ def get_ask_service() -> AskService:
                 tenant_id=tenant_id,
                 current_version_ids=current_ids,
                 retrieve=retrieve,
-                chat_client=build_chat_client(),
+                chat_client=chat_client,
                 equipment_model=equipment_model,
                 revision=revision,
+                context_fingerprint=_context_fingerprint(history, filters),
             )
         # Answer-cache hit rate → dashboard (Story 5.6). An answer-cache hit also skips
         # retrieval + embedding entirely (the biggest win).
@@ -367,6 +455,7 @@ def ask(
             equipment_model=req.equipment_model,
             revision=req.revision,
             user_id=principal.user_id,
+            conversation_id=req.conversation_id,
         )
         latency_ms = (time.perf_counter() - start) * 1000
         cost_usd = estimate_cost_usd(req.query, result.answer or "")

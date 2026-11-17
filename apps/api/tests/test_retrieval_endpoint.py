@@ -175,7 +175,7 @@ def test_ask_returns_grounded_answer() -> None:
         get_ask_service,
     )
 
-    def fake_ask(*, tenant_id, query, equipment_model, revision, user_id):
+    def fake_ask(*, tenant_id, query, equipment_model, revision, user_id, conversation_id=None):
         return AskResponse(
             status="answered",
             answer="E42 = pump overheat. [E1]",

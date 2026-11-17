@@ -67,8 +67,15 @@ def answer_key(
     revision: str | None,
     current_version_ids: Iterable[str],
     epoch: int = 0,
+    context_fingerprint: str | None = None,
 ) -> str:
-    """Layer 4: exact-match answer cache key. Tenant-partitioned + version-aware + epoch."""
+    """Layer 4: exact-match answer cache key. Tenant-partitioned + version-aware + epoch.
+
+    `context_fingerprint` (ADR 0032) partitions the cache when conversational history or
+    long-term memory changed *what was retrieved* for this question: the same raw question can
+    yield different grounded answers under different thread context / user memory, so those must
+    NOT share a cache entry. When `None` (no memory/history active) the key is byte-identical to the
+    pre-memory key — the existing cache is preserved, not invalidated."""
     vfp = version_fingerprint(current_version_ids)
     parts = [
         "ans",
@@ -79,4 +86,6 @@ def answer_key(
         vfp,
         _sha(normalize(question)),
     ]
+    if context_fingerprint:
+        parts.append(f"ctx:{context_fingerprint}")
     return ":".join(parts)

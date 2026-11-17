@@ -105,6 +105,33 @@ def test_answer_key_epoch_invalidation() -> None:
     assert _key(A, epoch=0) != _key(A, epoch=1)
 
 
+def test_answer_key_context_fingerprint_partitions_and_is_backwards_compatible() -> None:
+    # ADR 0032: a memory/history-influenced answer must not collide with the context-free one.
+    base = _key(A)
+    with_ctx = answer_key(
+        A,
+        "E42?",
+        equipment_model="P1",
+        revision="A",
+        current_version_ids=("v1",),
+        context_fingerprint="abc123",
+    )
+    assert with_ctx != base  # different context -> different cache entry
+    assert "ctx:abc123" in with_ctx
+    # None / empty fingerprint keeps the pre-memory key byte-identical (no cache invalidation).
+    assert (
+        answer_key(
+            A,
+            "E42?",
+            equipment_model="P1",
+            revision="A",
+            current_version_ids=("v1",),
+            context_fingerprint=None,
+        )
+        == base
+    )
+
+
 def test_query_embedding_key_depends_on_model_version() -> None:
     assert query_embedding_key("q", "m1@512") != query_embedding_key("q", "m2@512")
     assert query_embedding_key("Q ", "m1@512") == query_embedding_key("q", "m1@512")  # normalized
