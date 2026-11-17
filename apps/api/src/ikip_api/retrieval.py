@@ -280,16 +280,17 @@ def _memory_filters(session, *, tenant_id, user_id):  # noqa: ANN001, ANN202
     return memory_retrieval_filters(entries, base=RetrievalFilters(user_id=user_id))
 
 
-def _context_fingerprint(history, filters):  # noqa: ANN001, ANN202
-    """Stable hash of the memory/history signals that changed retrieval, or None when neither is
-    active (so the cache key is byte-identical to the pre-memory key). Partitions the answer cache
-    so a memory-influenced answer can't collide with another user's answer to the same question."""
+def _context_fingerprint(history, filters, *, decompose=False):  # noqa: ANN001, ANN202
+    """Stable hash of the retrieval-shaping signals that changed what was retrieved (history,
+    long-term memory, decomposition), or None when none is active (so the cache key stays identical
+    to the pre-memory key). Partitions the answer cache so a memory- or decomposition-influenced
+    answer never collides with a single-shot answer to the same raw question."""
     memory_active = (filters.document_type, filters.equipment_id, filters.metadata) != (
         None,
         None,
         None,
     )
-    if not history and not memory_active:
+    if not history and not memory_active and not decompose:
         return None
     import hashlib
     import json
@@ -299,6 +300,7 @@ def _context_fingerprint(history, filters):  # noqa: ANN001, ANN202
         "document_type": filters.document_type,
         "equipment_id": str(filters.equipment_id) if filters.equipment_id else None,
         "metadata": filters.metadata,
+        "decompose": decompose,
     }
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
@@ -316,6 +318,7 @@ def get_ask_service() -> AskService:
         *, tenant_id, query, equipment_model, revision, user_id, conversation_id=None
     ) -> AskResponse:
         from ikip_common.cache import CachingEmbeddingClient, build_cache
+        from ikip_common.config import get_settings
         from ikip_common.db import make_session_factory
         from ikip_common.db.models import Document, DocumentVersion
         from ikip_common.llm import build_chat_client, build_embedding_client
@@ -356,6 +359,14 @@ def get_ask_service() -> AskService:
                 history=history or None,
                 contextualize_client=chat_client if history else None,
             )
+            # ADR 0033 / Story 10.5: agentic query decomposition (opt-in). Self-gates — a single-ask
+            # question still takes the single-shot path; a compound one fans out + merges. Returns a
+            # retrieve of the same shape, so generate/validate + grounding are unchanged.
+            decompose = get_settings().agent_decompose
+            if decompose:
+                from ikip_common.agent.decompose import make_decomposed_retrieve
+
+                retrieve = make_decomposed_retrieve(retrieve, chat_client)
             result, hit = cached_grounded_answer(
                 query,
                 cache=cache,
@@ -365,7 +376,7 @@ def get_ask_service() -> AskService:
                 chat_client=chat_client,
                 equipment_model=equipment_model,
                 revision=revision,
-                context_fingerprint=_context_fingerprint(history, filters),
+                context_fingerprint=_context_fingerprint(history, filters, decompose=decompose),
             )
         # Answer-cache hit rate → dashboard (Story 5.6). An answer-cache hit also skips
         # retrieval + embedding entirely (the biggest win).

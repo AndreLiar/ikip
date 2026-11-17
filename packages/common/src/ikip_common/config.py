@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # Enables the dev-only token endpoint; must be False in prod.
     auth_dev_login: bool = Field(default=False, alias="AUTH_DEV_LOGIN")
     rate_limit_per_minute: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE", ge=1)
+    # Agentic query decomposition at /ask (ADR 0033 / Story 10.5). Opt-in: the gate passed on the
+    # multi-hop probe (MISSION-050) but promotion-to-default awaits a wider, --runs-averaged gold +
+    # an FR re-confirm. Self-gates per query — a single ask still takes the single-shot path.
+    agent_decompose: bool = Field(default=False, alias="AGENT_DECOMPOSE")
     # Comma-separated Entra/OIDC subject UUIDs allowed to operate across tenants.
     # This capability is deliberately independent from tenant roles.
     platform_operator_user_ids: str = Field(default="", alias="PLATFORM_OPERATOR_USER_IDS")
