@@ -52,10 +52,14 @@ class Settings(BaseSettings):
     # Enables the dev-only token endpoint; must be False in prod.
     auth_dev_login: bool = Field(default=False, alias="AUTH_DEV_LOGIN")
     rate_limit_per_minute: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE", ge=1)
-    # Agentic query decomposition at /ask (ADR 0033 / Story 10.5). Opt-in: the gate passed on the
-    # multi-hop probe (MISSION-050) but promotion-to-default awaits a wider, --runs-averaged gold +
-    # an FR re-confirm. Self-gates per query — a single ask still takes the single-shot path.
-    agent_decompose: bool = Field(default=False, alias="AGENT_DECOMPOSE")
+    # Agentic query decomposition at /ask (ADR 0033 / Story 10.5). DEFAULT ON — the gate passed
+    # across three golds (EN n=9/n=18 + FR n=12: answer_correctness +0.22–0.30, context_recall up
+    # to 1.0; MISSION-050/051/052). Self-gates per query: a single-ask question skips the fan-out
+    # (and most of the cost); only the cheap split-classification call runs on every query, the
+    # multi-part fan-out (~+50% cost) only when it's actually compound. The flag stays as the
+    # per-tenant kill-switch (AGENT_DECOMPOSE=false). Cost note: a cheaper/faster split model is the
+    # next measured optimization (not a keyword heuristic — that could silently erode the win).
+    agent_decompose: bool = Field(default=True, alias="AGENT_DECOMPOSE")
     # Comma-separated Entra/OIDC subject UUIDs allowed to operate across tenants.
     # This capability is deliberately independent from tenant roles.
     platform_operator_user_ids: str = Field(default="", alias="PLATFORM_OPERATOR_USER_IDS")
