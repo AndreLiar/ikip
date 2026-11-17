@@ -242,9 +242,8 @@ def _load_history(session, *, tenant_id, user_id, conversation_id):  # noqa: ANN
     """Last ≤4 (user, assistant) turns of an **owned** conversation (NFR10: tenant+user scoped);
     [] if the conversation isn't the caller's. Feeds query contextualization only — never the
     answer (ADR 0032)."""
-    from sqlalchemy import select
-
     from ikip_common.db.models import Conversation, ConversationMessage
+    from sqlalchemy import select
 
     owned = session.execute(
         select(Conversation.id).where(
