@@ -1,6 +1,8 @@
 # 0033. Agentic foundation (Tool port + cyclic controller) + the first measured slice: query decomposition
 
-- **Status:** Proposed — plan + design (ADR-before-code, BMAD). No implementation until agreed.
+- **Status:** Accepted — foundation (10.1 Tool port/registry, 10.2 controller/guardrails) + the
+  decomposition slice (10.5) implemented and gated (#130/#131), wired into `/ask` behind
+  `AGENT_DECOMPOSE` (#132). **One deviation from this plan — see [Implementation notes](#implementation-notes--one-deviation-from-the-plan).** Measured in [MISSION-050](../learning/missions/MISSION-050/mission.md).
 - **Date:** 2026-11-17
 - **Deciders:** Architect, PM
 - **Related:** [ADR 0026](./0026-agentic-rag-evolution.md) (agentic direction + triggers) · [ADR 0021](./0021-framework-boundary-langchain-langgraph-vs-data-plane.md) (LangGraph/ports) · [ADR 0022](./0022-grounded-answer-langgraph-gpt5-mini.md) (grounded-answer flow) · [Epic 10](../prd/epic-10-agentic-rag.md) (Stories 10.1, 10.2, 10.5) · [MISSION-049](../learning/missions/MISSION-049/mission.md) (the measurement) · concept [agentic-rag](../learning/concepts/agentic-rag.md)
@@ -66,7 +68,8 @@ invariant (citations, abstention, isolation, budget) intact at each added step.
   - **loop / no-progress detection** (same tool+args, or no new evidence → terminate),
   - a **kill-switch flag** per tenant, and the **router** that only sends *hard* queries here.
 - **Checkpointing** persists controller state so a long/interrupted run is resumable (LangGraph
-  checkpointer) — and so a step can be traced/replayed.
+  checkpointer) — and so a step can be traced/replayed. *(Deferred — not in the shipped loop; see
+  [Implementation notes](#implementation-notes--one-deviation-from-the-plan).)*
 
 ### 3. Query decomposition — the first flow (Story 10.5, the measured slice)
 The minimal, bounded flow that cashes the MISSION-049 result:
@@ -128,12 +131,38 @@ required field on `ToolResult`, isolation tests extended).
   behind our ports (ADR 0021); no new stack.
 
 ## Scope — built now vs explicitly deferred
-**Now:** Tool port + registry (retrieval tool), cyclic controller + guardrails + checkpointing, router
-flag, decomposition flow, the gate + trajectory traces.
-**Deferred until its own failure class is measured:** multi-corpus **routing** (10.4 — needs a
-multi-domain *single-tenant* corpus or multi-corpus authz; structurally provable but unmeasured),
-non-retrieval **tools** (calculator/DB), **self-critique** (10.6), **planning** beyond flat
-decomposition, full **trajectory-eval gate** in CI (10.7).
+**Now (shipped):** Tool port + registry (retrieval tool), cyclic controller + guardrails,
+decomposition flow, `/ask` flag, the gate.
+**Deferred until its own failure class is measured:** **checkpointing** (see below), the **router**
+(decomposition self-gates per query for now; a dedicated compound-question router is not built),
+multi-corpus **routing** (10.4 — needs a multi-domain *single-tenant* corpus or multi-corpus authz;
+structurally provable but unmeasured), non-retrieval **tools** (calculator/DB), **self-critique**
+(10.6), **planning** beyond flat decomposition, full **trajectory-eval gate** in CI (10.7).
+
+## Implementation notes — one deviation from the plan
+This section records where the shipped code diverges from §2 above, so the ADR stays honest.
+
+- **The controller is a plain-Python loop (`agent/controller.py`), not a LangGraph cyclic graph.**
+  §2/alternatives said "LangGraph already gives cyclic graphs + checkpointing — no new framework."
+  We kept the *reuse-LangGraph* intent but implemented the loop + guardrails ourselves, deliberately:
+  1. **ADR 0021** — the loop *is* the orchestration + the safety invariants (tenant-scoped tools,
+     provenance threading, `max_steps`/budget/loop guards). Those must be **structurally guaranteed by
+     our code**, not delegated to a framework whose loop/checkpointer semantics we don't control.
+  2. **Base-env testability** — all 30 agent tests run in the `validate` CI gate with no LLM/DB/
+     langchain (fakes + `ScriptedPolicy`). A LangGraph graph would drag langgraph into every test.
+  3. The LLM step still goes through the **`ChatClient` port** (LangChain/Azure adapter behind it,
+     ADR 0021), and the decomposition slice returns LangChain `Document`s that plug into the existing
+     **LangGraph grounded-answer graph** (ADR 0022) — so LangGraph is reused where it already fits.
+- **Checkpointing (Story 10.2 AC3) is NOT implemented.** The plan tied resumable/replayable runs to
+  the LangGraph checkpointer; the shipped loop is in-memory. Justified for now: the first and only
+  shipped flow (decomposition) is a bounded, synchronous fan-out that needs no durable state, and it
+  doesn't even use the dynamic loop. **When** a capability needs durable/long-running agent state
+  (e.g. iterative reasoning, human-in-the-loop), that is the trigger to adapt the loop into a
+  LangGraph graph and adopt its checkpointer — measure-first, same as every other deferral here.
+- **The decomposition slice does not use the cyclic controller** — it's a deterministic fan-out over
+  the Tool port (a static plan runs *every* sub-query; the loop's `no_progress` guard would truncate
+  it). So the controller ships **tested but not yet exercised by a shipped flow** — ready for the
+  first capability whose steps depend on prior observations.
 
 ## Revisit when
 - The decomposition gate passes → enable it per query class (multi-part detector) and make the agentic
