@@ -51,6 +51,7 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-044](./missions/MISSION-044/mission.md) | Wire the Stage-1 auto-merge A/B (`--auto-merge` through the eval CLI); recall@k-vs-dedup caveat; live run gated | Epic 3 / retrieval eval |
 | [MISSION-045](./missions/MISSION-045/mission.md) | Measure the 4 FR corpora (law/insurance/finance/credit): faithfulness ~1.0 across languages; law's low recall@5 is a strict-metric artifact | Epic 5 / eval |
 | [MISSION-046](./missions/MISSION-046/mission.md) | Would BM25/OpenSearch help? Measured the lexical arm: ~0 on NL questions (vector carries), already 0.83–0.92 on keyword queries; french analyzer rejected → no second datastore | Epic 3 / retrieval |
+| [MISSION-047](./missions/MISSION-047/mission.md) | A/B context engineering (dedup+lost-in-the-middle) on NTRS n=18: lost on every Ragas metric (faithfulness −0.016, recall −0.056) → stays opt-in, not default; serialize paid LLM-judged arms (429) | ADR 0032 / context eng |
 
 ## Concepts (write-once, reused across missions)
 | Concept | Covers |
