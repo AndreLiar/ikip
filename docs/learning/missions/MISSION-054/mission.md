@@ -47,13 +47,17 @@ and behind an opt-in flag (default off) — it commits no live cost and no defau
   surfaces the trajectory `stop_reason` on abstention. **34 agent + 44 eval/rerank tests green, ruff
   clean.** Zero live cost.
 
-## The probe plan (next mission)
-- **Gold:** a **synthetic grounded mini-corpus** (chosen for a *valid* measurement fastest). Per
-  case, two ingested chunks: A ("system S uses component C"), B ("component C has property P =
-  value"); question names **S, not C** ("what is P of the component used in S?"), ground_truth =
-  value, `relevant_chunk_ids = [A, B]`. Single-shot retrieval surfaces A but not B → the bridge is
-  forced. Honest caveat: synthetic/invented entities measure the **mechanism**, not a natural
-  distribution — like MISSION-049 it isolates structure, but here the corpus is constructed.
+## The probe plan (next mission) — gold generator shipped here
+- **Gold:** a **synthetic grounded mini-corpus** (chosen for a *valid* measurement fastest), built by
+  `scripts/dataset/gen_bridge_probe.py` (shipped here). 6 bridge cases → 24 chunks: per case a link
+  A ("system S is fitted with component C"), the correct fact B ("C has property P = value"), **plus
+  2 distractor facts** (other components sharing P). The question names **S + P, never C**, so a
+  single retrieval surfaces A but cannot disambiguate B among the distractors — the bridge is forced,
+  not incidental. The script emits the symbolic gold deterministically (no DB); `--seed` ingests the
+  corpus through the real indexing path and resolves `relevant_chunk_ids` to real chunk UUIDs (reuses
+  `eval.seed.seed_corpus`/`resolve_gold_ids`). Honest caveat: synthetic/invented entities measure the
+  **mechanism**, not a natural distribution — like MISSION-049 it isolates structure, but here the
+  corpus is constructed. Tenant `…b1` ("bridge"), isolated like NTRS' `…a1`.
 - **Arms:** fixed flow vs `--decompose` vs `--agent`, on the bridge gold.
 - **Expected (stated up front for honesty):** fixed fails (gets A only); decompose fails (can't form
   hop 2); `--agent` recovers (reads C from A's evidence, then retrieves B). If `--agent` does *not*
@@ -72,5 +76,6 @@ and behind an opt-in flag (default off) — it commits no live cost and no defau
 
 ## See also
 `packages/common/src/ikip_common/agent/agentic.py` · `agent/controller.py` (`_observations`) ·
-`eval/__main__.py` (`_maybe_agentic`, `--agent`) · tests `test_agent_agentic.py`,
-`test_agent_controller.py`. Enables the bridge-hop probe (next MISSION-0NN).
+`eval/__main__.py` (`_maybe_agentic`, `--agent`) · `scripts/dataset/gen_bridge_probe.py` (the probe
+gold generator) · tests `test_agent_agentic.py`, `test_agent_controller.py`. The live bridge-hop
+probe (seed `--seed`, then fixed vs `--decompose` vs `--agent`) is the next MISSION-0NN.
