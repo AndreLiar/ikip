@@ -88,14 +88,26 @@ class ControllerPolicy(Protocol):
     ) -> AgentAction: ...
 
 
+# A bridge/conditional hop needs the policy to read *what* a prior step found (an entity) to form
+# the next query — not just how many passages it got. So the observation history carries a bounded
+# snippet of each step's evidence content. Bounds keep the controller prompt cost/size predictable.
+_OBS_MAX_PASSAGES = 3  # per step, how many passage snippets to surface
+_OBS_SNIPPET_CHARS = 240  # per passage, truncate content
+
+
 def _observations(steps: Sequence[AgentStep]) -> str:
-    """Render the act→observe history for the policy prompt (compact + stable)."""
+    """Render the act→observe history for the policy prompt (compact + stable). Each step shows the
+    call, the passage count, and a bounded snippet of the top passages' *content* — so the policy
+    can use an entity found in an earlier step to form a dependent follow-up query (bridge hop)."""
     lines = []
     for i, s in enumerate(steps):
-        n = 0 if s.result is None else len(s.result.evidence)
-        lines.append(
-            f"[{i}] {s.action.tool}({json.dumps(s.action.args, sort_keys=True)}) -> {n} passages"
-        )
+        ev = [] if s.result is None else s.result.evidence
+        args = json.dumps(s.action.args, sort_keys=True)
+        lines.append(f"[{i}] {s.action.tool}({args}) -> {len(ev)} passages")
+        for e in ev[:_OBS_MAX_PASSAGES]:
+            snippet = " ".join(e.content.split())[:_OBS_SNIPPET_CHARS]
+            cid = e.provenance.get("chunk_id", "?")
+            lines.append(f"      - [{cid}] {snippet}")
     return "\n".join(lines)
 
 
@@ -210,5 +222,8 @@ _CONTROLLER_SYSTEM = (
     "You are a retrieval controller for a grounded Q&A system. You do NOT answer the question; you "
     "only decide which retrieval tool to call next to gather citable evidence, one step at a time. "
     "Prefer the fewest steps; call a tool only when it would add missing evidence; stop as soon as "
-    "the gathered evidence covers every part of the question. Never invent facts."
+    "the gathered evidence covers every part of the question. Never invent facts. "
+    "If the question asks about something that is only identified by a prior step's result (a "
+    "bridge/conditional hop), read the entity you found in the observations and use it to form the "
+    "next query — do not re-query the same thing."
 )
