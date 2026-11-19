@@ -64,6 +64,10 @@ Mission notes record how each non-trivial implementation was built **and** how t
 | [MISSION-055](./missions/MISSION-055/mission.md) | Ran the bridge-hop probe (synthetic grounded mini-corpus, 6 cases × 9 distractors). At k=2 (bridge forced): correct-value **fixed 1/6, decompose 1/6, agent 5/6** — only the cyclic controller clears it; decompose ties fixed **exactly** (distinct failure class from compound multi-hop, by construction). The live run also caught a real bug: the controller's structured decision (`args` open dict) was rejected by OpenAI structured output → it had **never worked live** (fixed to a typed `query`). Finding: the bridge is a retrieval-**coverage** failure, invisible at small scale. First flow to exercise + justify the controller | ADR 0033 / agentic |
 
 ## Concepts (write-once, reused across missions)
+
+> 🗺️ **[Concept map](./concepts/index.md)** — the consolidated view of every AI / data / platform
+> concept by domain, with the discoveries and the method. Start there for the full picture.
+
 | Concept | Covers |
 |---------|--------|
 | [dev-tooling](./concepts/dev-tooling.md) | lint vs format, ruff, pytest, pnpm workspaces, prettier, eslint flat, tsconfig |
