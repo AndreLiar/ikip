@@ -61,6 +61,22 @@ def test_null_telemetry_is_safe_noop() -> None:
     assert span.trace_id == ""  # nothing to correlate when unconfigured
 
 
+def test_adapter_exercises_the_real_langfuse_span_api() -> None:
+    # Runs ONLY where the telemetry SDK is installed (skipped in the fast CI lane). Drives a span
+    # through the REAL Langfuse client — no network (flush is never called), so it's offline-safe.
+    # This is the test that WOULD HAVE caught the v3->v5 drift (`start_span` removed for
+    # `start_observation`): a fake client can't, it only mimics the API we wrote.
+    pytest.importorskip("langfuse")
+    from ikip_common.telemetry.langfuse import LangfuseTelemetry
+
+    s = _settings(LANGFUSE_PUBLIC_KEY="pk", LANGFUSE_SECRET_KEY="sk")
+    t = LangfuseTelemetry(s)  # real SDK client (keys unused until flush)
+    with t.span("test.span", operation="verify") as span:
+        span.set_metadata(status="answered")
+        span.set_cost(cost_usd=0.001, tokens=10)
+        assert isinstance(span.trace_id, str) and span.trace_id  # real OTel trace id
+
+
 def test_build_telemetry_null_without_credentials() -> None:
     assert isinstance(build_telemetry(_settings()), NullTelemetry)
 

@@ -35,19 +35,19 @@ def _make_client(settings: Settings) -> Any:
 class _LangfuseSpan:
     def __init__(self, client: Any, name: str, metadata: dict) -> None:
         self._client = client
-        self._span = client.start_span(name=name, metadata=metadata)
+        # langfuse v5 API: `start_observation(as_type="span")` replaced v3's `start_span`. The loose
+        # `>=3.0` pin had silently moved us to v5; the adapter was never run live, so it went
+        # unnoticed — the pin is now `>=5,<6`. The span still exposes trace_id / update / end.
+        self._span = client.start_observation(name=name, as_type="span", metadata=metadata)
         self.trace_id = self._span.trace_id
 
     def set_metadata(self, **fields: object) -> None:
         self._span.update(metadata=fields)
 
     def set_cost(self, *, cost_usd: float | None = None, tokens: int | None = None) -> None:
-        usage = {}
-        if tokens is not None:
-            usage["total"] = tokens
         self._span.update(
-            metadata={"cost_usd": cost_usd} if cost_usd is not None else {},
-            usage_details=usage or None,
+            usage_details={"total": tokens} if tokens is not None else None,
+            cost_details={"total": cost_usd} if cost_usd is not None else None,
         )
 
     def finish(self, *, status: str = "ok") -> None:
