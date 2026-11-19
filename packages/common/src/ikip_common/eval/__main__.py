@@ -118,6 +118,25 @@ def _build_reranker(args: argparse.Namespace):  # noqa: ANN202 — Reranker | No
     )
 
 
+def _maybe_agentic(retrieve, args: argparse.Namespace):  # noqa: ANN001, ANN201 — wraps retrieve
+    """Optionally wrap the base retrieve in an agentic request-time flow (ADR 0033). `--agent` runs
+    the cyclic controller (dynamic, bridge-hop capable); `--decompose` runs the static fan-out.
+    Alternative A/B levers — `--agent` takes precedence if both are set. Default: neither."""
+    from ikip_common.llm import build_chat_client
+
+    if getattr(args, "agent", False):
+        from ikip_common.agent.agentic import make_agentic_retrieve
+
+        return make_agentic_retrieve(
+            retrieve, build_chat_client(), max_steps=getattr(args, "agent_max_steps", 4)
+        )
+    if getattr(args, "decompose", False):
+        from ikip_common.agent.decompose import make_decomposed_retrieve
+
+        return make_decomposed_retrieve(retrieve, build_chat_client())
+    return retrieve
+
+
 def _run(args: argparse.Namespace) -> int:
     from sqlalchemy.orm import Session
 
@@ -149,10 +168,7 @@ def _run(args: argparse.Namespace) -> int:
             context_budget=budget,
             reranker=reranker,
         )
-        if getattr(args, "decompose", False):
-            from ikip_common.agent.decompose import make_decomposed_retrieve
-
-            retrieve = make_decomposed_retrieve(retrieve, build_chat_client())
+        retrieve = _maybe_agentic(retrieve, args)
         report = evaluate_dataset(
             cases,
             retrieve=retrieve,
@@ -166,6 +182,7 @@ def _run(args: argparse.Namespace) -> int:
                 "context_engineering": _context_config(budget),
                 "reranker": getattr(args, "reranker", "identity"),
                 "decompose": getattr(args, "decompose", False),
+                "agent": getattr(args, "agent", False),
             },
             prompts=prompts,
         )
@@ -270,10 +287,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
             context_budget=budget,
             reranker=reranker,
         )
-        if getattr(args, "decompose", False):
-            from ikip_common.agent.decompose import make_decomposed_retrieve
-
-            retrieve = make_decomposed_retrieve(retrieve, build_chat_client())
+        retrieve = _maybe_agentic(retrieve, args)
         report = evaluate_dataset(
             cases,
             retrieve=retrieve,
@@ -287,6 +301,7 @@ def _live_report(args: argparse.Namespace):  # noqa: ANN201 — (version, cases,
                 "context_engineering": _context_config(budget),
                 "reranker": getattr(args, "reranker", "identity"),
                 "decompose": getattr(args, "decompose", False),
+                "agent": getattr(args, "agent", False),
             },
             prompts=prompts,
             telemetry=build_telemetry(),  # trace each case -> attach Ragas scores (5.4↔5.2)
@@ -679,6 +694,21 @@ def main(argv: list[str] | None = None) -> int:
             dest="decompose",
             action="store_true",
             help="agentic query decomposition: split -> fan-out retrieval -> merge (ADR 0033)",
+        )
+        # ADR 0033 / Story 10.2: the cyclic controller — dynamic plan-act-observe loop (bridge hop).
+        p.add_argument(
+            "--agent",
+            dest="agent",
+            action="store_true",
+            help="agentic controller: iterative plan-act-observe retrieval loop (ADR 0033); "
+            "takes precedence over --decompose",
+        )
+        p.add_argument(
+            "--agent-max-steps",
+            dest="agent_max_steps",
+            type=int,
+            default=4,
+            help="hard cap on controller iterations for --agent (default 4)",
         )
 
     p_run = sub.add_parser("run", help="live run against a gold set")

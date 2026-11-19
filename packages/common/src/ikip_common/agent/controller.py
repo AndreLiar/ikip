@@ -24,18 +24,23 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from ikip_common.agent.tools import ToolEvidence, ToolRegistry, ToolResult
 
 
 class _ControllerDecision(BaseModel):
-    """Structured controller output. `tool=None` means stop; `args` are the tool's inputs."""
+    """Structured controller output. `tool=None` means stop; `query` is the retrieval tool's input.
+
+    `query` is a flat string (not an open `dict`) on purpose: OpenAI/Azure structured output rejects
+    free-form object properties (`additionalProperties` must be false), so an open `args` dict makes
+    every decision call fail. Every current tool takes `{"query": str}`; the policy rebuilds that
+    dict from `query`. A non-`query` tool would add its own typed field here."""
 
     tool: str | None = None
-    args: dict[str, Any] = Field(default_factory=dict)
+    query: str = ""
     reason: str = ""
 
 
@@ -88,14 +93,26 @@ class ControllerPolicy(Protocol):
     ) -> AgentAction: ...
 
 
+# A bridge/conditional hop needs the policy to read *what* a prior step found (an entity) to form
+# the next query — not just how many passages it got. So the observation history carries a bounded
+# snippet of each step's evidence content. Bounds keep the controller prompt cost/size predictable.
+_OBS_MAX_PASSAGES = 3  # per step, how many passage snippets to surface
+_OBS_SNIPPET_CHARS = 240  # per passage, truncate content
+
+
 def _observations(steps: Sequence[AgentStep]) -> str:
-    """Render the act→observe history for the policy prompt (compact + stable)."""
+    """Render the act→observe history for the policy prompt (compact + stable). Each step shows the
+    call, the passage count, and a bounded snippet of the top passages' *content* — so the policy
+    can use an entity found in an earlier step to form a dependent follow-up query (bridge hop)."""
     lines = []
     for i, s in enumerate(steps):
-        n = 0 if s.result is None else len(s.result.evidence)
-        lines.append(
-            f"[{i}] {s.action.tool}({json.dumps(s.action.args, sort_keys=True)}) -> {n} passages"
-        )
+        ev = [] if s.result is None else s.result.evidence
+        args = json.dumps(s.action.args, sort_keys=True)
+        lines.append(f"[{i}] {s.action.tool}({args}) -> {len(ev)} passages")
+        for e in ev[:_OBS_MAX_PASSAGES]:
+            snippet = " ".join(e.content.split())[:_OBS_SNIPPET_CHARS]
+            cid = e.provenance.get("chunk_id", "?")
+            lines.append(f"      - [{cid}] {snippet}")
     return "\n".join(lines)
 
 
@@ -191,7 +208,7 @@ class LlmControllerPolicy:
             f"Question:\n{question}\n\nTools:\n{tools_menu}\n\n"
             f"Observations so far (step {step}):\n{observations or '(none yet)'}\n\n"
             "Pick the next tool to gather missing evidence, or stop if you have enough. "
-            'Reply with the tool name + args (e.g. {"query": "..."}), or tool=null to stop.'
+            "Reply with the tool name + the search query string, or tool=null to stop."
         )
         try:
             out = self._chat.complete_structured(
@@ -201,7 +218,8 @@ class LlmControllerPolicy:
                 ],
                 _ControllerDecision,
             )
-            return AgentAction(tool=out.tool or None, args=out.args or {}, reason=out.reason or "")
+            args = {"query": out.query} if out.query else {}
+            return AgentAction(tool=out.tool or None, args=args, reason=out.reason or "")
         except Exception:  # noqa: BLE001 — a controller failure must stop, never crash the request
             return AgentAction(tool=None, reason="policy_error")
 
@@ -210,5 +228,8 @@ _CONTROLLER_SYSTEM = (
     "You are a retrieval controller for a grounded Q&A system. You do NOT answer the question; you "
     "only decide which retrieval tool to call next to gather citable evidence, one step at a time. "
     "Prefer the fewest steps; call a tool only when it would add missing evidence; stop as soon as "
-    "the gathered evidence covers every part of the question. Never invent facts."
+    "the gathered evidence covers every part of the question. Never invent facts. "
+    "If the question asks about something that is only identified by a prior step's result (a "
+    "bridge/conditional hop), read the entity you found in the observations and use it to form the "
+    "next query — do not re-query the same thing."
 )

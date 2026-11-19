@@ -3,9 +3,11 @@
 from ikip_common.agent.controller import (
     AgentAction,
     AgentBudget,
+    AgentStep,
     ControllerPolicy,
     LlmControllerPolicy,
     ScriptedPolicy,
+    _observations,
     run_agent,
 )
 from ikip_common.agent.tools import FakeTool, ToolEvidence, ToolRegistry, ToolResult
@@ -158,7 +160,9 @@ class _FakeChat:
 
 
 def test_llm_policy_parses_a_tool_call() -> None:
-    policy = LlmControllerPolicy(_FakeChat({"tool": "manuals", "args": {"query": "torque?"}}))
+    # the decision carries a flat `query` (OpenAI structured output rejects an open args dict);
+    # the policy rebuilds {"query": ...} from it.
+    policy = LlmControllerPolicy(_FakeChat({"tool": "manuals", "query": "torque?"}))
     action = policy.decide(question="q", tools_menu="- manuals: x", observations="", step=0)
     assert action.tool == "manuals" and action.args == {"query": "torque?"}
 
@@ -173,3 +177,63 @@ def test_llm_policy_fails_safe_to_stop_on_error() -> None:
     policy = LlmControllerPolicy(_FakeChat(RuntimeError("llm down")))
     action = policy.decide(question="q", tools_menu="", observations="", step=0)
     assert action.is_stop and action.reason == "policy_error"
+
+
+# --- content-aware observations (bridge-hop prerequisite) ---------------------------------
+
+
+def test_observations_surface_evidence_content_not_just_counts() -> None:
+    # The policy must be able to read WHAT a step found (an entity), not just how many passages —
+    # otherwise a bridge hop (step N+1 depends on step N's answer) is impossible.
+    step = AgentStep(
+        AgentAction("retrieval", {"query": "x"}),
+        ToolResult(
+            tool="retrieval",
+            evidence=[
+                ToolEvidence(
+                    content="The APU uses the CFM56 engine.", provenance={"chunk_id": "c1"}
+                )
+            ],
+        ),
+    )
+    obs = _observations([step])
+    assert "1 passages" in obs  # still shows the count
+    assert (
+        "CFM56" in obs and "c1" in obs
+    )  # AND the content + its chunk id, so a follow-up can bridge
+
+
+def test_loop_bridges_using_an_entity_found_in_prior_evidence() -> None:
+    # A genuine bridge: the dependent fact (c2) is only retrievable with the entity (CFM56) that the
+    # first step surfaced. The loop recovers it ONLY because the policy reads evidence content.
+    class _BridgeTool:
+        name, description = "retrieval", "r"
+
+        def invoke(self, args):  # noqa: ANN001, ANN201
+            if "CFM56" in args["query"]:
+                return ToolResult(tool="retrieval", evidence=[_ev("c2")])  # the dependent fact
+            return ToolResult(
+                tool="retrieval",
+                evidence=[
+                    ToolEvidence(content="X uses the CFM56 engine.", provenance={"chunk_id": "c1"})
+                ],
+            )
+
+    reg = ToolRegistry()
+    reg.register(_BridgeTool())
+
+    class _BridgePolicy(ControllerPolicy):
+        def decide(self, *, question, tools_menu, observations, step):  # noqa: ANN001, ANN201, ARG002
+            if step == 0:
+                return AgentAction("retrieval", {"query": "engine used by X"})
+            if "CFM56" in observations:  # reads the entity out of the observation history
+                return AgentAction("retrieval", {"query": "CFM56 max temperature"})
+            return AgentAction(tool=None)
+
+    traj = run_agent(
+        question="max temp of X's engine",
+        registry=reg,
+        policy=_BridgePolicy(),
+        budget=AgentBudget(max_steps=4),
+    )
+    assert [e.provenance["chunk_id"] for e in traj.evidence] == ["c1", "c2"]  # bridged
