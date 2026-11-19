@@ -79,18 +79,78 @@ class BridgeSpec:
 # 6 bridge cases, industrial-flavoured. Component model names are deliberately distinct from system
 # names so the link chunk is retrieved by the system and the fact chunk only by the component.
 BRIDGE_SPECS: tuple[BridgeSpec, ...] = (
-    BridgeSpec("compressor-sensor-temp", "X-200 compressor", "TH", 9, "temperature sensor",
-               "maximum operating temperature", "120", "°C", 60, 7),
-    BridgeSpec("pump-seal-pressure", "P-44 feed pump", "MS", 3, "mechanical seal",
-               "maximum rated pressure", "34", "bar", 10, 5),
-    BridgeSpec("turbine-bearing-rpm", "GT-18 gas turbine", "BR", 22, "journal bearing",
-               "maximum continuous speed", "9500", "rpm", 3000, 900),
-    BridgeSpec("valve-actuator-torque", "V-7 control valve", "AC", 5, "pneumatic actuator",
-               "rated output torque", "220", "N·m", 80, 30),
-    BridgeSpec("motor-winding-voltage", "M-12 drive motor", "WD", 6, "stator winding",
-               "rated insulation voltage", "690", "V", 300, 70),
-    BridgeSpec("heatx-tube-flow", "HX-3 heat exchanger", "TB", 14, "tube bundle",
-               "maximum design flow rate", "75", "m³/h", 20, 12),
+    BridgeSpec(
+        "compressor-sensor-temp",
+        "X-200 compressor",
+        "TH",
+        9,
+        "temperature sensor",
+        "maximum operating temperature",
+        "120",
+        "°C",
+        60,
+        7,
+    ),
+    BridgeSpec(
+        "pump-seal-pressure",
+        "P-44 feed pump",
+        "MS",
+        3,
+        "mechanical seal",
+        "maximum rated pressure",
+        "34",
+        "bar",
+        10,
+        5,
+    ),
+    BridgeSpec(
+        "turbine-bearing-rpm",
+        "GT-18 gas turbine",
+        "BR",
+        22,
+        "journal bearing",
+        "maximum continuous speed",
+        "9500",
+        "rpm",
+        3000,
+        900,
+    ),
+    BridgeSpec(
+        "valve-actuator-torque",
+        "V-7 control valve",
+        "AC",
+        5,
+        "pneumatic actuator",
+        "rated output torque",
+        "220",
+        "N·m",
+        80,
+        30,
+    ),
+    BridgeSpec(
+        "motor-winding-voltage",
+        "M-12 drive motor",
+        "WD",
+        6,
+        "stator winding",
+        "rated insulation voltage",
+        "690",
+        "V",
+        300,
+        70,
+    ),
+    BridgeSpec(
+        "heatx-tube-flow",
+        "HX-3 heat exchanger",
+        "TB",
+        14,
+        "tube bundle",
+        "maximum design flow rate",
+        "75",
+        "m³/h",
+        20,
+        12,
+    ),
 )
 
 
@@ -134,9 +194,7 @@ def _gold(specs: tuple[BridgeSpec, ...]) -> dict:
         cases.append(
             {
                 "case_key": f"br-{s.key}",
-                "question": (
-                    f"What is the {s.prop} of the component fitted to the {s.system}?"
-                ),
+                "question": (f"What is the {s.prop} of the component fitted to the {s.system}?"),
                 "expected_behavior": "answered",
                 "ground_truth": (
                     f"The {s.component} fitted to the {s.system} has a {s.prop} "

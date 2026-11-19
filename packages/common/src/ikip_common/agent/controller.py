@@ -208,7 +208,7 @@ class LlmControllerPolicy:
             f"Question:\n{question}\n\nTools:\n{tools_menu}\n\n"
             f"Observations so far (step {step}):\n{observations or '(none yet)'}\n\n"
             "Pick the next tool to gather missing evidence, or stop if you have enough. "
-            'Reply with the tool name + the search query string, or tool=null to stop.'
+            "Reply with the tool name + the search query string, or tool=null to stop."
         )
         try:
             out = self._chat.complete_structured(
