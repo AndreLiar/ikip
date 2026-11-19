@@ -448,8 +448,18 @@ def ask(
     from ikip_common.budget import get_budget_ledger
     from ikip_common.eval.metrics import estimate_cost_usd
     from ikip_common.llm.prompts import active_prompt_config
+    from ikip_common.ratelimit import get_rate_limiter
 
     governance.authorize(principal, "assistant.ask")
+    # Per-tenant rate limit (ADR 0036 / #144): the cheapest guard first — one tenant can't starve
+    # the others. 429 + Retry-After. No-op when disabled (NullRateLimiter).
+    limiter = get_rate_limiter()
+    if not limiter.allow(principal.tenant_id):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Per-tenant rate limit exceeded; retry shortly.",
+            headers={"Retry-After": str(max(1, round(limiter.retry_after(principal.tenant_id))))},
+        )
     # Hard spend ceiling (ADR 0034 / #146): refuse new paid work once a tenant is over its cap,
     # BEFORE spending on retrieval/generation. No-op when no cap is configured (NullBudgetLedger).
     ledger = get_budget_ledger()

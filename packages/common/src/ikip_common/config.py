@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # Enables the dev-only token endpoint; must be False in prod.
     auth_dev_login: bool = Field(default=False, alias="AUTH_DEV_LOGIN")
     rate_limit_per_minute: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE", ge=1)
+    # Per-tenant rate limiting (ADR 0036 / #144). Off by default; when true, each tenant gets its own
+    # token bucket at RATE_LIMIT_PER_MINUTE and /ask returns 429 + Retry-After once it's drained.
+    rate_limit_enabled: bool = Field(default=False, alias="RATE_LIMIT_ENABLED")
     # Hard spend ceiling per tenant in USD (ADR 0034 / prod-readiness #146). 0 = disabled (no cap);
     # a positive value builds an enforcing BudgetLedger that refuses new paid work past the cap.
     budget_cap_usd: float = Field(default=0.0, alias="IKIP_BUDGET_CAP_USD", ge=0)

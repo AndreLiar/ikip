@@ -18,7 +18,7 @@ spend ceilings — all **amplified by the agentic loop** (N LLM calls per query,
 ## 🔴 The 5 blockers (tracked)
 | # | Blocker | Why it gates prod | Issue |
 |---|---------|-------------------|-------|
-| 1 | **Per-tenant rate limiting / quota** | only a *global* `rate_limit_per_minute` exists (`config.py:54`) → one tenant can starve all others | [#144](https://github.com/AndreLiar/ikip/issues/144) |
+| 1 | ✅ **Per-tenant rate limiting / quota** | ~~only a *global* `rate_limit_per_minute`~~ **done:** `RateLimiter` token bucket + `/ask` 429 + Retry-After (ADR 0036) | [#144](https://github.com/AndreLiar/ikip/issues/144) |
 | 2 | ✅ **Circuit breaker on the Azure LLM/embedding path** | ~~retry+backoff only → sustained 429s cascade~~ **done:** `CircuitBreaker` wraps both adapters (ADR 0035) | [#145](https://github.com/AndreLiar/ikip/issues/145) |
 | 3 | ✅ **Hard budget cap (per-tenant)** | ~~agent `max_cost_usd` default 0.0 = off~~ **done:** `BudgetLedger` + `/ask` 429 (ADR 0034) | [#146](https://github.com/AndreLiar/ikip/issues/146) |
 | 4 | **Wire the existing k6 load test as a CI perf gate** | `load/k6/ask_load.js` exists but isn't asserted → p95/TTFT (NFR1/2) can regress undetected | [#147](https://github.com/AndreLiar/ikip/issues/147) |
@@ -55,7 +55,7 @@ spend ceilings — all **amplified by the agentic loop** (N LLM calls per query,
 ### 6. Security & governance — ✅ mostly
 - ✅ Tenant isolation by construction (`db/repository.py`, `db/retrieval.py`), authorize-before-retrieve, PII scrubbing (`pii.py`, Presidio+regex), SecretsProvider/Key Vault, **`docs/architecture/threat-model.md` exists**, retention/deletion (Epic 6).
 - 🟡 Document-level ACL only (no chunk-level); audit-event schema exists, retention policy of the audit log itself unclear.
-- 🔴 **Per-tenant rate limiting** (blocker #1), **soft-delete audit trail** (what/who/when archived), **key rotation** (API + encryption) policy.
+- ✅ **Per-tenant rate limiting** (blocker #1 — ADR 0036; `ratelimit.RateLimiter` token bucket, `/ask` 429 + Retry-After). 🔴 **soft-delete audit trail** (what/who/when archived), **key rotation** (API + encryption) policy.
 
 ### 7. Cost controls — 🟡
 - ✅ Token accounting (`metrics.record_cost`), batch controls, two-stage extraction (paid OCR only on demand), agent `AgentBudget`.
