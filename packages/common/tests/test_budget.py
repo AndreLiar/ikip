@@ -2,6 +2,7 @@
 
 import uuid
 
+import pytest
 from ikip_common.budget import (
     BudgetLedger,
     InMemoryBudgetLedger,
@@ -59,7 +60,11 @@ def test_build_satisfies_the_port() -> None:
     assert isinstance(build_budget_ledger(0.0), BudgetLedger)
 
 
-def test_get_budget_ledger_is_a_singleton() -> None:
+def test_get_budget_ledger_is_a_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
+    # decouple from the full Settings env — the singleton behaviour is under test, not config.
+    import ikip_common.config as cfg
+
+    monkeypatch.setattr(cfg, "get_settings", lambda: type("S", (), {"budget_cap_usd": 1.0})())
     get_budget_ledger.cache_clear()
     a = get_budget_ledger()
     b = get_budget_ledger()
