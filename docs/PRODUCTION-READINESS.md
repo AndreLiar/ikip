@@ -1,15 +1,19 @@
 # IKIP — Production-Readiness Audit & Roadmap
 
-> What the AI/RAG pipeline needs to be **production-grade and reliable**. Grounded in a code + CI +
-> IaC audit (2026-11-19), then **each "missing" item verified against the repo** before listing —
-> several items an initial pass flagged as missing actually exist (noted below). Legend:
+> What the AI pipeline needs to be **production-grade and reliable** — covering **both request-time
+> modes**: the fixed RAG flow *and* the **agentic workflow** (the plan–act–observe controller, Epic 10
+> / ADR 0033, which routes the hard tail: multi-hop, bridge/conditional, cross-corpus). Grounded in a
+> code + CI + IaC audit (2026-11-19), then **each "missing" item verified against the repo** before
+> listing — several items an initial pass flagged as missing actually exist (noted below). Legend:
 > **✅ EXISTS** (verified in code) · **🟡 PARTIAL** (exists but incomplete/not enforced) · **🔴 MISSING**.
 
 ## Verdict in one line
-The pipeline is **strong on correctness/safety** (grounding, citations, abstention, tenant isolation
-are *structural*) and **good on eval + observability plumbing**. The real work left is **runtime
-reliability & ops**: resource isolation (quotas), failure containment (circuit breaker), spend
-ceilings, and turning *measured* SLOs into *enforced* gates. The 5 blockers below gate go-live.
+Both planes are **strong on correctness/safety** (grounding, citations, abstention, tenant isolation
+are *structural* — and the agentic branch inherits them unchanged: it changes *what we retrieve*,
+never *what we claim*, ADR 0033) and **good on eval + observability plumbing**. The real work left is
+**runtime reliability & ops**: resource isolation (quotas), failure containment (circuit breaker),
+spend ceilings — all **amplified by the agentic loop** (N LLM calls per query, not one) — and turning
+*measured* SLOs into *enforced* gates. The 5 blockers below gate go-live; §10 is the agentic surface.
 
 ## 🔴 The 5 blockers (tracked)
 | # | Blocker | Why it gates prod | Issue |
