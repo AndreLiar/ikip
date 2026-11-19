@@ -15,6 +15,7 @@ from typing import Any
 
 from ikip_common.config import Settings, get_settings
 from ikip_common.llm.base import Vector
+from ikip_common.resilience import CircuitBreaker
 
 
 class AzureConfigError(RuntimeError):
@@ -56,6 +57,7 @@ class AzureOpenAIEmbeddingClient:
         *,
         batch_size: int | None = None,
         max_retries: int = 5,
+        breaker: CircuitBreaker | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._dimensions = self._settings.embedding_dimensions
@@ -66,6 +68,10 @@ class AzureOpenAIEmbeddingClient:
         # comes from Settings unless overridden (tests pass it explicitly).
         self._batch_size = batch_size or self._settings.embedding_batch_size
         self._max_retries = max_retries
+        # Fail fast on a SUSTAINED outage/throttle instead of backing off on every call (#145):
+        # once a batch exhausts its retries repeatedly, the breaker opens and `embed` raises
+        # CircuitOpenError immediately, so the caller degrades rather than hanging.
+        self._breaker = breaker or CircuitBreaker(name="azure-embeddings")
 
     @property
     def model_version(self) -> str:
@@ -82,7 +88,7 @@ class AzureOpenAIEmbeddingClient:
         vectors: list[Vector] = []
         for i in range(0, len(items), self._batch_size):
             batch = items[i : i + self._batch_size]
-            vectors.extend(list(v) for v in self._embed_batch(batch))
+            vectors.extend(list(v) for v in self._breaker.call(self._embed_batch, batch))
         return vectors
 
     def _embed_batch(self, batch: list[str]) -> list[Vector]:
