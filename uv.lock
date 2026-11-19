@@ -1909,7 +1909,7 @@ ragas = [
     { name = "langchain-openai", specifier = ">=0.2" },
     { name = "ragas", specifier = ">=0.2" },
 ]
-telemetry = [{ name = "langfuse", specifier = ">=3.0" }]
+telemetry = [{ name = "langfuse", specifier = ">=5,<6" }]
 
 [[package]]
 name = "ikip-api"
