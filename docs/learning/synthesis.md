@@ -24,11 +24,14 @@ answer_correctness LLM-judged), not intuition.
 | Stage-1 auto-merge (ADR 0029) | **Neutral** → opt-in | Recall-vs-dedup wash at n=18; the n=5 "regression" was noise ([MISSION-044](./missions/MISSION-044/mission.md)) |
 | Query rewrite (single-query) | **Rejected** | Flat on NTRS; *hurt* multi-hop (reformulating one query can't separate hops) |
 | Context: dedup | **Rejected** | −0.096 context_precision, hurt answer_correctness ([MISSION-047](./missions/MISSION-047/mission.md)) |
-| Context: lost-in-the-middle reorder | **Promote-candidate** | Judge-averaged faithfulness **+0.076** (~18× noise floor), recall-neutral — M-047 |
+| Context: lost-in-the-middle reorder | **Rejected** | *Was* a promote-candidate (+0.076 judge-averaged, M-047) — but re-measured with **fresh generation** (not just re-judging) the gain **reversed** to −0.056: it was a generation artifact, the baseline's own run-to-run spread (sd 0.037) was *larger* than the "gain" ([MISSION-053](./missions/MISSION-053/mission.md)) |
 | Cross-encoder reranker | **Deferred (design-only)** | Measured headroom small (recall 0.89, faithfulness ~0.9–1.0) vs certain torch cost → built the port seam, committed **zero deps** ([MISSION-048](./missions/MISSION-048/mission.md)) |
-| Agentic query decomposition | **Accepted** | Multi-hop recall collapses 0.89→0.44→0.28; cheap fixes ruled out; only decomposition recovers (→0.89); Ragas **answer_correctness +0.259** ([MISSION-049](./missions/MISSION-049/mission.md)/[050](./missions/MISSION-050/mission.md)) |
+| Agentic query decomposition | **Accepted (for its class)** | Multi-hop recall collapses 0.89→0.44→0.28; cheap fixes ruled out; only decomposition recovers (→0.89); Ragas **answer_correctness +0.259** ([MISSION-049](./missions/MISSION-049/mission.md)/[050](./missions/MISSION-050/mission.md)) |
+| Cyclic controller (bridge/conditional hop) | **Accepted (for its class)** | On a bridge hop (hop 2 needs hop 1's answer) flat decomposition ties fixed **exactly** (1/6) — a *distinct* failure class; only the plan–act–observe loop clears it (**5/6** correct-value); the live run also caught a controller bug (open-dict structured output never worked live) ([MISSION-054](./missions/MISSION-054/mission.md)/[055](./missions/MISSION-055/mission.md)) |
 
-The pattern is the point: **5 rejected/deferred, 2 promoted.** The gate cut both ways.
+The pattern is the point: **6 rejected/deferred, 2 promoted** — and the gate cut *forward too*, re-killing a
+promote-candidate (litm) on re-measurement. **A gain measured against one sample — one generation, one small
+corpus, one fake-tested policy — is not a gain.** That single discipline is what each verdict here rests on.
 
 ## 3. Architecture at a glance
 Two planes (ADR 0002), one grounding contract, everything swappable behind ports (ADR 0021).
@@ -45,7 +48,9 @@ flowchart LR
     Q[/ask] --> R{router}
     R -->|simple| H[hybrid retrieve: lexical+vector, RRF ADR 0004]
     R -->|multi-part| D[decompose → fan-out → merge ADR 0033]
+    R -->|bridge/conditional| AG[agentic controller: plan→act→observe loop ADR 0033]
     D --> H
+    AG --> H
     H --> RK[Reranker port: identity→x-enc]
     RK --> G[generate: gpt-5.4-mini ADR 0022]
     G --> V[grounding validator]
@@ -90,8 +95,8 @@ Honest roadmap; nothing built on spec.
 |---|---|
 | Qdrant (ADR 0027) | pgvector recall/latency ceiling at scale |
 | Cross-encoder reranker (ADR 0032 §3) | a measured ranking gap the bi-encoder can't close |
-| litm reorder → default | a `--runs`-averaged generation-variance re-test holds the +0.076 |
-| Agentic cyclic controller / checkpointer (ADR 0033) | a capability needing durable/resumable multi-step state |
+| Bridge-hop detector → route to the controller (issue #142) | trace the 1/6 agent miss + reproduce the failure at prod-k by scale, then gate routing on a mixed gold |
+| Controller **checkpointer** (ADR 0033) | a capability needing durable/resumable multi-step state (the loop itself now ships, M-054/055) |
 | Multi-corpus routing (Epic 10.4) | a multi-domain single-tenant corpus (cross-corpus demand) |
 | Native multimodal (ADR 0031) | caption-and-embed recall ceiling on diagrams |
 | OpenSearch | the lexical arm becomes the measured bottleneck (M-046 says it isn't) |
@@ -99,10 +104,13 @@ Honest roadmap; nothing built on spec.
 ## 7. How to defend it (the narrative)
 *"I didn't add features because they're fashionable — I built a measurement harness first, then let it
 decide. BM25, dedup, query-rewrite, the French analyzer: measured, rejected. The cross-encoder:
-measured as not-yet-worth-its-dependency, so I built the seam and stopped. litm and decomposition:
-measured as real wins, so I shipped them — decomposition only after proving the cheap fixes (bigger k,
-rewrite) couldn't touch the multi-hop failure. The grounding invariant and tenant isolation held
-through every one. The discipline is the contribution."*
+measured as not-yet-worth-its-dependency, so I built the seam and stopped. The sharpest case is litm:
+it passed a judge-averaged A/B (+0.076) and I flagged it a promote-candidate — then a re-test with
+fresh generation reversed it, so I rejected it. A gain against one sample isn't a gain. Decomposition
+and the cyclic controller I shipped only after proving the failure was real and the cheap alternatives
+couldn't touch it — and I proved each on the exact class it fixes (compound multi-hop vs the bridge
+hop, which decomposition ties fixed on). The grounding invariant and tenant isolation held through
+every one. The discipline — not the feature list — is the contribution."*
 
 ## See also
 [concepts/](./concepts/) (the how) · [missions/](./missions/) (the evidence) · [adr/](../adr/) (the
