@@ -96,9 +96,7 @@ class AzureChatClient:
     ) -> SchemaT:
         return self._breaker.call(self._do_complete, messages, schema)
 
-    def _do_complete(
-        self, messages: Sequence[ChatMessage], schema: type[SchemaT]
-    ) -> SchemaT:
+    def _do_complete(self, messages: Sequence[ChatMessage], schema: type[SchemaT]) -> SchemaT:
         structured = self._client.with_structured_output(schema)
         lc_messages = [(m.role, m.content) for m in messages]
         return structured.invoke(lc_messages)
