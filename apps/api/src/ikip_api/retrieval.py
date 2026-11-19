@@ -16,7 +16,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Literal, Protocol
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ikip_api.auth import CurrentPrincipal
@@ -445,10 +445,19 @@ def ask(
 ) -> AskResponse:
     import time
 
+    from ikip_common.budget import get_budget_ledger
     from ikip_common.eval.metrics import estimate_cost_usd
     from ikip_common.llm.prompts import active_prompt_config
 
     governance.authorize(principal, "assistant.ask")
+    # Hard spend ceiling (ADR 0034 / #146): refuse new paid work once a tenant is over its cap,
+    # BEFORE spending on retrieval/generation. No-op when no cap is configured (NullBudgetLedger).
+    ledger = get_budget_ledger()
+    if ledger.remaining(principal.tenant_id) <= 0.0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Tenant budget cap reached; new requests are paused until the budget resets.",
+        )
     # Attribution (Story 5.5 ↔ 5.4): stamp the trace with the deployment + the ACTIVE prompt
     # config version, so a quality shift is traceable to the exact prompt/model that produced it.
     _cfg = active_prompt_config()
@@ -477,6 +486,9 @@ def ask(
     # counters, labelled by status. No-op unless an OTLP endpoint is configured.
     metrics.record_request(operation="ask", latency_ms=latency_ms, status=result.status)  # type: ignore[attr-defined]
     metrics.record_cost(cost_usd=cost_usd)  # type: ignore[attr-defined]
+    # Charge the SAME estimated cost against the tenant's spend cap (ADR 0034 / #146). A cache hit
+    # still estimates cost here, but it is cheap; the cap bites on the paid path next turn.
+    ledger.charge(principal.tenant_id, cost_usd)
 
     governance.record(
         principal,

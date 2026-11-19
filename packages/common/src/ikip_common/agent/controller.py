@@ -75,12 +75,18 @@ class AgentTrajectory:
     stop_reason: str
 
 
+# A non-zero default so the loop is cost-capped out of the box (prod-readiness #146 / ADR 0034).
+# `max_steps` is the primary per-query bound; this is a second bound for when a single step is
+# unexpectedly expensive. The cross-request per-tenant ceiling lives in `budget.BudgetLedger`.
+DEFAULT_AGENT_MAX_COST_USD = 0.50
+
+
 @dataclass(frozen=True)
 class AgentBudget:
     """Deterministic bounds. Defaults are conservative (a hard tail is usually 2–4 steps)."""
 
     max_steps: int = 4
-    max_cost_usd: float = 0.0  # 0 = no cost cap
+    max_cost_usd: float = DEFAULT_AGENT_MAX_COST_USD  # 0 = no cost cap
     kill_switch: bool = False
 
 

@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # Enables the dev-only token endpoint; must be False in prod.
     auth_dev_login: bool = Field(default=False, alias="AUTH_DEV_LOGIN")
     rate_limit_per_minute: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE", ge=1)
+    # Hard spend ceiling per tenant in USD (ADR 0034 / prod-readiness #146). 0 = disabled (no cap);
+    # a positive value builds an enforcing BudgetLedger that refuses new paid work past the cap.
+    budget_cap_usd: float = Field(default=0.0, alias="IKIP_BUDGET_CAP_USD", ge=0)
     # Agentic query decomposition at /ask (ADR 0033 / Story 10.5). DEFAULT ON — the gate passed
     # across three golds (EN n=9/n=18 + FR n=12: answer_correctness +0.22–0.30, context_recall up
     # to 1.0; MISSION-050/051/052). Self-gates per query: a single-ask question skips the fan-out
