@@ -281,6 +281,52 @@ def test_ask_refuses_over_budget_tenant_with_429(monkeypatch: pytest.MonkeyPatch
     budget.get_budget_ledger.cache_clear()  # don't leak the capped ledger into other tests
 
 
+def test_ask_rate_limits_per_tenant_with_429(monkeypatch: pytest.MonkeyPatch) -> None:
+    # ADR 0036 / #144: a tenant over its per-minute bucket gets 429 + Retry-After.
+    from ikip_api.conversations import get_conversation_service
+    from ikip_api.observability import get_metrics, get_telemetry, get_trace_recorder
+    from ikip_api.retrieval import AskResponse, get_ask_service
+    from ikip_common import ratelimit
+    from ikip_common.telemetry import FakeTelemetry
+    from ikip_common.telemetry.metrics import FakeMetrics
+
+    monkeypatch.setenv("RATE_LIMIT_ENABLED", "true")
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "1")  # one request, then throttle
+    from ikip_common.config import get_settings
+
+    get_settings.cache_clear()
+    ratelimit.get_rate_limiter.cache_clear()
+
+    def ok_ask(**kwargs):
+        return AskResponse(
+            status="answered",
+            answer="ok",
+            claims=[],
+            warnings=[],
+            abstention_reason=None,
+            not_certified_notice="n",
+            cache_hit=False,
+        )
+
+    app = _app()
+    app.dependency_overrides[get_ask_service] = lambda: ok_ask
+    app.dependency_overrides[get_conversation_service] = lambda: _FakeConvs()
+    app.dependency_overrides[get_telemetry] = lambda: FakeTelemetry()
+    app.dependency_overrides[get_trace_recorder] = lambda: _FakeRecorder()
+    app.dependency_overrides[get_metrics] = lambda: FakeMetrics()
+    client = TestClient(app)
+    tenant = uuid.uuid4()
+    token = _token(client, tenant)
+    hdr = {"Authorization": f"Bearer {token}"}
+
+    first = client.post("/api/v1/ask", json={"query": "q"}, headers=hdr)
+    second = client.post("/api/v1/ask", json={"query": "q"}, headers=hdr)
+    assert first.status_code == 200  # within the bucket
+    assert second.status_code == 429  # bucket drained → throttled
+    assert "Retry-After" in second.headers
+    ratelimit.get_rate_limiter.cache_clear()  # don't leak the limiter into other tests
+
+
 class _FakeRecorder:
     def __init__(self) -> None:
         self.calls: list[dict] = []
