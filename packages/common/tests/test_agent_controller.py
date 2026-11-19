@@ -160,7 +160,9 @@ class _FakeChat:
 
 
 def test_llm_policy_parses_a_tool_call() -> None:
-    policy = LlmControllerPolicy(_FakeChat({"tool": "manuals", "args": {"query": "torque?"}}))
+    # the decision carries a flat `query` (OpenAI structured output rejects an open args dict);
+    # the policy rebuilds {"query": ...} from it.
+    policy = LlmControllerPolicy(_FakeChat({"tool": "manuals", "query": "torque?"}))
     action = policy.decide(question="q", tools_menu="- manuals: x", observations="", step=0)
     assert action.tool == "manuals" and action.args == {"query": "torque?"}
 

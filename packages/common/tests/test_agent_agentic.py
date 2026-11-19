@@ -52,8 +52,8 @@ def test_agentic_retrieve_gathers_evidence_across_loop_steps() -> None:
 
     chat = _ScriptChat(
         [
-            {"tool": "retrieval", "args": {"query": "q0"}},
-            {"tool": "retrieval", "args": {"query": "q1"}},
+            {"tool": "retrieval", "query": "q0"},
+            {"tool": "retrieval", "query": "q1"},
             {"tool": None},  # stop
         ]
     )

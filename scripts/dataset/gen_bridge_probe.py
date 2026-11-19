@@ -46,79 +46,57 @@ BRIDGE_TENANT = uuid.UUID("c0f90000-0000-4000-8000-0000000000b1")
 _OUT_DIR = Path("eval-results/ab")
 
 
+# same-property distractors per case: enough that top-k can't co-retrieve them all, so the CORRECT
+# fact (no lexical edge over distractors) falls out of a single retrieval — the bridge becomes a
+# real coverage failure (not solvable in-context).
+DEFAULT_DISTRACTORS = 9
+
+
 @dataclass(frozen=True)
 class BridgeSpec:
-    """One bridge case: Q names `system` + `prop`; the answer `value` lives in a fact chunk keyed by
-    `component`, which Q never names. `distractors` are (other_component, other_value) sharing
-    `prop` — they make the property phrase ambiguous so the component must be learned first."""
+    """One bridge case. The component is `<prefix>-<num> <noun>` (e.g. TH-9 temperature sensor); the
+    correct fact is `<value> <unit>`. Distractors are synthesised as other `<prefix>-N <noun>` units
+    with the SAME `prop` and spread values (`dist_base` + i·`dist_step`) — they share every term Q
+    has (the property), and differ only by the component number Q never names, so the correct fact
+    has no retrieval edge and must be reached via the component learned from the link."""
 
     key: str
     system: str
-    component: str
+    prefix: str
+    num: int
+    noun: str
     prop: str
     value: str
-    distractors: tuple[tuple[str, str], ...]
+    unit: str
+    dist_base: int
+    dist_step: int
+
+    @property
+    def component(self) -> str:
+        return f"{self.prefix}-{self.num} {self.noun}"
 
 
 # 6 bridge cases, industrial-flavoured. Component model names are deliberately distinct from system
 # names so the link chunk is retrieved by the system and the fact chunk only by the component.
 BRIDGE_SPECS: tuple[BridgeSpec, ...] = (
-    BridgeSpec(
-        "compressor-sensor-temp",
-        system="X-200 compressor",
-        component="TH-9 temperature sensor",
-        prop="maximum operating temperature",
-        value="120 °C",
-        distractors=(("TH-4 temperature sensor", "85 °C"), ("TH-7 temperature sensor", "150 °C")),
-    ),
-    BridgeSpec(
-        "pump-seal-pressure",
-        system="P-44 feed pump",
-        component="MS-3 mechanical seal",
-        prop="maximum rated pressure",
-        value="34 bar",
-        distractors=(("MS-1 mechanical seal", "16 bar"), ("MS-8 mechanical seal", "50 bar")),
-    ),
-    BridgeSpec(
-        "turbine-bearing-rpm",
-        system="GT-18 gas turbine",
-        component="BR-22 journal bearing",
-        prop="maximum continuous speed",
-        value="9 500 rpm",
-        distractors=(
-            ("BR-10 journal bearing", "3 600 rpm"),
-            ("BR-30 journal bearing", "12 000 rpm"),
-        ),
-    ),
-    BridgeSpec(
-        "valve-actuator-torque",
-        system="V-7 control valve",
-        component="AC-5 pneumatic actuator",
-        prop="rated output torque",
-        value="220 N·m",
-        distractors=(("AC-2 pneumatic actuator", "90 N·m"), ("AC-9 pneumatic actuator", "400 N·m")),
-    ),
-    BridgeSpec(
-        "motor-winding-voltage",
-        system="M-12 drive motor",
-        component="WD-6 stator winding",
-        prop="rated insulation voltage",
-        value="690 V",
-        distractors=(("WD-2 stator winding", "400 V"), ("WD-11 stator winding", "1 000 V")),
-    ),
-    BridgeSpec(
-        "heatx-tube-flow",
-        system="HX-3 heat exchanger",
-        component="TB-14 tube bundle",
-        prop="maximum design flow rate",
-        value="75 m³/h",
-        distractors=(("TB-5 tube bundle", "30 m³/h"), ("TB-20 tube bundle", "140 m³/h")),
-    ),
+    BridgeSpec("compressor-sensor-temp", "X-200 compressor", "TH", 9, "temperature sensor",
+               "maximum operating temperature", "120", "°C", 60, 7),
+    BridgeSpec("pump-seal-pressure", "P-44 feed pump", "MS", 3, "mechanical seal",
+               "maximum rated pressure", "34", "bar", 10, 5),
+    BridgeSpec("turbine-bearing-rpm", "GT-18 gas turbine", "BR", 22, "journal bearing",
+               "maximum continuous speed", "9500", "rpm", 3000, 900),
+    BridgeSpec("valve-actuator-torque", "V-7 control valve", "AC", 5, "pneumatic actuator",
+               "rated output torque", "220", "N·m", 80, 30),
+    BridgeSpec("motor-winding-voltage", "M-12 drive motor", "WD", 6, "stator winding",
+               "rated insulation voltage", "690", "V", 300, 70),
+    BridgeSpec("heatx-tube-flow", "HX-3 heat exchanger", "TB", 14, "tube bundle",
+               "maximum design flow rate", "75", "m³/h", 20, 12),
 )
 
 
-def _corpus(specs: tuple[BridgeSpec, ...]) -> tuple[SeedDoc, ...]:
-    """Expand each spec into its link chunk, its correct fact chunk, and the distractor facts."""
+def _corpus(specs: tuple[BridgeSpec, ...], n_distractors: int) -> tuple[SeedDoc, ...]:
+    """Expand each spec into its link chunk, its correct fact chunk, and `n_distractors` synthesised
+    same-property distractor facts (distinct component numbers, so none collides with correct)."""
     docs: list[SeedDoc] = []
     for s in specs:
         docs.append(
@@ -132,15 +110,17 @@ def _corpus(specs: tuple[BridgeSpec, ...]) -> tuple[SeedDoc, ...]:
             SeedDoc(
                 f"br-{s.key}-fact",
                 f"{s.component} datasheet",
-                f"The {s.component} has a {s.prop} of {s.value}.",
+                f"The {s.component} has a {s.prop} of {s.value} {s.unit}.",
             )
         )
-        for i, (other, val) in enumerate(s.distractors):
+        for i in range(n_distractors):
+            other = f"{s.prefix}-{s.num + 100 + i} {s.noun}"  # distinct number, never the correct
+            dval = s.dist_base + i * s.dist_step
             docs.append(
                 SeedDoc(
                     f"br-{s.key}-dist{i}",
                     f"{other} datasheet",
-                    f"The {other} has a {s.prop} of {val}.",
+                    f"The {other} has a {s.prop} of {dval} {s.unit}.",
                 )
             )
     return tuple(docs)
@@ -159,7 +139,8 @@ def _gold(specs: tuple[BridgeSpec, ...]) -> dict:
                 ),
                 "expected_behavior": "answered",
                 "ground_truth": (
-                    f"The {s.component} fitted to the {s.system} has a {s.prop} of {s.value}."
+                    f"The {s.component} fitted to the {s.system} has a {s.prop} "
+                    f"of {s.value} {s.unit}."
                 ),
                 "language": "en",
                 "reviewed": False,
@@ -180,9 +161,15 @@ def main() -> None:
         default=str(_OUT_DIR / "bridge_probe.json"),
         help="gold output path (resolved when --seed)",
     )
+    ap.add_argument(
+        "--distractors",
+        type=int,
+        default=DEFAULT_DISTRACTORS,
+        help="same-property distractors per case (more -> the correct fact falls out of top-k)",
+    )
     args = ap.parse_args()
 
-    corpus = _corpus(BRIDGE_SPECS)
+    corpus = _corpus(BRIDGE_SPECS, args.distractors)
     gold = _gold(BRIDGE_SPECS)
     _OUT_DIR.mkdir(parents=True, exist_ok=True)
 
