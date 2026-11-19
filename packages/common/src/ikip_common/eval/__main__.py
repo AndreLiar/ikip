@@ -607,6 +607,17 @@ def _config(args: argparse.Namespace) -> int:
         print(f"promoted + activated {args.version} (synced to prompt backend if configured)")
         return 0
 
+    if args.action == "publish":  # explicit sync to Langfuse prompt management (no gate)
+        version = getattr(args, "version", None) or active
+        publisher = build_prompt_publisher()
+        publisher.publish(reg.get(version), label=args.label)
+        print(
+            f"published prompts for {version} -> {type(publisher).__name__} "
+            f"under label '{args.label}' "
+            f"(NullPromptPublisher = no Langfuse creds/SDK; nothing sent)"
+        )
+        return 0
+
     return 2
 
 
@@ -809,6 +820,13 @@ def main(argv: list[str] | None = None) -> int:
     c_prom.add_argument("--version", required=True)
     c_prom.add_argument("--eval", default="eval-results", help="dir with latest.json aggregate")
     c_prom.add_argument("--safety-gold", default="packages/common/tests/fixtures/safety/v1.json")
+    c_pub = csub.add_parser(
+        "publish", help="sync a version's prompts to Langfuse prompt management (no gate)"
+    )
+    c_pub.add_argument("--version", default=None, help="version to publish (default: active)")
+    c_pub.add_argument(
+        "--label", default="production", help="Langfuse prompt label (default: production)"
+    )
     p_config.set_defaults(func=_config)
 
     args = parser.parse_args(argv)

@@ -39,6 +39,19 @@ def _seed(tmp_path) -> PromptRegistry:
     return reg
 
 
+def test_publisher_matches_the_real_langfuse_create_prompt_api() -> None:
+    # Offline CONTRACT test against the REAL SDK (skipped when the telemetry group isn't installed):
+    # asserts every kwarg the publisher sends is accepted by langfuse.create_prompt. Catches version
+    # drift (as start_span→start_observation broke telemetry) WITHOUT a network call — a fake can't.
+    pytest.importorskip("langfuse")
+    import inspect
+
+    from langfuse import Langfuse
+
+    params = set(inspect.signature(Langfuse.create_prompt).parameters)
+    assert {"name", "prompt", "labels", "config", "type"} <= params
+
+
 # --- shipped artifact integrity -------------------------------------------
 
 
