@@ -244,6 +244,43 @@ def test_ask_returns_grounded_answer() -> None:
     # by the endpoint itself; the cache metric is asserted in the service/cache unit tests.
 
 
+def test_ask_refuses_over_budget_tenant_with_429(monkeypatch: pytest.MonkeyPatch) -> None:
+    # ADR 0034 / #146: a tenant over its spend cap is refused BEFORE any paid work.
+    from ikip_api.conversations import get_conversation_service
+    from ikip_api.observability import get_metrics, get_telemetry, get_trace_recorder
+    from ikip_api.retrieval import get_ask_service
+    from ikip_common import budget
+    from ikip_common.telemetry import FakeTelemetry
+    from ikip_common.telemetry.metrics import FakeMetrics
+
+    monkeypatch.setenv("IKIP_BUDGET_CAP_USD", "0.10")
+    from ikip_common.config import get_settings
+
+    get_settings.cache_clear()
+    budget.get_budget_ledger.cache_clear()  # rebuild the ledger with the cap
+
+    def boom_ask(**kwargs):  # must NOT be called — the guard fires first
+        raise AssertionError("paid work ran despite the budget cap")
+
+    app = _app()
+    app.dependency_overrides[get_ask_service] = lambda: boom_ask
+    app.dependency_overrides[get_conversation_service] = lambda: _FakeConvs()
+    app.dependency_overrides[get_telemetry] = lambda: FakeTelemetry()
+    app.dependency_overrides[get_trace_recorder] = lambda: _FakeRecorder()
+    app.dependency_overrides[get_metrics] = lambda: FakeMetrics()
+    client = TestClient(app)
+    tenant = uuid.uuid4()
+    token = _token(client, tenant)
+
+    budget.get_budget_ledger().charge(tenant, 0.20)  # push this tenant over the 0.10 cap
+
+    resp = client.post(
+        "/api/v1/ask", json={"query": "What is E42?"}, headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 429
+    budget.get_budget_ledger.cache_clear()  # don't leak the capped ledger into other tests
+
+
 class _FakeRecorder:
     def __init__(self) -> None:
         self.calls: list[dict] = []

@@ -62,6 +62,43 @@ def test_agentic_retrieve_gathers_evidence_across_loop_steps() -> None:
     assert outcome.abstained is False
 
 
+def test_agentic_retrieve_degrades_when_tenant_over_budget() -> None:
+    pytest.importorskip("langchain_core")
+    import uuid
+
+    from ikip_common.budget import InMemoryBudgetLedger
+
+    tenant = uuid.UUID("c0f90000-0000-4000-8000-0000000000b2")
+    ledger = InMemoryBudgetLedger(cap_usd=0.001)  # tiny cap → any query's worst-case exceeds it
+    called = []
+
+    def base_retrieve(q):  # noqa: ANN001, ANN202
+        called.append(q)
+        return _Outcome([_Doc("p", {"chunk_id": "c1"})])
+
+    chat = _ScriptChat([{"tool": "retrieval", "query": "q0"}, {"tool": None}])
+    outcome = make_agentic_retrieve(base_retrieve, chat, ledger=ledger, tenant_id=tenant)("q")
+    assert outcome.abstained is True and outcome.reason == "budget:tenant-cap-exceeded"
+    assert called == []  # degraded BEFORE spending — base retrieve never ran
+
+
+def test_agentic_retrieve_charges_the_ledger_per_step() -> None:
+    pytest.importorskip("langchain_core")
+    import uuid
+
+    from ikip_common.budget import InMemoryBudgetLedger
+
+    tenant = uuid.UUID("c0f90000-0000-4000-8000-0000000000b2")
+    ledger = InMemoryBudgetLedger(cap_usd=100.0)  # generous → runs, then charges
+
+    def base_retrieve(q):  # noqa: ANN001, ANN202
+        return _Outcome([_Doc(f"p {q}", {"chunk_id": q})])
+
+    chat = _ScriptChat([{"tool": "retrieval", "query": "a"}, {"tool": None}])
+    make_agentic_retrieve(base_retrieve, chat, ledger=ledger, tenant_id=tenant)("q")
+    assert ledger.spent(tenant) > 0.0  # one step ran → a non-zero charge landed
+
+
 def test_agentic_retrieve_abstains_and_reports_stop_reason_when_empty() -> None:
     pytest.importorskip("langchain_core")
 
