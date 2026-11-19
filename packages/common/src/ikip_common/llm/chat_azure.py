@@ -15,6 +15,7 @@ from typing import Any
 from ikip_common.config import Settings, get_settings
 from ikip_common.llm.azure import AzureConfigError
 from ikip_common.llm.base import ChatMessage, SchemaT
+from ikip_common.resilience import CircuitBreaker
 
 # Reasoning-model families (tuned by reasoning_effort; temperature fixed at 1).
 _REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
@@ -73,10 +74,18 @@ def _make_chat(settings: Settings) -> Any:
 class AzureChatClient:
     """ChatClient backed by LangChain's AzureChatOpenAI, behind our port."""
 
-    def __init__(self, settings: Settings | None = None, client: Any = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        client: Any = None,
+        *,
+        breaker: CircuitBreaker | None = None,
+    ) -> None:
         self._settings = settings or get_settings()
         self._model_version = self._settings.azure_openai_chat_deployment or "unknown"
         self._client = client or _make_chat(self._settings)
+        # Fail fast on a sustained Azure outage/throttle instead of hanging on every call (#145).
+        self._breaker = breaker or CircuitBreaker(name="azure-chat")
 
     @property
     def model_version(self) -> str:
@@ -85,6 +94,9 @@ class AzureChatClient:
     def complete_structured(
         self, messages: Sequence[ChatMessage], schema: type[SchemaT]
     ) -> SchemaT:
+        return self._breaker.call(self._do_complete, messages, schema)
+
+    def _do_complete(self, messages: Sequence[ChatMessage], schema: type[SchemaT]) -> SchemaT:
         structured = self._client.with_structured_output(schema)
         lc_messages = [(m.role, m.content) for m in messages]
         return structured.invoke(lc_messages)

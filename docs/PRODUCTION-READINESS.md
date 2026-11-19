@@ -19,8 +19,8 @@ spend ceilings — all **amplified by the agentic loop** (N LLM calls per query,
 | # | Blocker | Why it gates prod | Issue |
 |---|---------|-------------------|-------|
 | 1 | **Per-tenant rate limiting / quota** | only a *global* `rate_limit_per_minute` exists (`config.py:54`) → one tenant can starve all others | [#144](https://github.com/AndreLiar/ikip/issues/144) |
-| 2 | **Circuit breaker on the Azure LLM/embedding path** | `llm/azure.py` is retry+backoff only → sustained 429s add latency to *every* request (cascade) | [#145](https://github.com/AndreLiar/ikip/issues/145) |
-| 3 | **Hard budget cap (global + per-tenant)** | the only cap is the agent loop's `max_cost_usd`, default **0.0 = off** → runaway spend | [#146](https://github.com/AndreLiar/ikip/issues/146) |
+| 2 | ✅ **Circuit breaker on the Azure LLM/embedding path** | ~~retry+backoff only → sustained 429s cascade~~ **done:** `CircuitBreaker` wraps both adapters (ADR 0035) | [#145](https://github.com/AndreLiar/ikip/issues/145) |
+| 3 | ✅ **Hard budget cap (per-tenant)** | ~~agent `max_cost_usd` default 0.0 = off~~ **done:** `BudgetLedger` + `/ask` 429 (ADR 0034) | [#146](https://github.com/AndreLiar/ikip/issues/146) |
 | 4 | **Wire the existing k6 load test as a CI perf gate** | `load/k6/ask_load.js` exists but isn't asserted → p95/TTFT (NFR1/2) can regress undetected | [#147](https://github.com/AndreLiar/ikip/issues/147) |
 | 5 | **DR: documented + *tested* backup/restore (RPO/RTO)** | runbooks exist but none for rollback/restore; PITR is a capability, not a drill (Story 6.8) | [#148](https://github.com/AndreLiar/ikip/issues/148) |
 
@@ -45,7 +45,7 @@ spend ceilings — all **amplified by the agentic loop** (N LLM calls per query,
 
 ### 4. Reliability / resilience — 🟡 the core gap
 - ✅ Retry+backoff (`llm/azure.py`), bounded timeouts (R2/DB/Redis), dead-letter + state-machine for ingestion.
-- 🔴 **Circuit breaker on the LLM path** (blocker #2). 🔴 **Idempotency keys on ingestion** (a DLQ re-run can index a doc twice — only an `attempts` counter today). 🔴 Graceful degradation under quota (serve stale cache / abstain vs back off every call).
+- ✅ **Circuit breaker on the LLM path** (blocker #2 — ADR 0035; `resilience.CircuitBreaker` wraps both Azure adapters, fast-fails while open). 🔴 **Idempotency keys on ingestion** (a DLQ re-run can index a doc twice — only an `attempts` counter today). 🟡 Graceful degradation under quota: the breaker now *fast-fails* (vs backing off every call); a serve-stale-cache fallback on `CircuitOpenError` is the next step.
 
 ### 5. Scalability / performance — 🟡
 - ✅ halfvec+Matryoshka vectors (ADR 0020/0027), hybrid retrieval in SQL, answer + embedding caches.
